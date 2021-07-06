@@ -1,0 +1,17 @@
+logfile: "/tmp/ferry.log"
+
+bootstrap:
+  address: "0.0.0.0:8888"
+  readTimeout: 0       # 0 means no limit
+  writeTimeout: 0      # 0 means no limit
+  maxHeaderBytes: 8192 # 8K
+  exitWaitSecond: 1    # 退出等待时间
+
+postgres:
+  master: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
+  slave1: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
+  slave2: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
+
+k8s:
+  deployment: "http://10.12.28.4:8080/apis/apps/v1/namespaces/%s/deployments"
+  service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services/%s"
