@@ -9,11 +9,11 @@ import (
 	"sync"
 
 	_ "github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
 
 	"ferry/ops/g"
+	"ferry/ops/log"
 )
 
 var (
