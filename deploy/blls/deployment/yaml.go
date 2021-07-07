@@ -11,9 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"ferry/ops/db"
+	"ferry/ops/log"
 )
 
 type yaml struct {
@@ -33,19 +32,15 @@ type yaml struct {
 func (y *yaml) init() {
 	y.serviceName = y.serviceObj.Name
 
-	// NOTE: 服务部署路径默认为根路径.
+	// NOTE: 服务部署路径默认为hostPath根路径.
 	y.defaultRootPath = y.serviceObj.DeployPath
-	log.WithFields(log.Fields{
-		"logid":       y.logid,
-		"pipeline_id": y.pipelineID,
-	}).Infof("default root path: %s", y.defaultRootPath)
 
-	// NOTE: 基于根路径最后一段设置为默认数据卷名称.
+	// NOTE: 基于根路径最后一段设置为hostPath默认数据卷名称.
 	y.defaultVolumeName = filepath.Base(y.defaultRootPath)
-	log.WithFields(log.Fields{
-		"logid":       y.logid,
-		"pipeline_id": y.pipelineID,
-	}).Infof("default volume: %s", y.defaultVolumeName)
+
+	log.InitFields(log.Fields{"logid": y.logid, "pipeline_id": y.pipelineID})
+	log.Infof("default root path: %s", y.defaultRootPath)
+	log.Infof("default volume: %s", y.defaultVolumeName)
 }
 
 func (y *yaml) instance() (string, error) {
