@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 
 	"ferry/ops/db"
 	"ferry/ops/g"
+	"ferry/ops/log"
 )
 
 var (
@@ -33,7 +33,8 @@ func main() {
 		return
 	}
 	g.ParseConfig(*cfgFile)
-	g.InitLogger(g.Config().LogFile)
+
+	log.InitLogger(g.Config().LogFile)
 
 	db.Connect()
 
@@ -73,6 +74,6 @@ func main() {
 		}
 	}
 
-	log.Info("lighthouse web shutdown....")
+	log.Info("Shutdown....")
 	time.Sleep(time.Duration(g.Config().Bootstrap.ExitWaitSecond) * time.Second)
 }

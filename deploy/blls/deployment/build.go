@@ -11,11 +11,11 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 
 	"ferry/deploy/base"
 	"ferry/ops/db"
 	"ferry/ops/g"
+	"ferry/ops/log"
 	"ferry/ops/objects"
 )
 
@@ -29,12 +29,13 @@ const (
 )
 
 type Build struct {
-	pid        int64  // pipeline id
-	logid      string // 请求id
-	phase      string // 当前部署阶段
-	group      string // 当前部署组
-	deployment string // 当前deployment name
-	namespace  string // 当前命名空间
+	pid        int64      // pipeline id
+	phase      string     // 当前部署阶段
+	logid      string     // 请求id
+	group      string     // 当前部署组
+	deployment string     // 当前deployment name
+	namespace  string     // 当前命名空间
+	fields     log.Fields // 日志公共部分
 }
 
 func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
@@ -49,79 +50,50 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 		return nil, err
 	}
 
-	pipelineObj, err := objects.GetPipelineInfo(data.ID)
+	b.init(data.ID, r.RequestID, data.Phase)
+	pipelineObj, err := b.getBaseInfo()
 	if err != nil {
 		return nil, err
 	}
-	imageList, err := objects.FindImageInfo(data.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	b.init(data.ID, r.RequestID, data.Phase, pipelineObj)
 
 	session := db.MEngine.NewSession()
 	defer session.Close()
 
-	if err = session.Begin(); err != nil {
+	if err := session.Begin(); err != nil {
 		return nil, err
 	}
 
 	if err := objects.CreatePhase(session, b.pid, b.phase, db.PHWait); err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("create phase: %s error: %s", b.phase, err)
+		log.Errorf("create phase: %s error: %s", b.phase, err)
 		return nil, err
 	}
-	log.WithFields(log.Fields{
-		"logid":       b.logid,
-		"pipeline_id": b.pid,
-	}).Infof("create phase: %s success", b.phase)
+	log.Infof("create phase: %s success", b.phase)
 
-	tpl, err := b.writeYaml(pipelineObj, imageList)
+	tpl, err := b.writeYaml(pipelineObj)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("create yaml error: %s", err)
+		log.Errorf("create yaml error: %s", err)
 		return nil, err
 	}
-	log.WithFields(log.Fields{
-		"logid":       b.logid,
-		"pipeline_id": b.pid,
-	}).Info("create yaml success")
+	log.Info("create yaml success")
 
 	if b.isFirstDeploy(pipelineObj.Service.Name) {
 		if err := b.createDeployment(tpl, b.namespace); err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Info("create deployment success")
+		log.Info("create deployment success")
 
 	} else {
 		if err := b.updateDeployment(tpl, b.namespace, b.deployment); err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Info("update deployment success")
+		log.Info("update deployment success")
 	}
 
 	if err = objects.UpdatePhase(session, b.pid, b.phase, db.PHSuccess, tpl); err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("update phase: %s error: %s", b.phase, err)
+		log.Errorf("update phase: %s error: %s", b.phase, err)
 		return nil, err
 	}
-	log.WithFields(log.Fields{
-		"logid":       b.logid,
-		"pipeline_id": b.pid,
-	}).Infof("update phase: %s success", b.phase)
+	log.Infof("update phase: %s success", b.phase)
 
 	if err := session.Commit(); err != nil {
 		return nil, err
@@ -129,33 +101,39 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	return "", nil
 }
 
-func (b *Build) init(pipelineID int64, logid, phase string, pipelineObj *db.PipelineQuery) {
+func (b *Build) init(pipelineID int64, logid, phase string) {
 	b.pid = pipelineID
 	b.logid = logid
 	b.phase = phase
+	log.InitFields(log.Fields{"logid": logid, "pipeline_id": pipelineID})
+}
+
+func (b *Build) getBaseInfo() (*db.PipelineQuery, error) {
+	pipelineObj, err := objects.GetPipelineInfo(b.pid)
+	if err != nil {
+		log.Errorf("get pipeline info error: %s", err)
+		return nil, err
+	}
 	b.namespace = pipelineObj.Namespace.Name
 
-	// 获取部署组
 	group := BLUE
 	if pipelineObj.Service.OnlineGroup == BLUE {
 		group = GREEN
 	}
 	b.group = group
-	log.WithFields(log.Fields{
-		"logid":       b.logid,
-		"pipeline_id": b.pid,
-	}).Infof("fetch current group: %s", group)
+	log.Infof("fetch current deploy group: %s", group)
 
-	// 获取deployment name
-	service := pipelineObj.Service.Name
-	b.deployment = fmt.Sprintf("%s-%d-%s-%s", service, b.pid, b.phase, group)
-	log.WithFields(log.Fields{
-		"logid":       b.logid,
-		"pipeline_id": b.pid,
-	}).Infof("fetch current deployment name: %s", b.deployment)
+	b.deployment = fmt.Sprintf("%s-%d-%s-%s", pipelineObj.Service.Name, b.pid, b.phase, group)
+	log.Infof("fetch current deployment name: %s", b.deployment)
+	return pipelineObj, nil
 }
 
-func (b *Build) writeYaml(pipelineObj *db.PipelineQuery, imageList []db.ImageQuery) (string, error) {
+func (b *Build) writeYaml(pipelineObj *db.PipelineQuery) (string, error) {
+	imageList, err := objects.FindImageInfo(b.pid)
+	if err != nil {
+		return "", err
+	}
+
 	yam := &yaml{
 		pipelineID:     b.pid,
 		logid:          b.logid,
@@ -177,10 +155,7 @@ func (b *Build) writeYaml(pipelineObj *db.PipelineQuery, imageList []db.ImageQue
 func (b *Build) isFirstDeploy(service string) bool {
 	pipelineList, err := objects.FindPipelineInfo(service)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("check first deploy error: %s", err)
+		log.Errorf("check first deploy error: %s", err)
 		return false
 	}
 	if len(pipelineList) == 0 {
@@ -195,10 +170,7 @@ func (b *Build) createDeployment(tpl, namespace string) error {
 	header["Context-Type"] = "application/json"
 	body, err := g.Post(url, header, []byte(tpl), TIMEOUT)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("request api-server failed: %s", err)
+		log.Errorf("request api-server failed: %s", err)
 		return err
 	}
 	return b.analysis(body)
@@ -220,20 +192,14 @@ func (b *Build) updateDeployment(tpl, namespace, deploymentName string) error {
 func (b *Build) analysis(body string) error {
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("parse reqeust deployment result error: %s", err)
+		log.Errorf("json decode http result error: %s", err)
 		return err
 	}
 
 	status, ok := resp["status"].(string)
 	if ok && status == "Failure" {
 		err := errors.New(resp["message"].(string))
-		log.WithFields(log.Fields{
-			"logid":       b.logid,
-			"pipeline_id": b.pid,
-		}).Errorf("request deployment api failed: %s", err)
+		log.Errorf("request deployment k8s-api failed: %s", err)
 		return err
 	}
 	return nil
