@@ -74,6 +74,5 @@ func main() {
 		}
 	}
 
-	log.Info("Shutdown....")
 	time.Sleep(time.Duration(g.Config().Bootstrap.ExitWaitSecond) * time.Second)
 }
