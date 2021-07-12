@@ -69,7 +69,7 @@ func FindPhases(pipelineID int64) ([]db.PipelinePhase, error) {
 }
 
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
-func FindImageInfo(pipelineID int64) ([]db.ImageQuery, error) {
+func FindImageInfo(pipelineID int64) ([]map[string]string, error) {
 	piList := make([]db.ImageQuery, 0)
 	if err := db.SEngine.Table("pipeline_image").
 		Join("INNER", "pipeline", "pipeline_image.pipeline_id = pipeline.id").
@@ -78,7 +78,17 @@ func FindImageInfo(pipelineID int64) ([]db.ImageQuery, error) {
 		Find(&piList); err != nil {
 		return nil, err
 	}
-	return piList, nil
+
+	imageList := make([]map[string]string, 0)
+	for _, model := range piList {
+		imageInfo := map[string]string{
+			"module_name": model.Module.Name,
+			"image_url":   model.PipelineImage.ImageURL,
+			"image_tag":   model.PipelineImage.ImageTag,
+		}
+		imageList = append(imageList, imageInfo)
+	}
+	return imageList, nil
 }
 
 // FindPipelineInfo 根据service返回pipeline相关信息

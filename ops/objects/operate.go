@@ -8,8 +8,6 @@ package objects
 import (
 	"fmt"
 
-	"xorm.io/xorm"
-
 	"ferry/ops/db"
 )
 
@@ -61,9 +59,9 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 	return session.Commit()
 }
 
-func CreatePhase(session *xorm.Session, pipelineID int64, name string, status int) error {
+func CreatePhase(pipelineID int64, name string, status int) error {
 	phase := new(db.PipelinePhase)
-	if has, err := session.Where("pipeline_id=? and name=?", pipelineID, name).Get(phase); has {
+	if has, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Get(phase); has {
 		return nil
 	} else if err != nil {
 		return err
@@ -72,17 +70,17 @@ func CreatePhase(session *xorm.Session, pipelineID int64, name string, status in
 	phase.Name = name
 	phase.Status = status
 	phase.PipelineID = pipelineID
-	if _, err := session.Insert(phase); err != nil {
+	if _, err := db.MEngine.Insert(phase); err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdatePhase(session *xorm.Session, pipelineID int64, name string, status int, deployment string) error {
+func UpdatePhase(pipelineID int64, name string, status int, deployment string) error {
 	phase := new(db.PipelinePhase)
 	phase.Status = status
 	phase.Deployment = deployment
-	if affected, err := session.Where("pipeline_id=? and name=?", pipelineID, name).Update(phase); err != nil {
+	if affected, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
 		return fmt.Errorf("query match is not exists")

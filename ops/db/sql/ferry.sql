@@ -18,7 +18,12 @@ create table if not exists service (
     namespace_id int not null,                       -- 服务所在命名空间
 
     name varchar(32) not null unique,                -- 服务名
-    replicas int default 0,                          -- 服务的副本数
+    deploy_path varchar(100),                        -- 服务部署路径
+    multi_phase bool default true,                   -- 服务是否是多阶段部署(分级发布)
+    rd varchar(50) not null,                         -- 该服务对应的rd
+    op varchar(50) not null,                         -- 该服务对应的op
+
+    replicas int default 0,                          -- 服务的副本数(在线的)
     container json,                                  -- 服务的容器配置信息
     volume json,                                     -- 服务的数据卷配置信息
 
@@ -26,10 +31,6 @@ create table if not exists service (
     lock varchar(100) not null default '',           -- 服务锁
     reserve_time int default 60,                     -- 服务停止时预留多长时间再关闭
 
-    deploy_path varchar(100),                        -- 服务部署路径
-    multi_phase bool default true,                   -- 服务是否是多阶段部署(分级发布)
-    rd varchar(50) not null,                         -- 该服务对应的rd
-    op varchar(50) not null,                         -- 该服务对应的op
     create_at timestamp not null default now(),
     update_at timestamp not null default now()
 );
@@ -99,7 +100,7 @@ create table if not exists pipeline_image (
 create table if not exists pipeline_phase (
     id serial primary key,
     pipeline_id int not null,                                                     -- 对应的流水线
-    name varchar(20) check(name in ('image', 'sandbox', 'smallflow', 'online')),  -- 部署阶段: 镜像构建、沙盒、小流量、全流量
+    name varchar(20) check(name in ('image', 'sandbox', 'online')),               -- 部署阶段: 镜像构建、沙盒、全流量
     status int not null check(status in (0, 1, 2, 3, 4)) default 0,               -- 0 待执行 1 执行中 3 执行成功  4 执行失败
     log text,                                                                     -- 阶段日志
     deployment text,                                                              -- 生成的deployment json串

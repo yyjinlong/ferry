@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ferry/deploy/base"
+	"ferry/ops/base"
 )
 
 type Query struct {

@@ -5,5 +5,11 @@
 
 package g
 
-func md5(content string) {
+func In(data string, dataList []string) bool {
+	for _, item := range dataList {
+		if data == item {
+			return true
+		}
+	}
+	return false
 }

@@ -8,8 +8,8 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/deploy/base"
-	"ferry/deploy/blls/service"
+	"ferry/apps/deploy/blls/service"
+	"ferry/ops/base"
 )
 
 func ServiceBuild(c *gin.Context) {

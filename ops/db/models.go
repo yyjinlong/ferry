@@ -20,16 +20,16 @@ type Service struct {
 	ID          int64
 	NamespaceID int64     `xorm:"bigint notnull"`
 	Name        string    `xorm:"varchar(32) notnull unique"`
+	DeployPath  string    `xorm:"varchar(100)"`
+	MultiPhase  bool      `xorm:"bool"`
+	RD          string    `xorm:"varchar(50) notnull"`
+	OP          string    `xorm:"varchar(50) notnull"`
 	Replicas    int       `xorm:"int"`
 	Container   string    `xorm:"text"`
 	Volume      string    `xorm:"text"`
 	OnlineGroup string    `xorm:"varchar(20) notnull"`
 	Lock        string    `xorm:"varchar(100) notnull"`
 	ReserveTime int       `xorm:"int"`
-	DeployPath  string    `xorm:"varchar(100)"`
-	MultiPhase  bool      `xorm:"bool"`
-	RD          string    `xorm:"varchar(50) notnull"`
-	OP          string    `xorm:"varchar(50) notnull"`
 	CreateAt    time.Time `xorm:"timestamp notnull created"`
 	UpdateAt    time.Time `xorm:"timestamp notnull updated"`
 }
@@ -121,3 +121,14 @@ type ImageQuery struct {
 	Pipeline      `xorm:"extends"`
 	Module        `xorm:"extends"`
 }
+
+// 阶段名称
+const (
+	PHASE_IMAGE   = "image"
+	PHASE_SANDBOX = "sandbox"
+	PHASE_ONLINE  = "online"
+)
+
+var (
+	PHASE_NAME_LIST = []string{PHASE_IMAGE, PHASE_SANDBOX, PHASE_ONLINE}
+)

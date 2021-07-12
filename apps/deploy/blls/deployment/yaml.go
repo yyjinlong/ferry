@@ -11,36 +11,33 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ferry/ops/db"
 	"ferry/ops/log"
 )
 
 type yaml struct {
-	pipelineID        int64           // 上线id
-	logid             string          // 请求id
-	phase             string          // 部署阶段
-	group             string          // 当前是蓝绿的那一组
-	namespace         string          // 当前服务的命名空间
-	serviceObj        *db.Service     // 服务相关信息
-	imageList         []db.ImageQuery // 模块镜像信息列表
-	serviceName       string          // 服务名
-	deploymentName    string          // deployment名字
-	defaultRootPath   string          // 容器内默认部署根路径
-	defaultVolumeName string          // 容器内默认卷名称
+	pipelineID    int64               // 流水线ID
+	phase         string              // 部署阶段
+	namespace     string              // 当前服务所在命名空间
+	deployment    string              // deployment名字
+	serviceName   string              // 服务名
+	deployPath    string              // 部署路径
+	replicas      int                 // 副本数
+	reserveTime   int                 // 终止后的预留时间
+	containerConf string              // 容器配置
+	volumeConf    string              // 数据卷配置
+	imageList     []map[string]string // 模块镜像信息列表
+	rootPath      string              // 容器内默认部署根路径
+	volumeName    string              // 容器内默认卷名称
 }
 
 func (y *yaml) init() {
-	y.serviceName = y.serviceObj.Name
+	// NOTE: 服务部署路径默认为: hostPath类型的根路径.
+	y.rootPath = y.deployPath
+	log.Infof("default volume root path: %s", y.rootPath)
 
-	// NOTE: 服务部署路径默认为hostPath根路径.
-	y.defaultRootPath = y.serviceObj.DeployPath
-
-	// NOTE: 基于根路径最后一段设置为hostPath默认数据卷名称.
-	y.defaultVolumeName = filepath.Base(y.defaultRootPath)
-
-	log.InitFields(log.Fields{"logid": y.logid, "pipeline_id": y.pipelineID})
-	log.Infof("default root path: %s", y.defaultRootPath)
-	log.Infof("default volume: %s", y.defaultVolumeName)
+	// NOTE: 基于根路径最后一段设置为: hostPath类型的默认数据卷名称.
+	y.volumeName = filepath.Base(y.rootPath)
+	log.Infof("default volume name: %s", y.volumeName)
 }
 
 func (y *yaml) instance() (string, error) {
@@ -72,7 +69,7 @@ func (y *yaml) instance() (string, error) {
 
 func (y *yaml) metadata() map[string]string {
 	meta := make(map[string]string)
-	meta["name"] = y.deploymentName
+	meta["name"] = y.deployment
 	meta["namespace"] = y.namespace
 	return meta
 }
@@ -89,7 +86,7 @@ func (y *yaml) spec() (map[string]interface{}, error) {
 		    ...
 	*/
 	spec := make(map[string]interface{})
-	spec["replicas"] = y.serviceObj.Replicas
+	spec["replicas"] = y.replicas
 	spec["selector"] = y.selector()
 	spec["strategy"] = y.strategy()
 
@@ -171,7 +168,7 @@ func (y *yaml) templateSpec() (interface{}, error) {
 	spec["hostAliases"] = y.hostAliases()
 	spec["dnsConfig"] = y.dnsConfig()
 	spec["dnsPolicy"] = "None"
-	spec["terminationGracePeriodSeconds"] = y.serviceObj.ReserveTime
+	spec["terminationGracePeriodSeconds"] = y.reserveTime
 
 	// NOTE: 加载默认的数据卷; 服务配置的数据卷.
 	volumes, err := y.volumes()
@@ -258,17 +255,18 @@ func (y *yaml) createDefaultVolume() interface{} {
 		      path: /home/worker/www/ivr
 		      type: DirectoryOrCreate
 		说明: 将宿主机上的/home/worker/www/ivr目录挂载到pod内, 挂载点名为www
+		约定: 宿主机的根路径 == 容器内服务的根路径
 	*/
-	// 约定: 宿主机的根路径 == 容器内服务的根路径
-	nodeRootPath := y.defaultRootPath
+	nodeRootPath := y.rootPath
 	nodeHostPath := fmt.Sprintf("%s/%s/%d", nodeRootPath, y.serviceName, y.pipelineID)
 	hostPath := map[string]string{
 		"path": nodeHostPath,
 		"type": "DirectoryOrCreate",
 	}
 	defaultVolume := make(map[string]interface{})
-	defaultVolume["name"] = y.defaultVolumeName
+	defaultVolume["name"] = y.volumeName
 	defaultVolume["hostPath"] = hostPath
+	log.Infof("create default volume: %s finish", defaultVolume)
 	return defaultVolume
 }
 
@@ -290,23 +288,23 @@ func (y *yaml) createDefineVolume() (interface{}, error) {
 	}
 	var volumeList []volume
 
-	defineVolume := y.serviceObj.Volume
-	if err := json.Unmarshal([]byte(defineVolume), &volumeList); err != nil {
+	if err := json.Unmarshal([]byte(y.volumeConf), &volumeList); err != nil {
 		return nil, err
 	}
 
-	newVolume := make(map[string]interface{})
+	defineVolume := make(map[string]interface{})
 	for _, item := range volumeList {
-		newVolume["name"] = item.VolumeName
+		defineVolume["name"] = item.VolumeName
 		if item.VolumeType == "hostPath" {
 			hostPath := map[string]string{
 				"type": item.HostPathType,
 				"path": item.HostPath,
 			}
-			newVolume["hostPath"] = hostPath
+			defineVolume["hostPath"] = hostPath
 		}
 	}
-	return newVolume, nil
+	log.Infof("create define volume: %s finish", defineVolume)
+	return defineVolume, nil
 }
 
 func (y *yaml) initContainers() interface{} {
@@ -321,24 +319,27 @@ func (y *yaml) initContainers() interface{} {
 		    ...
 	*/
 	initContainers := make([]interface{}, 0)
-	for _, model := range y.imageList {
-		imageURL := model.PipelineImage.ImageURL
-		imageTag := model.PipelineImage.ImageTag
+	for _, item := range y.imageList {
+		moduleName := item["module_name"]
+		imageURL := item["image_url"]
+		imageTag := item["image_tag"]
+		log.Infof("init container current init module: %s", moduleName)
 
 		// NOTE: 将容器内的部署路径挂载到默认的挂载点下
 		volumeMounts := []map[string]string{{
-			"name":      y.defaultVolumeName,
-			"mountPath": y.defaultRootPath,
+			"name":      y.volumeName,
+			"mountPath": y.rootPath,
 		}}
+		log.Infof("init container mount path: %s to: %s", y.rootPath, y.volumeName)
 
 		// NOTE: 代码镜像添加'-code'后缀, 区别于运行镜像名, 避免重名.
-		containerName := fmt.Sprintf("%s-code", model.Module.Name)
+		containerName := fmt.Sprintf("%s-code", moduleName)
 		containerInfo := map[string]interface{}{
 			"volumeMounts":    volumeMounts,
 			"name":            containerName,
 			"image":           fmt.Sprintf("%s:%s", imageURL, imageTag),
 			"imagePullPolicy": "IfNotPresent",
-			"command":         y.codeCopy(model.Module.Name),
+			"command":         y.codeCopy(moduleName),
 		}
 		initContainers = append(initContainers, containerInfo)
 	}
@@ -347,15 +348,13 @@ func (y *yaml) initContainers() interface{} {
 
 // 将代码拷贝到数据卷所挂载的节点路径
 func (y *yaml) codeCopy(moduleName string) []string {
-	// 容器内根路径
-	rootPath := y.defaultRootPath
-	lockFile := fmt.Sprintf("%s/cp_code_lock_%s", rootPath, moduleName)
-	doneFile := fmt.Sprintf("%s/cp_code_done_%s", rootPath, moduleName)
-	destPath := filepath.Join(rootPath, moduleName)
+	lockFile := fmt.Sprintf("%s/cp_code_lock_%s", y.rootPath, moduleName)
+	doneFile := fmt.Sprintf("%s/cp_code_done_%s", y.rootPath, moduleName)
+	destPath := filepath.Join(y.rootPath, moduleName)
 
 	copyCmdList := []string{
 		"if [ ! -f \"" + doneFile + "\" ]; then",
-		"cp -rfp /src/* " + rootPath + " &&",
+		"cp -rfp /src/* " + y.rootPath + " &&",
 		"chown -R 500:500 " + destPath + " &&",
 		"touch " + doneFile + "; fi",
 	}
@@ -400,15 +399,14 @@ func (y *yaml) containers() (interface{}, error) {
 	}
 
 	type containerInfo struct {
-		Image  string       `json:"image_addr"`
-		Volume []volumeInfo `json:"volume"`
-		Quota  quotaInfo    `json:"quota"`
+		ImageURL string       `json:"image_url"`
+		Volume   []volumeInfo `json:"volume"`
+		Quota    quotaInfo    `json:"quota"`
 	}
 
 	var cList []containerInfo
 
-	containerConf := y.serviceObj.Container
-	if err := json.Unmarshal([]byte(containerConf), &cList); err != nil {
+	if err := json.Unmarshal([]byte(y.containerConf), &cList); err != nil {
 		return nil, err
 	}
 
@@ -419,7 +417,7 @@ func (y *yaml) containers() (interface{}, error) {
 		containers := make(map[string]interface{})
 		containers["volumeMounts"] = y.mountVolume()
 		containers["name"] = y.serviceName
-		containers["image"] = item.Image
+		containers["image"] = item.ImageURL
 		containers["imagePullPolicy"] = "IfNotPresent"
 		containers["env"] = y.setEnv()
 		containers["resources"] = resources
@@ -477,12 +475,12 @@ func (y *yaml) mountVolume() interface{} {
 	       name:
 	       subPath:
 	*/
-	rootPath := y.defaultRootPath     // 容器内根路径
-	mountPoint := y.defaultVolumeName // 容器内挂载点
+	rootPath := y.rootPath     // 容器内根路径
+	mountPoint := y.volumeName // 容器内挂载点
 
 	containerVolumeMounts := make([]map[string]string, 0)
 	for _, item := range y.imageList {
-		moduleName := item.Module.Name
+		moduleName := item["module_name"]
 		mountPath := filepath.Join(rootPath, moduleName)
 		containerVolume := map[string]string{
 			"name":      mountPoint,
@@ -490,6 +488,7 @@ func (y *yaml) mountVolume() interface{} {
 			"subPath":   moduleName,
 		}
 		containerVolumeMounts = append(containerVolumeMounts, containerVolume)
+		log.Infof("container volume mount path: %s to: %s", mountPath, mountPoint)
 	}
 	return containerVolumeMounts
 }
