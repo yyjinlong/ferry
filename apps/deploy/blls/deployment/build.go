@@ -19,15 +19,6 @@ import (
 	"ferry/ops/objects"
 )
 
-const (
-	BLUE  = "blue"
-	GREEN = "green"
-)
-
-const (
-	TIMEOUT = 5
-)
-
 type Build struct {
 	pid        int64  // pipeline id
 	phase      string // 当前部署阶段
@@ -48,7 +39,13 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 		log.Errorf("get pipeline info error: %s", err)
 		return nil, err
 	}
-	b.getBaseInfo(pipelineObj)
+
+	b.group = objects.GetDeployGroup(pipelineObj.Service.OnlineGroup)
+	log.Infof("fetch current deploy group: %s", b.group)
+
+	b.namespace = pipelineObj.Namespace.Name
+	b.deployment = objects.GetDeployment(b.pid, pipelineObj.Service.Name, b.phase, b.group)
+	log.Infof("fetch current deployment name: %s", b.deployment)
 
 	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
 		log.Errorf("create phase: %s error: %s", b.phase, err)
@@ -106,21 +103,6 @@ func (b *Build) checkParam(c *gin.Context, logid string) error {
 	return nil
 }
 
-func (b *Build) getBaseInfo(pipelineObj *db.PipelineQuery) {
-	b.namespace = pipelineObj.Namespace.Name
-	log.Infof("fetch current namespace: %s", b.namespace)
-
-	group := BLUE
-	if pipelineObj.Service.OnlineGroup == BLUE {
-		group = GREEN
-	}
-	b.group = group
-	log.Infof("fetch current deploy group: %s", group)
-
-	b.deployment = fmt.Sprintf("%s-%d-%s-%s", pipelineObj.Service.Name, b.pid, b.phase, group)
-	log.Infof("fetch current deployment name: %s", b.deployment)
-}
-
 func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
 	imageList, err := objects.FindImageInfo(b.pid)
 	if err != nil {
@@ -175,7 +157,7 @@ func (b *Build) getBaseURL() string {
 func (b *Build) createDeployment(tpl string) error {
 	url := b.getBaseURL()
 	header := map[string]string{"Content-Type": "application/json"}
-	body, err := g.Post(url, header, []byte(tpl), TIMEOUT)
+	body, err := g.Post(url, header, []byte(tpl), 5)
 	if err != nil {
 		log.Errorf("request api-server failed: %s", err)
 		return err
@@ -186,7 +168,7 @@ func (b *Build) createDeployment(tpl string) error {
 func (b *Build) updateDeployment(tpl string) error {
 	url := fmt.Sprintf("%s/%s", b.getBaseURL(), b.deployment)
 	header := map[string]string{"Content-Type": "application/json"}
-	body, err := g.Put(url, header, []byte(tpl), TIMEOUT)
+	body, err := g.Put(url, header, []byte(tpl), 5)
 	if err != nil {
 		return err
 	}

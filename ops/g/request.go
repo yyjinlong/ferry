@@ -15,9 +15,8 @@ import (
 	"time"
 )
 
-type response struct {
-	resp *http.Response
-	err  error
+func Get(url string, header map[string]string, param []byte, timeout int) (string, error) {
+	return do("GET", url, header, param, timeout)
 }
 
 func Post(url string, header map[string]string, payload []byte, timeout int) (string, error) {
@@ -28,14 +27,15 @@ func Put(url string, header map[string]string, payload []byte, timeout int) (str
 	return do("PUT", url, header, payload, timeout)
 }
 
+func Patch(url string, header map[string]string, payload []byte, timeout int) (string, error) {
+	return do("PATCH", url, header, payload, timeout)
+}
+
 func do(mode, url string, header map[string]string, payload []byte, timeout int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
 	defer cancel()
 
-	transport := http.Transport{
-		DisableKeepAlives: true,
-	}
-	client := http.Client{Transport: &transport}
+	client := http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
 	req, err := http.NewRequest(mode, url, bytes.NewBuffer(payload))
 	if err != nil {
@@ -53,6 +53,11 @@ func do(mode, url string, header map[string]string, payload []byte, timeout int)
 	wg.Add(1)
 	defer wg.Wait()
 
+	type response struct {
+		resp *http.Response
+		err  error
+	}
+
 	respChan := make(chan *response, 1)
 	go func() {
 		resp, err := client.Do(req)
@@ -63,12 +68,20 @@ func do(mode, url string, header map[string]string, payload []byte, timeout int)
 
 	select {
 	case <-ctx.Done():
-		return "", fmt.Errorf("post request url: %s timeout", url)
+		return "", fmt.Errorf("request url: %s timeout", url)
 	case r := <-respChan:
+		if r.err != nil {
+			return "", r.err
+		}
+
+		if r.resp.StatusCode != 200 {
+			return "", fmt.Errorf("request url: %s status code: %d", url, r.resp.StatusCode)
+		}
+
 		defer r.resp.Body.Close()
 		body, err := ioutil.ReadAll(r.resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("post request url: %s error: %s", url, err)
+			return "", fmt.Errorf("request url: %s error: %s", url, err)
 		}
 		return string(body), nil
 	}

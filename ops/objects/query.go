@@ -12,8 +12,24 @@ import (
 )
 
 const (
+	BLUE     = "blue"
+	GREEN    = "green"
 	NOTFOUND = "no data not found."
 )
+
+// GetDeployGroup 获取当前部署组
+func GetDeployGroup(onlineGroup string) string {
+	group := BLUE
+	if onlineGroup == BLUE {
+		group = GREEN
+	}
+	return group
+}
+
+// GetDeployment 获取deployment name
+func GetDeployment(pipelineID int64, service, phase, group string) string {
+	return fmt.Sprintf("%s-%d-%s-%s", service, pipelineID, phase, group)
+}
 
 func GetService(serviceID int64) (*db.Service, error) {
 	service := new(db.Service)

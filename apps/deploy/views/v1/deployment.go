@@ -19,3 +19,7 @@ func DeploymentBuild(c *gin.Context) {
 func DeploymentQuery(c *gin.Context) {
 	base.Construct(&deployment.Query{}, c)
 }
+
+func DeploymentFinish(c *gin.Context) {
+	base.Construct(&deployment.Finish{}, c)
+}

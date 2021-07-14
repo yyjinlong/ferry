@@ -87,3 +87,30 @@ func UpdatePhase(pipelineID int64, name string, status int, deployment string) e
 	}
 	return nil
 }
+
+func UpdateGroup(pipelineID int64, serviceName, group string) error {
+	session := db.MEngine.NewSession()
+	defer session.Close()
+
+	if err := session.Begin(); err != nil {
+		return err
+	}
+
+	pipeline := new(db.Pipeline)
+	pipeline.Status = db.PLSuccess
+	if affected, err := session.ID(pipelineID).Update(pipeline); err != nil {
+		return err
+	} else if affected == 0 {
+		return fmt.Errorf("query match is not exists")
+	}
+
+	service := new(db.Service)
+	service.OnlineGroup = group
+	service.Lock = ""
+	if affected, err := session.Where("name=?", serviceName).Update(service); err != nil {
+		return err
+	} else if affected == 0 {
+		return fmt.Errorf("query match is not exists")
+	}
+	return session.Commit()
+}

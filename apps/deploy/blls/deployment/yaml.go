@@ -266,7 +266,7 @@ func (y *yaml) createDefaultVolume() interface{} {
 	defaultVolume := make(map[string]interface{})
 	defaultVolume["name"] = y.volumeName
 	defaultVolume["hostPath"] = hostPath
-	log.Infof("create default volume: %s finish", defaultVolume)
+	log.Infof("create default volume: %v finish", defaultVolume)
 	return defaultVolume
 }
 
@@ -303,7 +303,7 @@ func (y *yaml) createDefineVolume() (interface{}, error) {
 			defineVolume["hostPath"] = hostPath
 		}
 	}
-	log.Infof("create define volume: %s finish", defineVolume)
+	log.Infof("create define volume: %v finish", defineVolume)
 	return defineVolume, nil
 }
 
