@@ -6,14 +6,12 @@
 package deployment
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
 
 	"ferry/ops/base"
 	"ferry/ops/db"
-	"ferry/ops/g"
 	"ferry/ops/log"
 	"ferry/ops/objects"
 )
@@ -68,10 +66,11 @@ func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
 		return true
 	}
 
+	dep := newDeployments()
 	for _, phase := range db.PHASE_NAME_LIST {
 		deployment := objects.GetDeployment(f.pid, service, phase, offlineGroup)
-		if f.isExist(namespace, deployment) {
-			if err := f.scale(0, namespace, deployment); err != nil {
+		if dep.isExist(namespace, deployment) {
+			if err := dep.scale(0, namespace, deployment); err != nil {
 				log.Errorf("scale deployment: %s replicas: 0 error: %s", deployment, err)
 				return false
 			}
@@ -79,45 +78,6 @@ func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
 		}
 	}
 	return true
-}
-
-func (f *Finish) isExist(namespace, deployment string) bool {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
-	header := map[string]string{"Content-Type": "application/json"}
-	_, err := g.Get(url, header, nil, 5)
-	if err != nil {
-		log.Errorf("check deployment: %s is not exist. error: %s", deployment, err)
-		return false
-	}
-	log.Infof("check deplloyment: %s is exist.", deployment)
-	return true
-}
-
-func (f *Finish) scale(replicas int, namespace, deployment string) error {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment + "/scale"
-	header := map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
-	payload := fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
-	body, err := g.Patch(url, header, []byte(payload), 5)
-	if err != nil {
-		log.Errorf("scale deployment: %s replicas: %d error: %s", deployment, replicas, err)
-		return err
-	}
-
-	log.Infof("scale deployment: %s response: %s", deployment, body)
-	resp := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("json decode http result error: %s", err)
-		return err
-	}
-
-	spec := resp["spec"].(map[string]interface{})
-	if len(spec) != 0 {
-		log.Infof("scale deployment: %s spec result: %s", deployment, spec)
-		if spec["replicas"].(float64) == float64(replicas) {
-			log.Infof("scale deployment: %s replicas: %d success.", deployment, replicas)
-		}
-	}
-	return nil
 }
 
 func (f *Finish) setOnline(pipelineObj *db.PipelineQuery) error {

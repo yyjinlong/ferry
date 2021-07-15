@@ -74,7 +74,7 @@ func do(mode, url string, header map[string]string, payload []byte, timeout int)
 			return "", r.err
 		}
 
-		if r.resp.StatusCode != 200 {
+		if !Ini(r.resp.StatusCode, []int{200, 201}) {
 			return "", fmt.Errorf("request url: %s status code: %d", url, r.resp.StatusCode)
 		}
 

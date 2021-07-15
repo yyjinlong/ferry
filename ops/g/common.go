@@ -13,3 +13,12 @@ func In(data string, dataList []string) bool {
 	}
 	return false
 }
+
+func Ini(num int, numList []int) bool {
+	for _, n := range numList {
+		if num == n {
+			return true
+		}
+	}
+	return false
+}

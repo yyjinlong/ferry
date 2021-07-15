@@ -6,8 +6,6 @@
 package deployment
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +22,7 @@ type Build struct {
 	phase      string // 当前部署阶段
 	logid      string // 请求id
 	namespace  string // 当前命名空间
+	service    string // 当前服务名
 	group      string // 当前部署组
 	deployment string // 当前deployment name
 }
@@ -44,14 +43,15 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	log.Infof("fetch current deploy group: %s", b.group)
 
 	b.namespace = pipelineObj.Namespace.Name
-	b.deployment = objects.GetDeployment(b.pid, pipelineObj.Service.Name, b.phase, b.group)
+	b.service = pipelineObj.Service.Name
+	b.deployment = objects.GetDeployment(b.pid, b.service, b.phase, b.group)
 	log.Infof("fetch current deployment name: %s", b.deployment)
 
 	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
-		log.Errorf("create phase: %s error: %s", b.phase, err)
+		log.Errorf("create %s phase error: %s", b.phase, err)
 		return nil, err
 	}
-	log.Infof("create phase: %s success", b.phase)
+	log.Infof("create %s phase success", b.phase)
 
 	tpl, err := b.createYaml(pipelineObj)
 	if err != nil {
@@ -60,14 +60,15 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	}
 	log.Info("create yaml success")
 
-	if b.isFirstDeploy(pipelineObj.Service.Name) {
-		if err := b.createDeployment(tpl); err != nil {
+	dep := newDeployments()
+	if !dep.isExist(b.namespace, b.deployment) {
+		if err := dep.create(b.namespace, tpl); err != nil {
 			return nil, err
 		}
 		log.Infof("create deployment: %s success", b.deployment)
 
 	} else {
-		if err := b.updateDeployment(tpl); err != nil {
+		if err := dep.update(b.namespace, b.deployment, tpl); err != nil {
 			return nil, err
 		}
 		log.Infof("update deployment: %s success", b.deployment)
@@ -114,7 +115,7 @@ func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
 		phase:         b.phase,
 		namespace:     b.namespace,
 		deployment:    b.deployment,
-		serviceName:   pipelineObj.Service.Name,
+		serviceName:   b.service,
 		deployPath:    pipelineObj.Service.DeployPath,
 		replicas:      b.getReplicas(pipelineObj),
 		reserveTime:   pipelineObj.Service.ReserveTime,
@@ -136,57 +137,4 @@ func (b *Build) getReplicas(pipelineObj *db.PipelineQuery) int {
 		return 1
 	}
 	return pipelineObj.Service.Replicas
-}
-
-func (b *Build) isFirstDeploy(service string) bool {
-	pipelineList, err := objects.FindPipelineInfo(service)
-	if err != nil {
-		log.Errorf("check first deploy error: %s", err)
-		return false
-	}
-	if len(pipelineList) == 0 {
-		return true
-	}
-	return false
-}
-
-func (b *Build) getBaseURL() string {
-	return fmt.Sprintf(g.Config().K8S.Deployment, b.namespace)
-}
-
-func (b *Build) createDeployment(tpl string) error {
-	url := b.getBaseURL()
-	header := map[string]string{"Content-Type": "application/json"}
-	body, err := g.Post(url, header, []byte(tpl), 5)
-	if err != nil {
-		log.Errorf("request api-server failed: %s", err)
-		return err
-	}
-	return b.parseResponse(body)
-}
-
-func (b *Build) updateDeployment(tpl string) error {
-	url := fmt.Sprintf("%s/%s", b.getBaseURL(), b.deployment)
-	header := map[string]string{"Content-Type": "application/json"}
-	body, err := g.Put(url, header, []byte(tpl), 5)
-	if err != nil {
-		return err
-	}
-	return b.parseResponse(body)
-}
-
-func (b *Build) parseResponse(body string) error {
-	resp := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("json decode http result error: %s", err)
-		return err
-	}
-
-	status, ok := resp["status"].(string)
-	if ok && status == "Failure" {
-		err := errors.New(resp["message"].(string))
-		log.Errorf("request deployment k8s-api failed: %s", err)
-		return err
-	}
-	return nil
 }
