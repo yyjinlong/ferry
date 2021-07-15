@@ -20,7 +20,7 @@ func newDeployments() *deployments {
 type deployments struct {
 }
 
-func (d *deployments) isExist(namespace, deployment string) bool {
+func (d *deployments) exist(namespace, deployment string) bool {
 	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
 	header := map[string]string{"Content-Type": "application/json"}
 	body, err := g.Get(url, header, nil, 5)

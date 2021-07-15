@@ -252,13 +252,14 @@ func (y *yaml) createDefaultVolume() interface{} {
 		volumes:
 		  - name: www
 		    hostPath:
-		      path: /home/worker/www/ivr
+		      path: /home/worker/www/ivr/上线流程ID
 		      type: DirectoryOrCreate
 		说明: 将宿主机上的/home/worker/www/ivr目录挂载到pod内, 挂载点名为www
 		约定: 宿主机的根路径 == 容器内服务的根路径
 	*/
-	nodeRootPath := y.rootPath
-	nodeHostPath := fmt.Sprintf("%s/%s/%d", nodeRootPath, y.serviceName, y.pipelineID)
+
+	// NOTE: 根据pipeline id创建本次hostPath宿主机路径(注: 一个上线流程对应一个路径)
+	nodeHostPath := fmt.Sprintf("%s/%s/%d", y.rootPath, y.serviceName, y.pipelineID)
 	hostPath := map[string]string{
 		"path": nodeHostPath,
 		"type": "DirectoryOrCreate",
@@ -348,6 +349,12 @@ func (y *yaml) initContainers() interface{} {
 
 // 将代码拷贝到数据卷所挂载的节点路径
 func (y *yaml) codeCopy(moduleName string) []string {
+	/* 为什么要判断doneFile, 以及为什么要使用flock?
+	 * 一个服务至少有两个deployment, 一个是sandbox的、一个是oneline的.
+	 * 在同一个上线流程里, 这两个deployment代码路径一致.
+	 * 一个deployment拷贝完成后, 另一个则无需拷贝. 所以需要判断doneFile.
+	 * 如果第一个deployment没有拷贝完, 则另一个则不能进行拷贝, 这就是flock排它锁的作用.
+	 */
 	lockFile := fmt.Sprintf("%s/cp_code_lock_%s", y.rootPath, moduleName)
 	doneFile := fmt.Sprintf("%s/cp_code_done_%s", y.rootPath, moduleName)
 	destPath := filepath.Join(y.rootPath, moduleName)

@@ -26,9 +26,9 @@ func GetDeployGroup(onlineGroup string) string {
 	return group
 }
 
-// GetDeployment 获取deployment name
-func GetDeployment(pipelineID int64, service, phase, group string) string {
-	return fmt.Sprintf("%s-%d-%s-%s", service, pipelineID, phase, group)
+// GetDeployment 根据服务ID、服务名等创建deployment name
+func GetDeployment(serviceID int64, service, phase, group string) string {
+	return fmt.Sprintf("%s-%d-%s-%s", service, serviceID, phase, group)
 }
 
 func GetService(serviceID int64) (*db.Service, error) {

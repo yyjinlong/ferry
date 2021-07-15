@@ -68,8 +68,8 @@ func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
 
 	dep := newDeployments()
 	for _, phase := range db.PHASE_NAME_LIST {
-		deployment := objects.GetDeployment(f.pid, service, phase, offlineGroup)
-		if dep.isExist(namespace, deployment) {
+		deployment := objects.GetDeployment(pipelineObj.Service.ID, service, phase, offlineGroup)
+		if dep.exist(namespace, deployment) {
 			if err := dep.scale(0, namespace, deployment); err != nil {
 				log.Errorf("scale deployment: %s replicas: 0 error: %s", deployment, err)
 				return false

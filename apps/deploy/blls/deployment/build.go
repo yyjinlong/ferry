@@ -44,7 +44,7 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 
 	b.namespace = pipelineObj.Namespace.Name
 	b.service = pipelineObj.Service.Name
-	b.deployment = objects.GetDeployment(b.pid, b.service, b.phase, b.group)
+	b.deployment = objects.GetDeployment(pipelineObj.Service.ID, b.service, b.phase, b.group)
 	log.Infof("fetch current deployment name: %s", b.deployment)
 
 	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
@@ -61,7 +61,7 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	log.Info("create yaml success")
 
 	dep := newDeployments()
-	if !dep.isExist(b.namespace, b.deployment) {
+	if !dep.exist(b.namespace, b.deployment) {
 		if err := dep.create(b.namespace, tpl); err != nil {
 			return nil, err
 		}
