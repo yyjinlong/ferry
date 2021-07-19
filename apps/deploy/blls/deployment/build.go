@@ -109,6 +109,10 @@ func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Infof("create yaml get image list: %s", imageList)
+	if len(imageList) == 0 {
+		return "", fmt.Errorf("get image list is empty")
+	}
 
 	yam := &yaml{
 		pipelineID:    b.pid,

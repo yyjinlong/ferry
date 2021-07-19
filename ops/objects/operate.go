@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"ferry/ops/db"
+	"ferry/ops/log"
 )
 
 func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, moduleInfoList []map[string]string) error {
@@ -20,9 +21,17 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 	}
 
 	service := new(db.Service)
-	if has, err := session.Where("name=?").Get(service); !has {
+	if has, err := session.Where("name=?", serviceName).Get(service); err != nil {
+		return err
+	} else if !has {
+		return fmt.Errorf("service query by name: %s is not exists", serviceName)
+	}
+
+	service.Lock = creator
+	if _, err := session.ID(service.ID).Update(service); err != nil {
 		return err
 	}
+	log.Infof("update service: %s lock: %s success", serviceName, creator)
 
 	pipeline := new(db.Pipeline)
 	pipeline.Name = name
@@ -35,16 +44,17 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 	if _, err := session.Insert(pipeline); err != nil {
 		return err
 	}
-
-	fmt.Println("----获取插入的pipeline id为: ", pipeline.ID)
+	log.Infof("create pipeline success. get pipeline id: %d", pipeline.ID)
 
 	for _, moduleInfo := range moduleInfoList {
 		moduleName := moduleInfo["name"]
 		deployBranch := moduleInfo["branch"]
 
 		module := new(db.Module)
-		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(module); !has {
+		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(module); err != nil {
 			return err
+		} else if !has {
+			return fmt.Errorf("query match is not exists")
 		}
 
 		pipelineUpdate := new(db.PipelineUpdate)
@@ -54,8 +64,8 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		if _, err := session.Insert(pipelineUpdate); err != nil {
 			return err
 		}
+		log.Infof("create update info success. by module: %s branch: %s", moduleName, deployBranch)
 	}
-
 	return session.Commit()
 }
 
@@ -107,7 +117,7 @@ func UpdateGroup(pipelineID int64, serviceName, group string) error {
 	service := new(db.Service)
 	service.OnlineGroup = group
 	service.Lock = ""
-	if affected, err := session.Where("name=?", serviceName).Update(service); err != nil {
+	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "lock").Update(service); err != nil {
 		return err
 	} else if affected == 0 {
 		return fmt.Errorf("query match is not exists")

@@ -19,6 +19,8 @@ func urls(r *gin.Engine) {
 	/* api v1 */
 	g1 := r.Group("v1")
 	{
+		g1.POST("/pipeline", v1.PipelineCreate)
+
 		g1.GET("/deployment", v1.DeploymentQuery)
 		g1.POST("/deployment", v1.DeploymentBuild)
 
