@@ -33,18 +33,18 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	}
 	log.InitFields(log.Fields{"logid": b.logid, "pipeline_id": b.pid})
 
-	pipelineObj, err := objects.GetPipelineInfo(b.pid)
+	pipeline, err := objects.GetPipelineInfo(b.pid)
 	if err != nil {
 		log.Errorf("get pipeline info error: %s", err)
 		return nil, err
 	}
 
-	b.group = objects.GetDeployGroup(pipelineObj.Service.OnlineGroup)
+	b.group = objects.GetDeployGroup(pipeline.Service.OnlineGroup)
 	log.Infof("fetch current deploy group: %s", b.group)
 
-	b.namespace = pipelineObj.Namespace.Name
-	b.service = pipelineObj.Service.Name
-	b.deployment = objects.GetDeployment(pipelineObj.Service.ID, b.service, b.phase, b.group)
+	b.namespace = pipeline.Namespace.Name
+	b.service = pipeline.Service.Name
+	b.deployment = objects.GetDeployment(pipeline.Service.ID, b.service, b.phase, b.group)
 	log.Infof("fetch current deployment name: %s", b.deployment)
 
 	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
@@ -53,7 +53,7 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	}
 	log.Infof("create %s phase success", b.phase)
 
-	tpl, err := b.createYaml(pipelineObj)
+	tpl, err := b.createYaml(pipeline)
 	if err != nil {
 		log.Errorf("create yaml error: %s", err)
 		return nil, err
@@ -104,7 +104,7 @@ func (b *Build) checkParam(c *gin.Context, logid string) error {
 	return nil
 }
 
-func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
+func (b *Build) createYaml(pipeline *db.PipelineQuery) (string, error) {
 	imageList, err := objects.FindImageInfo(b.pid)
 	if err != nil {
 		return "", err
@@ -120,11 +120,11 @@ func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
 		namespace:     b.namespace,
 		deployment:    b.deployment,
 		serviceName:   b.service,
-		deployPath:    pipelineObj.Service.DeployPath,
-		replicas:      b.getReplicas(pipelineObj),
-		reserveTime:   pipelineObj.Service.ReserveTime,
-		containerConf: pipelineObj.Service.Container,
-		volumeConf:    pipelineObj.Service.Volume,
+		deployPath:    pipeline.Service.DeployPath,
+		replicas:      b.getReplicas(pipeline),
+		reserveTime:   pipeline.Service.ReserveTime,
+		containerConf: pipeline.Service.Container,
+		volumeConf:    pipeline.Service.Volume,
 		imageList:     imageList,
 	}
 	yam.init()
@@ -135,10 +135,10 @@ func (b *Build) createYaml(pipelineObj *db.PipelineQuery) (string, error) {
 	return tpl, nil
 }
 
-func (b *Build) getReplicas(pipelineObj *db.PipelineQuery) int {
+func (b *Build) getReplicas(pipeline *db.PipelineQuery) int {
 	// NOTE: 沙盒阶段默认返回1个副本
 	if b.phase == db.PHASE_SANDBOX {
 		return 1
 	}
-	return pipelineObj.Service.Replicas
+	return pipeline.Service.Replicas
 }

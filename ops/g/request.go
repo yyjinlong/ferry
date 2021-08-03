@@ -16,19 +16,19 @@ import (
 )
 
 func Get(url string, header map[string]string, param []byte, timeout int) (string, error) {
-	return do("GET", url, header, param, timeout)
+	return do(http.MethodGet, url, header, param, timeout)
 }
 
 func Post(url string, header map[string]string, payload []byte, timeout int) (string, error) {
-	return do("POST", url, header, payload, timeout)
+	return do(http.MethodPost, url, header, payload, timeout)
 }
 
 func Put(url string, header map[string]string, payload []byte, timeout int) (string, error) {
-	return do("PUT", url, header, payload, timeout)
+	return do(http.MethodPut, url, header, payload, timeout)
 }
 
 func Patch(url string, header map[string]string, payload []byte, timeout int) (string, error) {
-	return do("PATCH", url, header, payload, timeout)
+	return do(http.MethodPatch, url, header, payload, timeout)
 }
 
 func do(mode, url string, header map[string]string, payload []byte, timeout int) (string, error) {

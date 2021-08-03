@@ -26,17 +26,17 @@ func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	}
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})
 
-	pipelineObj, err := objects.GetPipelineInfo(f.pid)
+	pipeline, err := objects.GetPipelineInfo(f.pid)
 	if err != nil {
 		log.Errorf("get pipeline info error: %s", err)
 		return nil, err
 	}
 
-	if !f.clearOld(pipelineObj) {
+	if !f.clearOld(pipeline) {
 		return nil, fmt.Errorf("old group deployment scale to 0 failed")
 	}
 
-	if err := f.setOnline(pipelineObj); err != nil {
+	if err := f.setOnline(pipeline); err != nil {
 		return nil, err
 	}
 	return "", nil
@@ -55,12 +55,12 @@ func (f *Finish) checkParam(c *gin.Context, logid string) error {
 	return nil
 }
 
-func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
-	namespace := pipelineObj.Namespace.Name
-	service := pipelineObj.Service.Name
+func (f *Finish) clearOld(pipeline *db.PipelineQuery) bool {
+	namespace := pipeline.Namespace.Name
+	service := pipeline.Service.Name
 
 	// NOTE: 在确认时, 原有表记录的组则变为待下线组
-	offlineGroup := pipelineObj.Service.OnlineGroup
+	offlineGroup := pipeline.Service.OnlineGroup
 	log.Infof("get current clear offline group: %s", offlineGroup)
 	if offlineGroup == "none" {
 		return true
@@ -68,7 +68,7 @@ func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
 
 	dep := newDeployments()
 	for _, phase := range db.PHASE_NAME_LIST {
-		deployment := objects.GetDeployment(pipelineObj.Service.ID, service, phase, offlineGroup)
+		deployment := objects.GetDeployment(pipeline.Service.ID, service, phase, offlineGroup)
 		if dep.exist(namespace, deployment) {
 			if err := dep.scale(0, namespace, deployment); err != nil {
 				log.Errorf("scale deployment: %s replicas: 0 error: %s", deployment, err)
@@ -80,11 +80,11 @@ func (f *Finish) clearOld(pipelineObj *db.PipelineQuery) bool {
 	return true
 }
 
-func (f *Finish) setOnline(pipelineObj *db.PipelineQuery) error {
-	group := objects.GetDeployGroup(pipelineObj.Service.OnlineGroup)
+func (f *Finish) setOnline(pipeline *db.PipelineQuery) error {
+	group := objects.GetDeployGroup(pipeline.Service.OnlineGroup)
 	log.Infof("get current online group: %s", group)
 
-	if err := objects.UpdateGroup(f.pid, pipelineObj.Service.Name, group); err != nil {
+	if err := objects.UpdateGroup(f.pid, pipeline.Service.Name, group); err != nil {
 		log.Errorf("set current group: %s online error: %s", group, err)
 	}
 	log.Infof("set current group: %s online success.", group)
