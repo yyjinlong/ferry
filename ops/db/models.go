@@ -20,16 +20,19 @@ type Service struct {
 	ID          int64
 	NamespaceID int64     `xorm:"bigint notnull"`
 	Name        string    `xorm:"varchar(32) notnull unique"`
-	DeployPath  string    `xorm:"varchar(100)"`
+	ImageAddr   string    `xorm:"varchar(500) notnull"`
+	QuotaCpu    string    `xorm:"varchar(20) notnull"`
+	QuotaMaxCpu string    `xorm:"varchar(20) notnull"`
+	QuotaMem    string    `xorm:"varchar(20) notnull"`
+	QuotaMaxMem string    `xorm:"varchar(20) notnull"`
+	Replicas    int       `xorm:"int"`
+	Volume      string    `xorm:"text"`
+	ReserveTime int       `xorm:"int"`
+	OnlineGroup string    `xorm:"varchar(20) notnull"`
 	MultiPhase  bool      `xorm:"bool"`
+	Lock        string    `xorm:"varchar(100) notnull"`
 	RD          string    `xorm:"varchar(50) notnull"`
 	OP          string    `xorm:"varchar(50) notnull"`
-	Replicas    int       `xorm:"int"`
-	Container   string    `xorm:"text"`
-	Volume      string    `xorm:"text"`
-	OnlineGroup string    `xorm:"varchar(20) notnull"`
-	Lock        string    `xorm:"varchar(100) notnull"`
-	ReserveTime int       `xorm:"int"`
 	CreateAt    time.Time `xorm:"timestamp notnull created"`
 	UpdateAt    time.Time `xorm:"timestamp notnull updated"`
 }
@@ -71,7 +74,6 @@ type PipelineUpdate struct {
 type PipelineImage struct {
 	ID         int64
 	PipelineID int64     `xorm:"bigint notnull"`
-	ModuleID   int64     `xorm:"bigint notnull"`
 	ImageURL   string    `xorm:"varchar(200)"`
 	ImageTag   string    `xorm:"varchar(50)"`
 	CreateAt   time.Time `xorm:"timestamp notnull created"`

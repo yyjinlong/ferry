@@ -31,9 +31,9 @@ func GetDeployment(serviceID int64, service, phase, group string) string {
 	return fmt.Sprintf("%s-%d-%s-%s", service, serviceID, phase, group)
 }
 
-func GetService(serviceID int64) (*db.Service, error) {
+func GetService(name string) (*db.Service, error) {
 	service := new(db.Service)
-	if has, err := db.SEngine.ID(serviceID).Get(service); err != nil {
+	if has, err := db.SEngine.Where("name=?", name).Get(service); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf(NOTFOUND)

@@ -69,6 +69,17 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 	return session.Commit()
 }
 
+func CreateImage(pipelineID int64, imageURL, imageTag string) error {
+	image := new(db.PipelineImage)
+	image.PipelineID = pipelineID
+	image.ImageURL = imageURL
+	image.ImageTag = imageTag
+	if _, err := db.MEngine.Insert(image); err != nil {
+		return err
+	}
+	return nil
+}
+
 func CreatePhase(pipelineID int64, name string, status int) error {
 	phase := new(db.PipelinePhase)
 	if has, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Get(phase); has {

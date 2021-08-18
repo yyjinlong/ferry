@@ -12,6 +12,19 @@ postgres:
   slave1: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
   slave2: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
 
+rabbitmq:
+  address: "amqp://rabbit:yangjinlong@10.12.24.19:5672/core"
+  exchange: "ferry"
+  queue: "all-build-image"
+  routingKey: "build-image"
+
+build:
+  dir: "/tmp/release"
+  logfile: "/tmp/image.log"
+
+registry:
+  release: "10.12.28.4:80/release"
+
 k8s:
   deployment: "http://10.12.28.4:8080/apis/apps/v1/namespaces/%s/deployments"
   service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services/%s"

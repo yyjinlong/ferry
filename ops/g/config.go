@@ -16,6 +16,9 @@ type Settings struct {
 	LogFile   string        `yaml:"logfile"`
 	Bootstrap BootstrapInfo `yaml:"bootstrap"`
 	Postgres  PostgresInfo  `yaml:"postgres"`
+	RabbitMQ  RabbtimqInfo  `yaml:"rabbitmq"`
+	Build     BuildInfo     `yaml:"build"`
+	Registry  RegistryInfo  `yaml:"registry"`
 	K8S       K8SInfo       `yaml:"k8s"`
 }
 
@@ -31,6 +34,22 @@ type PostgresInfo struct {
 	Master string `yaml:"master"`
 	Slave1 string `yaml:"slave1"`
 	Slave2 string `yaml:"slave2"`
+}
+
+type RabbtimqInfo struct {
+	Address    string `yaml:"address"`
+	Exchange   string `yaml:"exchange"`
+	Queue      string `yaml:"queue"`
+	RoutingKey string `yaml:"routingKey"`
+}
+
+type BuildInfo struct {
+	Dir     string `yaml:"dir"`
+	LogFile string `yaml:"logfile"`
+}
+
+type RegistryInfo struct {
+	Release string `yaml:"release"`
 }
 
 type K8SInfo struct {

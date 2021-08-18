@@ -18,28 +18,31 @@ create table if not exists service (
     namespace_id int not null,                       -- 服务所在命名空间
 
     name varchar(32) not null unique,                -- 服务名
-    deploy_path varchar(100),                        -- 服务部署路径
+    image_addr varchar(500) not null,                -- 服务镜像地址
+    quota_cpu varchar(20) not null,                  -- 服务容器正常使用的cpu配额
+    quota_max_cpu varchar(20) not null,              -- 服务容器最大使用的cpu配额
+    quota_mem varchar(20) not null,                  -- 服务容器正常使用的mem配额
+    quota_max_mem  varchar(20) not null,             -- 服务容器最大使用的mem配额
+    replicas int default 0,                          -- 服务的副本数(在线的)
+    volume json,                                     -- 服务的数据卷配置信息
+    reserve_time int default 60,                     -- 服务停止时预留多长时间再关闭
+
+    online_group varchar(20) default '',             -- 当前在线组(blue、green), 默认是空
     multi_phase bool default true,                   -- 服务是否是多阶段部署(分级发布)
+    lock varchar(100) not null default '',           -- 服务锁
     rd varchar(50) not null,                         -- 该服务对应的rd
     op varchar(50) not null,                         -- 该服务对应的op
-
-    replicas int default 0,                          -- 服务的副本数(在线的)
-    container json,                                  -- 服务的容器配置信息
-    volume json,                                     -- 服务的数据卷配置信息
-
-    online_group varchar(20) default 'none',         -- 当前在线组(blue、green), 默认是none(表示服务未上线)
-    lock varchar(100) not null default '',           -- 服务锁
-    reserve_time int default 60,                     -- 服务停止时预留多长时间再关闭
 
     create_at timestamp not null default now(),
     update_at timestamp not null default now()
 );
 
 --
--- 模块表
--- 比如: 有个test服务, 分前端vue项目、后端python项目. 并且前后端不分开部署.
+-- 代码模块表
 --
-create table if not exists module (
+-- 一个服务可能对应一个或多个代码模块, 比如ivr服务只有一个git仓库地址, 也就是只依赖一个代码模块.
+--
+create table if not exists code_module (
     id serial primary key,
     service_id int not null,
     name varchar(50) not null,                                                             -- 模块名
@@ -49,7 +52,6 @@ create table if not exists module (
     create_at timestamp not null default now(),
     update_at timestamp not null default now()
 );
-
 
 --
 -- 流水线
@@ -74,25 +76,22 @@ create table if not exists pipeline (
 create table if not exists pipeline_update (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
-    module_id int not null,                                                    -- 变更模块
-    deploy_branch varchar(20) default 'master',                                -- 变更模块对应的部署分支 master上线、分支上线
+    module_id int not null,                                                    -- 变更的代码模块
+    deploy_branch varchar(20) default 'master',                                -- 变更的代码模块对应的部署分支 master上线、分支上线
     code_tag varchar(50),                                                      -- 基于代码模块打的tag
     create_at timestamp not null default now()
 );
 
 --
--- 流程镜像
--- 注: 每次发布都全量记录该服务下的所有模块的镜像信息, 如果一个模块没有变更则使用历史镜像.
+-- 服务镜像
 --
 create table if not exists pipeline_image (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
-    module_id int not null,                                                    -- 模块
-    image_url varchar(200),                                                    -- 基于模块构建的镜像地址
-    image_tag varchar(50),                                                     -- 基于模块构建的镜像tag
+    image_url varchar(200),                                                    -- 基于所有代码模块构建的服务镜像地址
+    image_tag varchar(50),                                                     -- 基于所有代码模块构建的服务镜像tag
     create_at timestamp not null default now()
 );
-
 
 --
 -- 流程阶段
@@ -112,5 +111,14 @@ create table if not exists pipeline_phase (
 -- 插入命名空间
 insert into namespace (name, creator) values('default', 'yangjinlong');
 
+-- 插入测试服务
+insert into service(namespace_id, name, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, volume, rd, op) values(1, 'ivr', '10.12.28.4:80/service/ivr', '1000', '1024', '1024', '2000', 2, '[{"newvolume_type": "hostPath", "hostpath_type": "DirectoryOrCreate", "newvolume_name": "logs", "hostpath": "/home/logs/ivr"}]', 'yangjinlong', 'yangjinlong');
+
+-- 插入测试代码模块
+insert into code_module(service_id, name, language, repos_name, repos_addr) values(1, 'ivr', 'python', 'GIT', 'http://127.0.0.1:4567/devops/ivr');
+
+-- 测试pipline
+insert into pipeline(service_id, name, summary, creator, rd, qa, pm) values(1, 'ONLINE TEST', 'TEST', 'yangjinlong', 'yangjinlong', 'yangjinlong', 'yangjinlong');
+insert into pipeline_update(pipeline_id, module_id, deploy_branch, code_tag) values(1, 1, 'master', 'release_ivr_20210817_153246');
 
 commit;
