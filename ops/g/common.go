@@ -87,3 +87,14 @@ func _do(cmd *exec.Cmd) ([]byte, error) {
 	}
 	return output, nil
 }
+
+func Execute(name string, arg ...string) error {
+	cmd := exec.Command(name, arg...)
+	return cmd.Run()
+}
+
+func ExecuteByDir(dir string, name string, arg ...string) error {
+	cmd := exec.Command(name, arg...)
+	cmd.Dir = dir
+	return cmd.Run()
+}

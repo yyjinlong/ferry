@@ -27,7 +27,7 @@ func Python(data base.Image) {
 type pyBuild struct {
 }
 
-func (p *pyBuild) getBuildPath(pid int64, mainPath, service string) string {
+func (p *pyBuild) getBuildPath(mainPath, service string, pid int64) string {
 	buildPath := filepath.Join(mainPath, service, strconv.FormatInt(pid, 10))
 	if _, err := os.Stat(buildPath); os.IsNotExist(err) {
 		os.MkdirAll(buildPath, os.ModePerm)
@@ -61,8 +61,36 @@ func (p *pyBuild) download(codePath, module, repo, tag string) error {
 	return nil
 }
 
-func (p *pyBuild) dockerBuild(pid int64, buildPath, service string) error {
-	// NOTE: 拷贝Dockerfile
+func (p *pyBuild) release(buildPath, service string, pid int64) error {
+	imageURL := fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
+	imageTag := fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
+	releaseTag := fmt.Sprintf("%s:%s", imageURL, imageTag)
+
+	if err := p.copyDockerfile(buildPath); err != nil {
+		return err
+	}
+
+	if err := p.dockerBuild(service, imageURL, imageTag, releaseTag, buildPath); err != nil {
+		return err
+	}
+
+	if err := p.dockerTag(releaseTag); err != nil {
+		return err
+	}
+
+	if err := p.dockerPush(releaseTag); err != nil {
+		return err
+	}
+
+	// 保存镜像信息
+	if err := objects.CreateImage(pid, imageURL, imageTag); err != nil {
+		return err
+	}
+	log.Info("(5) write image info to db success")
+	return nil
+}
+
+func (p *pyBuild) copyDockerfile(buildPath string) error {
 	_, curPath, _, _ := runtime.Caller(1)
 	appPath := filepath.Dir(filepath.Dir(curPath))
 	srcFile := filepath.Join(appPath, "dockerfile", "Dockerfile")
@@ -72,45 +100,43 @@ func (p *pyBuild) dockerBuild(pid int64, buildPath, service string) error {
 		return err
 	}
 	log.Infof("(1) copy dockerfile: %s success.", dstFile)
+	return nil
+}
 
-	// NOTE: 构建镜像
+func (p *pyBuild) dockerBuild(service, imageURL, imageTag, releaseTag, buildPath string) error {
 	svc, err := objects.GetService(service)
 	if err != nil {
 		log.Errorf("query service: %s failed: %s", service, err)
 		return err
 	}
+
 	repo := fmt.Sprintf("repo=%s", svc.ImageAddr)
-	imageURL := fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
-	imageTag := fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
-	releaseTag := imageURL + ":" + imageTag
 	log.Infof("docker build --build-arg %s -t %s %s", repo, releaseTag, buildPath)
 
-	if _, err := g.Cmd("docker", "build", "--build-arg", repo, "-t", releaseTag, buildPath); err != nil {
+	if err := g.Execute("docker", "build", "--build-arg", repo, "-t", releaseTag, buildPath); err != nil {
 		log.Errorf("docker build error: %s", err)
 		return err
 	}
 	log.Info("(2) docker build success")
+	return nil
+}
 
-	// NOTE: 打tag
+func (p *pyBuild) dockerTag(releaseTag string) error {
 	log.Infof("docker tag %s %s", releaseTag, releaseTag)
-	if _, err := g.Cmd("docker", "tag", releaseTag, releaseTag); err != nil {
+	if err := g.Execute("docker", "tag", releaseTag, releaseTag); err != nil {
 		log.Errorf("docker tag error: %s", err)
 		return err
 	}
 	log.Info("(3) docker tag success")
+	return nil
+}
 
-	// NOTE: 推送镜像
+func (p *pyBuild) dockerPush(releaseTag string) error {
 	log.Infof("docker push %s", releaseTag)
-	if _, err := g.Cmd("docker", "push", releaseTag); err != nil {
+	if err := g.Execute("docker", "push", releaseTag); err != nil {
 		log.Errorf("docker push error: %s", err)
 		return err
 	}
 	log.Info("(4) docker push success")
-
-	// NOTE: 保存镜像信息
-	if err := objects.CreateImage(pid, imageURL, imageTag); err != nil {
-		return err
-	}
-	log.Info("(5) write image info to db success")
 	return nil
 }
