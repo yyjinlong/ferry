@@ -21,10 +21,10 @@ type Service struct {
 	NamespaceID int64     `xorm:"bigint notnull"`
 	Name        string    `xorm:"varchar(32) notnull unique"`
 	ImageAddr   string    `xorm:"varchar(500) notnull"`
-	QuotaCpu    string    `xorm:"varchar(20) notnull"`
-	QuotaMaxCpu string    `xorm:"varchar(20) notnull"`
-	QuotaMem    string    `xorm:"varchar(20) notnull"`
-	QuotaMaxMem string    `xorm:"varchar(20) notnull"`
+	QuotaCpu    int       `xorm:"int"`
+	QuotaMaxCpu int       `xorm:"int"`
+	QuotaMem    int       `xorm:"int"`
+	QuotaMaxMem int       `xorm:"int"`
 	Replicas    int       `xorm:"int"`
 	Volume      string    `xorm:"text"`
 	ReserveTime int       `xorm:"int"`
@@ -121,7 +121,6 @@ type PipelineQuery struct {
 type ImageQuery struct {
 	PipelineImage `xorm:"extends"`
 	Pipeline      `xorm:"extends"`
-	Module        `xorm:"extends"`
 }
 
 // 阶段名称

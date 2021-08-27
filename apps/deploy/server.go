@@ -66,11 +66,11 @@ func main() {
 	select {
 	case sig := <-qs:
 		if sig == syscall.SIGINT || sig == syscall.SIGTERM || sig == syscall.SIGQUIT {
-			log.Info("Quit the server with Ctrl C.")
+			log.Info("Quit the server with Ctrl C")
 			server.Shutdown(ctx)
 			cancel()
 		} else if sig == syscall.SIGPIPE {
-			log.Warn("Ignore broken pipe signal.")
+			log.Warn("Ignore broken pipe signal")
 		}
 	}
 

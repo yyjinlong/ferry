@@ -27,8 +27,8 @@ func GetDeployGroup(onlineGroup string) string {
 }
 
 // GetDeployment 根据服务ID、服务名等创建deployment name
-func GetDeployment(serviceID int64, service, phase, group string) string {
-	return fmt.Sprintf("%s-%d-%s-%s", service, serviceID, phase, group)
+func GetDeployment(serviceName string, serviceID int64, phase, group string) string {
+	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
 }
 
 func GetService(name string) (*db.Service, error) {
@@ -62,14 +62,12 @@ func GetPipeline(pipelineID int64) (*db.Pipeline, error) {
 // GetPipelineInfo 根据pipeline id返回pipeline、namespace、service信息
 func GetPipelineInfo(pipelineID int64) (*db.PipelineQuery, error) {
 	pq := new(db.PipelineQuery)
-	has, err := db.SEngine.Table("pipeline").
+	if has, err := db.SEngine.Table("pipeline").
 		Join("INNER", "service", "pipeline.service_id = service.id").
 		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("pipeline.id = ?", pipelineID).Get(pq)
-	if err != nil {
+		Where("pipeline.id = ?", pipelineID).Get(pq); err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		return nil, fmt.Errorf(NOTFOUND)
 	}
 	return pq, nil
@@ -85,26 +83,21 @@ func FindPhases(pipelineID int64) ([]db.PipelinePhase, error) {
 }
 
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
-func FindImageInfo(pipelineID int64) ([]map[string]string, error) {
-	piList := make([]db.ImageQuery, 0)
-	if err := db.SEngine.Table("pipeline_image").
-		Join("INNER", "pipeline", "pipeline_image.pipeline_id = pipeline.id").
-		Join("INNER", "module", "pipeline_image.module_id = module.id").
-		Where("pipeline_image.pipeline_id = ?", pipelineID).
-		Find(&piList); err != nil {
+func FindImageInfo(pipelineID int64) (map[string]string, error) {
+	pi := new(db.ImageQuery)
+	if has, err := db.SEngine.Table("pipeline_image").
+		Join("INNER", "pipeline", "pipeline.id = pipeline_image.pipeline_id").
+		Where("pipeline.id = ?", pipelineID).Get(pi); err != nil {
 		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf(NOTFOUND)
 	}
 
-	imageList := make([]map[string]string, 0)
-	for _, model := range piList {
-		imageInfo := map[string]string{
-			"module_name": model.Module.Name,
-			"image_url":   model.PipelineImage.ImageURL,
-			"image_tag":   model.PipelineImage.ImageTag,
-		}
-		imageList = append(imageList, imageInfo)
+	imageInfo := map[string]string{
+		"image_url": pi.ImageURL,
+		"image_tag": pi.ImageTag,
 	}
-	return imageList, nil
+	return imageInfo, nil
 }
 
 // FindPipelineInfo 根据service返回pipeline相关信息

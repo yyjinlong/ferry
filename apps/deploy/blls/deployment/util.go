@@ -25,7 +25,7 @@ func (d *deployments) exist(namespace, deployment string) bool {
 	header := map[string]string{"Content-Type": "application/json"}
 	body, err := g.Get(url, header, nil, 5)
 	if err != nil {
-		log.Errorf("check deployment: %s is not exist. error: %s", deployment, err)
+		log.Infof("check deployment: %s is not exist.", deployment)
 		return false
 	}
 	if err := d.result(body); err != nil {

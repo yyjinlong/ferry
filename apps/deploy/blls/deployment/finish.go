@@ -57,7 +57,6 @@ func (f *Finish) checkParam(c *gin.Context, logid string) error {
 
 func (f *Finish) clearOld(pipeline *db.PipelineQuery) bool {
 	namespace := pipeline.Namespace.Name
-	service := pipeline.Service.Name
 
 	// NOTE: 在确认时, 原有表记录的组则变为待下线组
 	offlineGroup := pipeline.Service.OnlineGroup
@@ -68,7 +67,7 @@ func (f *Finish) clearOld(pipeline *db.PipelineQuery) bool {
 
 	dep := newDeployments()
 	for _, phase := range db.PHASE_NAME_LIST {
-		deployment := objects.GetDeployment(pipeline.Service.ID, service, phase, offlineGroup)
+		deployment := objects.GetDeployment(pipeline.Service.Name, pipeline.Service.ID, phase, offlineGroup)
 		if dep.exist(namespace, deployment) {
 			if err := dep.scale(0, namespace, deployment); err != nil {
 				log.Errorf("scale deployment: %s replicas: 0 error: %s", deployment, err)

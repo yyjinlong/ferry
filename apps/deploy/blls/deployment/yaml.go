@@ -8,36 +8,25 @@ package deployment
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"ferry/ops/log"
 )
 
 type yaml struct {
-	pipelineID    int64               // 流水线ID
-	phase         string              // 部署阶段
-	namespace     string              // 当前服务所在命名空间
-	deployment    string              // deployment名字
-	serviceName   string              // 服务名
-	deployPath    string              // 部署路径
-	replicas      int                 // 副本数
-	reserveTime   int                 // 终止后的预留时间
-	containerConf string              // 容器配置
-	volumeConf    string              // 数据卷配置
-	imageList     []map[string]string // 模块镜像信息列表
-	rootPath      string              // 容器内默认部署根路径
-	volumeName    string              // 容器内默认卷名称
-}
-
-func (y *yaml) init() {
-	// NOTE: 服务部署路径默认为: hostPath类型的根路径.
-	y.rootPath = y.deployPath
-	log.Infof("default volume root path: %s", y.rootPath)
-
-	// NOTE: 基于根路径最后一段设置为: hostPath类型的默认数据卷名称.
-	y.volumeName = filepath.Base(y.rootPath)
-	log.Infof("default volume name: %s", y.volumeName)
+	pipelineID  int64  // 流水线ID
+	phase       string // 部署阶段
+	deployment  string // deployment名字
+	namespace   string // 当前服务所在命名空间
+	service     string // 服务名
+	imageURL    string // 镜像地址
+	imageTag    string // 镜像tag
+	replicas    int    // 副本数
+	quotaCpu    int    // cpu配额
+	quotaMaxCpu int    // cpu最大配额
+	quotaMem    int    // 内存配额
+	quotaMaxMem int    // 内存最大配额
+	volumeConf  string // 数据卷配置
+	reserveTime int    // 终止后的预留时间
 }
 
 func (y *yaml) instance() (string, error) {
@@ -107,7 +96,7 @@ func (y *yaml) selector() map[string]interface{} {
 
 func (y *yaml) labels() map[string]string {
 	return map[string]string{
-		"service": y.serviceName,
+		"service": y.service,
 		"phase":   y.phase,
 	}
 }
@@ -170,16 +159,11 @@ func (y *yaml) templateSpec() (interface{}, error) {
 	spec["dnsPolicy"] = "None"
 	spec["terminationGracePeriodSeconds"] = y.reserveTime
 
-	// NOTE: 加载默认的数据卷; 服务配置的数据卷.
 	volumes, err := y.volumes()
 	if err != nil {
 		return nil, err
 	}
 	spec["volumes"] = volumes
-
-	// NOTE: 初始化该服务的各个模块代码.
-	// NOTE: pod里的存储卷是共享的, 所以initContainers产生的数据可以被主容器访问到
-	spec["initContainers"] = y.initContainers()
 
 	containers, err := y.containers()
 	if err != nil {
@@ -234,10 +218,8 @@ func (y *yaml) dnsConfig() interface{} {
 }
 
 func (y *yaml) volumes() (interface{}, error) {
-	// 在宿主机上创建本地存储卷, 目前只支持hostPath类型.·
+	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath类型.
 	volumes := make([]interface{}, 0)
-	volumes = append(volumes, y.createDefaultVolume())
-
 	defineVolume, err := y.createDefineVolume()
 	if err != nil {
 		return nil, err
@@ -246,34 +228,9 @@ func (y *yaml) volumes() (interface{}, error) {
 	return volumes, nil
 }
 
-// 创建默认数据卷
-func (y *yaml) createDefaultVolume() interface{} {
-	/*
-		volumes:
-		  - name: www
-		    hostPath:
-		      path: /home/worker/www/ivr/上线流程ID
-		      type: DirectoryOrCreate
-		说明: 将宿主机上的/home/worker/www/ivr目录挂载到pod内, 挂载点名为www
-		约定: 宿主机的根路径 == 容器内服务的根路径
-	*/
-
-	// NOTE: 根据pipeline id创建本次hostPath宿主机路径(注: 一个上线流程对应一个路径)
-	nodeHostPath := fmt.Sprintf("%s/%s/%d", y.rootPath, y.serviceName, y.pipelineID)
-	hostPath := map[string]string{
-		"path": nodeHostPath,
-		"type": "DirectoryOrCreate",
-	}
-	defaultVolume := make(map[string]interface{})
-	defaultVolume["name"] = y.volumeName
-	defaultVolume["hostPath"] = hostPath
-	log.Infof("create default volume: %v finish", defaultVolume)
-	return defaultVolume
-}
-
-// 创建自定义的数据卷(服务需要的数据卷)
 func (y *yaml) createDefineVolume() (interface{}, error) {
 	/*
+	   创建自定义的数据卷(服务需要的数据卷)
 	   volumes:
 	     - name:
 	       hostPath:
@@ -281,100 +238,35 @@ func (y *yaml) createDefineVolume() (interface{}, error) {
 	         type:
 	*/
 
-	type volume struct {
-		VolumeName   string `json:"newvolume_name"`
-		VolumeType   string `json:"newvolume_type"`
-		HostPathType string `json:"hostpath_type"`
-		HostPath     string `json:"hostpath"`
+	type physicalInfo struct {
+		HostpathType string `json:"hostpath_type"`
+		PhysicalPath string `json:"physical_path"`
 	}
-	var volumeList []volume
 
-	if err := json.Unmarshal([]byte(y.volumeConf), &volumeList); err != nil {
+	type volume struct {
+		Type     string       `json:"volume_type"`
+		Name     string       `json:"volume_name"`
+		Physical physicalInfo `json:"physical"`
+	}
+
+	var volumes []volume
+	if err := json.Unmarshal([]byte(y.volumeConf), &volumes); err != nil {
 		return nil, err
 	}
 
 	defineVolume := make(map[string]interface{})
-	for _, item := range volumeList {
-		defineVolume["name"] = item.VolumeName
-		if item.VolumeType == "hostPath" {
+	for _, item := range volumes {
+		defineVolume["name"] = item.Name
+		if item.Type == "hostPath" {
 			hostPath := map[string]string{
-				"type": item.HostPathType,
-				"path": item.HostPath,
+				"type": item.Physical.HostpathType,
+				"path": item.Physical.PhysicalPath,
 			}
 			defineVolume["hostPath"] = hostPath
 		}
 	}
 	log.Infof("create define volume: %v finish", defineVolume)
 	return defineVolume, nil
-}
-
-func (y *yaml) initContainers() interface{} {
-	/*
-		initContainers:
-		  - name:
-		    image:
-		    imagePullPolicy:
-		    command:
-		    ...
-		    volumeMounts:
-		    ...
-	*/
-	initContainers := make([]interface{}, 0)
-	for _, item := range y.imageList {
-		moduleName := item["module_name"]
-		imageURL := item["image_url"]
-		imageTag := item["image_tag"]
-		log.Infof("init container current init module: %s", moduleName)
-
-		// NOTE: 将容器内的部署路径挂载到默认的挂载点下
-		volumeMounts := []map[string]string{{
-			"name":      y.volumeName,
-			"mountPath": y.rootPath,
-		}}
-		log.Infof("init container mount path: %s to: %s", y.rootPath, y.volumeName)
-
-		// NOTE: 代码镜像添加'-code'后缀, 区别于运行镜像名, 避免重名.
-		containerName := fmt.Sprintf("%s-code", moduleName)
-		containerInfo := map[string]interface{}{
-			"volumeMounts":    volumeMounts,
-			"name":            containerName,
-			"image":           fmt.Sprintf("%s:%s", imageURL, imageTag),
-			"imagePullPolicy": "IfNotPresent",
-			"command":         y.codeCopy(moduleName),
-		}
-		initContainers = append(initContainers, containerInfo)
-	}
-	return initContainers
-}
-
-// 将代码拷贝到数据卷所挂载的节点路径
-func (y *yaml) codeCopy(moduleName string) []string {
-	/* 为什么要判断doneFile, 以及为什么要使用flock?
-	 * 一个服务至少有两个deployment, 一个是sandbox的、一个是oneline的.
-	 * 在同一个上线流程里, 这两个deployment代码路径一致.
-	 * 一个deployment拷贝完成后, 另一个则无需拷贝. 所以需要判断doneFile.
-	 * 如果第一个deployment没有拷贝完, 则另一个则不能进行拷贝, 这就是flock排它锁的作用.
-	 */
-	lockFile := fmt.Sprintf("%s/cp_code_lock_%s", y.rootPath, moduleName)
-	doneFile := fmt.Sprintf("%s/cp_code_done_%s", y.rootPath, moduleName)
-	destPath := filepath.Join(y.rootPath, moduleName)
-
-	copyCmdList := []string{
-		"if [ ! -f \"" + doneFile + "\" ]; then",
-		"cp -rfp /src/* " + y.rootPath + " &&",
-		"chown -R 500:500 " + destPath + " &&",
-		"touch " + doneFile + "; fi",
-	}
-	copyCmd := strings.Join(copyCmdList, " ")
-
-	command := []string{
-		"/usr/bin/flock",
-		"-x",
-		lockFile,
-		"-c",
-		copyCmd,
-	}
-	return command
 }
 
 func (y *yaml) containers() (interface{}, error) {
@@ -392,51 +284,27 @@ func (y *yaml) containers() (interface{}, error) {
 	     volumeMounts:
 	       ...
 	*/
-	type volumeInfo struct {
-		Name      string `json:"volume_name"`
-		MountPath string `json:"volume_mount_path"`
-		SubPath   string `json:"volume_subpath"`
-	}
-
-	type quotaInfo struct {
-		CPU    int `json:"budget_cpu"`
-		CPUMax int `json:"budget_max_cpu"`
-		Mem    int `json:"budget_memory"`
-		MemMax int `json:"budget_max_memory"`
-	}
-
-	type containerInfo struct {
-		ImageURL string       `json:"image_url"`
-		Volume   []volumeInfo `json:"volume"`
-		Quota    quotaInfo    `json:"quota"`
-	}
-
-	var cList []containerInfo
-
-	if err := json.Unmarshal([]byte(y.containerConf), &cList); err != nil {
-		return nil, err
-	}
 
 	containerList := make([]interface{}, 0)
-	for _, item := range cList {
-		resources := y.setResource(item.Quota.CPU, item.Quota.CPUMax, item.Quota.Mem, item.Quota.MemMax)
-
-		containers := make(map[string]interface{})
-		containers["volumeMounts"] = y.mountVolume()
-		containers["name"] = y.serviceName
-		containers["image"] = item.ImageURL
-		containers["imagePullPolicy"] = "IfNotPresent"
-		containers["env"] = y.setEnv()
-		containers["resources"] = resources
-		containers["securityContext"] = y.security()
-		containers["lifecycle"] = y.lifecycle()
-
-		// livenessProbe
-
-		// readinessProbe
-
-		containerList = append(containerList, containers)
+	container := make(map[string]interface{})
+	container["name"] = y.service
+	container["image"] = fmt.Sprintf("%s:%s", y.imageURL, y.imageTag)
+	container["imagePullPolicy"] = "IfNotPresent"
+	container["env"] = y.setEnv()
+	container["resources"] = y.setResource(y.quotaCpu, y.quotaMaxCpu, y.quotaMem, y.quotaMaxMem)
+	container["securityContext"] = y.security()
+	container["lifecycle"] = y.lifecycle()
+	volumeMounts, err := y.mountContainerVolume()
+	if err != nil {
+		return nil, err
 	}
+	container["volumeMounts"] = volumeMounts
+
+	// livenessProbe
+
+	// readinessProbe
+
+	containerList = append(containerList, container)
 	return containerList, nil
 }
 
@@ -447,7 +315,7 @@ func (y *yaml) setEnv() interface{} {
 	         value:
 	*/
 	env := []map[string]string{
-		{"name": "SERVICE", "value": y.serviceName},
+		{"name": "SERVICE", "value": y.service},
 	}
 	return env
 }
@@ -474,30 +342,39 @@ func (y *yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	}
 }
 
-// 将宿主机代码挂载到主容器
-func (y *yaml) mountVolume() interface{} {
+func (y *yaml) mountContainerVolume() (interface{}, error) {
 	/*
 	   volumeMounts:
 	     - mountPath:
 	       name:
 	       subPath:
 	*/
-	rootPath := y.rootPath     // 容器内根路径
-	mountPoint := y.volumeName // 容器内挂载点
+
+	type containerInfo struct {
+		ContainerPath string `json:"container_path"`
+	}
+
+	type volume struct {
+		Type      string        `json:"volume_type"`
+		Name      string        `json:"volume_name"`
+		Container containerInfo `json:"container"`
+	}
+
+	var volumes []volume
+	if err := json.Unmarshal([]byte(y.volumeConf), &volumes); err != nil {
+		return nil, err
+	}
 
 	containerVolumeMounts := make([]map[string]string, 0)
-	for _, item := range y.imageList {
-		moduleName := item["module_name"]
-		mountPath := filepath.Join(rootPath, moduleName)
+	for _, item := range volumes {
 		containerVolume := map[string]string{
-			"name":      mountPoint,
-			"mountPath": mountPath,
-			"subPath":   moduleName,
+			"name":      item.Name,
+			"mountPath": item.Container.ContainerPath,
 		}
 		containerVolumeMounts = append(containerVolumeMounts, containerVolume)
-		log.Infof("container volume mount path: %s to: %s", mountPath, mountPoint)
+		log.Infof("container volume mount path: %s to: %s", item.Container.ContainerPath, item.Name)
 	}
-	return containerVolumeMounts
+	return containerVolumeMounts, nil
 }
 
 func (y *yaml) security() interface{} {
