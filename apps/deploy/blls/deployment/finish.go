@@ -20,29 +20,7 @@ type Finish struct {
 	pid int64
 }
 
-func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
-	if err := f.checkParam(c, r.RequestID); err != nil {
-		return nil, err
-	}
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})
-
-	pipeline, err := objects.GetPipelineInfo(f.pid)
-	if err != nil {
-		log.Errorf("get pipeline info error: %s", err)
-		return nil, err
-	}
-
-	if !f.clearOld(pipeline) {
-		return nil, fmt.Errorf("old group deployment scale to 0 failed")
-	}
-
-	if err := f.setOnline(pipeline); err != nil {
-		return nil, err
-	}
-	return "", nil
-}
-
-func (f *Finish) checkParam(c *gin.Context, logid string) error {
+func (f *Finish) validate(c *gin.Context, logid string) error {
 	type params struct {
 		ID int64 `form:"pipeline_id" binding:"required"`
 	}
@@ -60,7 +38,7 @@ func (f *Finish) clearOld(pipeline *db.PipelineQuery) bool {
 
 	// NOTE: 在确认时, 原有表记录的组则变为待下线组
 	offlineGroup := pipeline.Service.OnlineGroup
-	log.Infof("get current clear offline group: %s", offlineGroup)
+	log.Infof("(1) begin clear current offline group: %s", offlineGroup)
 	if offlineGroup == "none" {
 		return true
 	}
@@ -86,6 +64,28 @@ func (f *Finish) setOnline(pipeline *db.PipelineQuery) error {
 	if err := objects.UpdateGroup(f.pid, pipeline.Service.Name, group); err != nil {
 		log.Errorf("set current group: %s online error: %s", group, err)
 	}
-	log.Infof("set current group: %s online success.", group)
+	log.Infof("(2) set current group: %s online success.", group)
 	return nil
+}
+
+func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
+	if err := f.validate(c, r.RequestID); err != nil {
+		return nil, err
+	}
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})
+
+	pipeline, err := objects.GetPipelineInfo(f.pid)
+	if err != nil {
+		log.Errorf("get pipeline info error: %s", err)
+		return nil, err
+	}
+
+	if !f.clearOld(pipeline) {
+		return nil, fmt.Errorf("old group deployment scale to 0 failed")
+	}
+
+	if err := f.setOnline(pipeline); err != nil {
+		return nil, err
+	}
+	return "", nil
 }
