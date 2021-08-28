@@ -37,7 +37,7 @@ type Service struct {
 	UpdateAt    time.Time `xorm:"timestamp notnull updated"`
 }
 
-type Module struct {
+type CodeModule struct {
 	ID        int64
 	ServiceID int64     `xorm:"bigint notnull"`
 	Name      string    `xorm:"varchar(50) notnull"`
@@ -65,7 +65,7 @@ type Pipeline struct {
 type PipelineUpdate struct {
 	ID           int64
 	PipelineID   int64     `xorm:"bigint notnull"`
-	ModuleID     int64     `xorm:"bigint notnull"`
+	CodeModuleID int64     `xorm:"bigint notnull"`
 	DeployBranch string    `xorm:"varchar(20)"`
 	CodeTag      string    `xorm:"varchar(50)"`
 	CreateAt     time.Time `xorm:"timestamp notnull created"`

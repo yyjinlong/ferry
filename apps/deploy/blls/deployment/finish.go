@@ -39,7 +39,7 @@ func (f *Finish) clearOld(pipeline *db.PipelineQuery) bool {
 	// NOTE: 在确认时, 原有表记录的组则变为待下线组
 	offlineGroup := pipeline.Service.OnlineGroup
 	log.Infof("(1) begin clear current offline group: %s", offlineGroup)
-	if offlineGroup == "none" {
+	if offlineGroup == "" {
 		return true
 	}
 

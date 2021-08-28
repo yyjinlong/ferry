@@ -76,7 +76,7 @@ create table if not exists pipeline (
 create table if not exists pipeline_update (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
-    module_id int not null,                                                    -- 变更的代码模块
+    code_module_id int not null,                                               -- 变更的代码模块
     deploy_branch varchar(20) default 'master',                                -- 变更的代码模块对应的部署分支 master上线、分支上线
     code_tag varchar(50),                                                      -- 基于代码模块打的tag
     create_at timestamp not null default now()
@@ -119,6 +119,6 @@ insert into code_module(service_id, name, language, repos_name, repos_addr) valu
 
 -- 测试pipline
 insert into pipeline(service_id, name, summary, creator, rd, qa, pm) values(1, 'ONLINE TEST', 'TEST', 'yangjinlong', 'yangjinlong', 'yangjinlong', 'yangjinlong');
-insert into pipeline_update(pipeline_id, module_id, deploy_branch, code_tag) values(1, 1, 'master', 'release_ivr_20210817_153246');
+insert into pipeline_update(pipeline_id, code_module_id, deploy_branch, code_tag) values(1, 1, 'master', 'release_ivr_20210817_153246');
 
 commit;

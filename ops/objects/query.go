@@ -41,8 +41,8 @@ func GetService(name string) (*db.Service, error) {
 	return service, nil
 }
 
-func GetModules(serviceID int64) ([]db.Module, error) {
-	moduleList := make([]db.Module, 0)
+func GetCodeModules(serviceID int64) ([]db.CodeModule, error) {
+	moduleList := make([]db.CodeModule, 0)
 	if err := db.SEngine.Where("service_id=?", serviceID).Find(&moduleList); err != nil {
 		return nil, err
 	}

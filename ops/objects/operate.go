@@ -50,8 +50,8 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		moduleName := moduleInfo["name"]
 		deployBranch := moduleInfo["branch"]
 
-		module := new(db.Module)
-		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(module); err != nil {
+		codeModule := new(db.CodeModule)
+		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(codeModule); err != nil {
 			return err
 		} else if !has {
 			return fmt.Errorf("query match is not exists")
@@ -59,12 +59,12 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 
 		pipelineUpdate := new(db.PipelineUpdate)
 		pipelineUpdate.PipelineID = pipeline.ID
-		pipelineUpdate.ModuleID = module.ID
+		pipelineUpdate.CodeModuleID = codeModule.ID
 		pipelineUpdate.DeployBranch = deployBranch
 		if _, err := session.Insert(pipelineUpdate); err != nil {
 			return err
 		}
-		log.Infof("create update info success. by module: %s branch: %s", moduleName, deployBranch)
+		log.Infof("create update info success. by code_module: %s branch: %s", moduleName, deployBranch)
 	}
 	return session.Commit()
 }
