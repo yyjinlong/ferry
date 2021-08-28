@@ -152,6 +152,8 @@ func (y *yaml) templateSpec() (interface{}, error) {
 			...
 		  containers:
 			...
+		  affinity:
+			...
 	*/
 	spec := make(map[string]interface{})
 	spec["hostAliases"] = y.hostAliases()
@@ -283,6 +285,12 @@ func (y *yaml) containers() (interface{}, error) {
 	       ...
 	     volumeMounts:
 	       ...
+	     livenessProbe:
+	       ...
+	     readinessProbe:
+	       ...
+	     terminationMessagePath:
+	     terminationMessagePolicy:
 	*/
 
 	containerList := make([]interface{}, 0)
@@ -299,11 +307,10 @@ func (y *yaml) containers() (interface{}, error) {
 		return nil, err
 	}
 	container["volumeMounts"] = volumeMounts
-
-	// livenessProbe
-
-	// readinessProbe
-
+	container["livenessProbe"] = y.liveness()
+	container["readinessProbe"] = y.readiness()
+	container["terminationMessagePath"] = "/dev/termination-log"
+	container["terminationMessagePolicy"] = "File"
 	containerList = append(containerList, container)
 	return containerList, nil
 }
@@ -342,6 +349,44 @@ func (y *yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	}
 }
 
+func (y *yaml) security() interface{} {
+	/*
+	   securityContext:
+	     capabilities:
+	       add:
+	*/
+
+	sysList := []string{"SYS_ADMIN", "SYS_PTRACE"}
+	capabilities := map[string][]string{"add": sysList}
+	context := map[string]interface{}{
+		"capabilities": capabilities,
+	}
+	return context
+}
+
+func (y *yaml) lifecycle() interface{} {
+	/*
+	   在容器被终结之前, Kubernetes 将发送一个 preStop 事件.
+	   优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 30秒等待未处理完的请求,
+	             如果没处理完, 则会被强制终止(kill -9)
+	   lifecycle:
+	     preStop:
+	       exec:
+	         command:
+	*/
+	stopCmd := []string{
+		"/bin/sh",
+		"-c",
+		"sleep 30",
+	}
+	stopExec := map[string]interface{}{"command": stopCmd}
+	preStop := map[string]interface{}{"exec": stopExec}
+
+	life := make(map[string]interface{})
+	life["preStop"] = preStop
+	return life
+}
+
 func (y *yaml) mountContainerVolume() (interface{}, error) {
 	/*
 	   volumeMounts:
@@ -377,37 +422,58 @@ func (y *yaml) mountContainerVolume() (interface{}, error) {
 	return containerVolumeMounts, nil
 }
 
-func (y *yaml) security() interface{} {
+func (y *yaml) liveness() interface{} {
 	/*
-	   securityContext:
-	     capabilities:
-	       add:
+		exec:
+		  command:
+		    ...
+		initialDelaySeconds:
+		timeoutSeconds:
+		periodSeconds:
+		successThreshold:
+		failureThreshold:
 	*/
 
-	sysList := []string{"SYS_ADMIN", "SYS_PTRACE"}
-	capabilities := map[string][]string{"add": sysList}
-	context := map[string]interface{}{
-		"capabilities": capabilities,
+	command := []string{
+		"/bin/sh",
+		"/home/tong/opbin/liveness-prob.sh",
 	}
-	return context
+	exec := map[string][]string{"command": command}
+
+	live := make(map[string]interface{})
+	live["exec"] = exec
+	live["initialDelaySeconds"] = 5
+	live["timeoutSeconds"] = 5
+	live["periodSeconds"] = 60
+	live["successThreshold"] = 1
+	live["failureThreshold"] = 3
+	return live
 }
 
-func (y *yaml) lifecycle() interface{} {
+func (y *yaml) readiness() interface{} {
 	/*
-	   lifecycle:
-	     preStop:
-	       exec:
-	         command:
+		exec:
+		  command:
+		    ...
+		initialDelaySeconds:
+		timeoutSeconds:
+		periodSeconds:
+		successThreshold:
+		failureThreshold:
 	*/
-	stopCmd := []string{
-		"/bin/sh",
-		"-c",
-		"sleep 2",
-	}
-	stopExec := map[string]interface{}{"command": stopCmd}
-	preStop := map[string]interface{}{"exec": stopExec}
 
-	life := make(map[string]interface{})
-	life["preStop"] = preStop
-	return life
+	command := []string{
+		"/bin/sh",
+		"/home/tong/opbin/readiness-probe.sh",
+	}
+	exec := map[string][]string{"command": command}
+
+	ready := make(map[string]interface{})
+	ready["exec"] = exec
+	ready["initialDelaySeconds"] = 5
+	ready["timeoutSeconds"] = 10
+	ready["periodSeconds"] = 10
+	ready["successThreshold"] = 1
+	ready["failureThreshold"] = 10
+	return ready
 }
