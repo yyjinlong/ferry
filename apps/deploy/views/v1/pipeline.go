@@ -15,3 +15,7 @@ import (
 func PipelineCreate(c *gin.Context) {
 	base.Construct(&pipeline.Build{}, c)
 }
+
+func BuildImage(c *gin.Context) {
+	base.Construct(&pipeline.BuildImage{}, c)
+}

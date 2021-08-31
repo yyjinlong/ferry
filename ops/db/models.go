@@ -123,6 +123,13 @@ type ImageQuery struct {
 	Pipeline      `xorm:"extends"`
 }
 
+type UpdateQuery struct {
+	PipelineUpdate `xorm:"extends"`
+	Pipeline       `xorm:"extends"`
+	CodeModule     `xorm:"extends"`
+	Service        `xorm:"extends"`
+}
+
 // 阶段名称
 const (
 	PHASE_IMAGE   = "image"

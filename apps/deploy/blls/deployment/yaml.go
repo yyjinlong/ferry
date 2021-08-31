@@ -96,7 +96,7 @@ func (y *yaml) selector() map[string]interface{} {
 
 func (y *yaml) labels() map[string]string {
 	return map[string]string{
-		"service": y.service,
+		"service": y.deployment,
 		"phase":   y.phase,
 	}
 }
@@ -172,6 +172,7 @@ func (y *yaml) templateSpec() (interface{}, error) {
 		return nil, err
 	}
 	spec["containers"] = containers
+	spec["affinity"] = y.affinity()
 	return spec, nil
 }
 
@@ -269,6 +270,41 @@ func (y *yaml) createDefineVolume() (interface{}, error) {
 	}
 	log.Infof("create define volume: %v finish", defineVolume)
 	return defineVolume, nil
+}
+
+func (y *yaml) affinity() interface{} {
+	/*
+		同一deployment下的pod散列在不同node上.
+		podAntiAffinity:
+		  preferredDuringSchedulingIgnoredDuringExecution:
+		  - podAffinityTerm:
+		      labelSelector:
+		        matchExpressions:
+		        - key: service
+		          operator: In
+		          values:
+		          - deployment名字
+		      topologyKey: kubernetes.io/hostname
+		    weight: 100
+	*/
+
+	compare := make(map[string]interface{})
+	compare["key"] = "service"
+	compare["operator"] = "In"
+	compare["values"] = []string{y.deployment}
+	matchExpression := []interface{}{compare}
+	labelSelector := map[string]interface{}{"matchExpressions": matchExpression}
+
+	podAffinityTerm := make(map[string]interface{})
+	podAffinityTerm["labelSelector"] = labelSelector
+	podAffinityTerm["topologyKey"] = "kubernetes.io/hostname"
+
+	policy := make(map[string]interface{})
+	policy["podAffinityTerm"] = podAffinityTerm
+	policy["weight"] = 100
+	policies := []interface{}{policy}
+	softLimit := map[string]interface{}{"preferredDuringSchedulingIgnoredDuringExecution": policies}
+	return map[string]interface{}{"podAntiAffinity": softLimit}
 }
 
 func (y *yaml) containers() (interface{}, error) {

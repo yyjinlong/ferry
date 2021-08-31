@@ -20,7 +20,7 @@ type Finish struct {
 	pid int64
 }
 
-func (f *Finish) validate(c *gin.Context, logid string) error {
+func (f *Finish) validate(c *gin.Context) error {
 	type params struct {
 		ID int64 `form:"pipeline_id" binding:"required"`
 	}
@@ -69,7 +69,7 @@ func (f *Finish) setOnline(pipeline *db.PipelineQuery) error {
 }
 
 func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
-	if err := f.validate(c, r.RequestID); err != nil {
+	if err := f.validate(c); err != nil {
 		return nil, err
 	}
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})

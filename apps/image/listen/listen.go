@@ -54,7 +54,6 @@ func (m *mirror) Consumer(body []byte) error {
 func listenMQ() {
 	mqConf := g.Config().RabbitMQ
 	rmq := mq.NewRabbitMQ(mqConf.Address, mqConf.Exchange, mqConf.Queue, mqConf.RoutingKey)
-	rmq.Connect()
 	rmq.Consume(&mirror{})
 }
 

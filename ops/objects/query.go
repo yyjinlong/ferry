@@ -112,3 +112,15 @@ func FindPipelineInfo(service string) ([]db.PipelineQuery, error) {
 	}
 	return pqList, nil
 }
+
+func FindUpdateInfo(pipelineID int64) ([]db.UpdateQuery, error) {
+	uqList := make([]db.UpdateQuery, 0)
+	if err := db.SEngine.Table("pipeline_update").
+		Join("INNER", "pipeline", "pipeline_update.pipeline_id = pipeline.id").
+		Join("INNER", "code_module", "pipeline_update.code_module_id = code_module.id").
+		Join("INNER", "service", "pipeline.service_id = service.id").
+		Where("pipeline_update.pipeline_id = ?", pipelineID).Find(&uqList); err != nil {
+		return nil, err
+	}
+	return uqList, nil
+}
