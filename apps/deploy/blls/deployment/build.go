@@ -43,7 +43,7 @@ func (b *Build) validate(c *gin.Context) error {
 	return nil
 }
 
-func (b *Build) createYaml(pipeline *db.PipelineQuery, deployment string) (string, error) {
+func (b *Build) createYaml(pipeline *db.PipelineQuery, deployment, appid string) (string, error) {
 	imageInfo, err := objects.FindImageInfo(b.pid)
 	if err != nil {
 		return "", err
@@ -64,6 +64,7 @@ func (b *Build) createYaml(pipeline *db.PipelineQuery, deployment string) (strin
 		pipelineID:  b.pid,
 		phase:       b.phase,
 		deployment:  deployment,
+		appid:       appid,
 		namespace:   pipeline.Namespace.Name,
 		service:     pipeline.Service.Name,
 		imageURL:    imageInfo["image_url"],
@@ -115,8 +116,9 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	group := objects.GetDeployGroup(pipeline.Service.OnlineGroup)
 	log.Infof("get current deploy group: %s", group)
 
+	appid := objects.GetAppID(pipeline.Service.Name, pipeline.Service.ID, b.phase)
 	deployment := objects.GetDeployment(pipeline.Service.Name, pipeline.Service.ID, b.phase, group)
-	log.Infof("get current deployment name: %s", deployment)
+	log.Infof("get current deployment name: %s appid: %s", deployment, appid)
 
 	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
 		log.Errorf("create %s phase error: %s", b.phase, err)
@@ -124,7 +126,7 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	}
 	log.Infof("create %s phase success", b.phase)
 
-	tpl, err := b.createYaml(pipeline, deployment)
+	tpl, err := b.createYaml(pipeline, deployment, appid)
 	if err != nil {
 		log.Errorf("create yaml error: %s", err)
 		return nil, err

@@ -17,24 +17,26 @@ type Namespace struct {
 }
 
 type Service struct {
-	ID          int64
-	NamespaceID int64     `xorm:"bigint notnull"`
-	Name        string    `xorm:"varchar(32) notnull unique"`
-	ImageAddr   string    `xorm:"varchar(500) notnull"`
-	QuotaCpu    int       `xorm:"int"`
-	QuotaMaxCpu int       `xorm:"int"`
-	QuotaMem    int       `xorm:"int"`
-	QuotaMaxMem int       `xorm:"int"`
-	Replicas    int       `xorm:"int"`
-	Volume      string    `xorm:"text"`
-	ReserveTime int       `xorm:"int"`
-	OnlineGroup string    `xorm:"varchar(20) notnull"`
-	MultiPhase  bool      `xorm:"bool"`
-	Lock        string    `xorm:"varchar(100) notnull"`
-	RD          string    `xorm:"varchar(50) notnull"`
-	OP          string    `xorm:"varchar(50) notnull"`
-	CreateAt    time.Time `xorm:"timestamp notnull created"`
-	UpdateAt    time.Time `xorm:"timestamp notnull updated"`
+	ID            int64
+	NamespaceID   int64     `xorm:"bigint notnull"`
+	Name          string    `xorm:"varchar(32) notnull unique"`
+	ImageAddr     string    `xorm:"varchar(500) notnull"`
+	QuotaCpu      int       `xorm:"int"`
+	QuotaMaxCpu   int       `xorm:"int"`
+	QuotaMem      int       `xorm:"int"`
+	QuotaMaxMem   int       `xorm:"int"`
+	Replicas      int       `xorm:"int"`
+	Volume        string    `xorm:"text"`
+	ReserveTime   int       `xorm:"int"`
+	Port          int       `xorm:"int"`
+	ContainerPort int       `xorm:"int"`
+	OnlineGroup   string    `xorm:"varchar(20) notnull"`
+	MultiPhase    bool      `xorm:"bool"`
+	Lock          string    `xorm:"varchar(100) notnull"`
+	RD            string    `xorm:"varchar(50) notnull"`
+	OP            string    `xorm:"varchar(50) notnull"`
+	CreateAt      time.Time `xorm:"timestamp notnull created"`
+	UpdateAt      time.Time `xorm:"timestamp notnull updated"`
 }
 
 type CodeModule struct {
@@ -128,6 +130,11 @@ type UpdateQuery struct {
 	Pipeline       `xorm:"extends"`
 	CodeModule     `xorm:"extends"`
 	Service        `xorm:"extends"`
+}
+
+type ServiceQuery struct {
+	Service   `xorm:"extends"`
+	Namespace `xorm:"extends"`
 }
 
 // 阶段名称

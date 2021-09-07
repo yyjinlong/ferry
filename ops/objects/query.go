@@ -31,10 +31,15 @@ func GetDeployment(serviceName string, serviceID int64, phase, group string) str
 	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
 }
 
-func GetService(name string) (*db.Service, error) {
-	service := new(db.Service)
-	if has, err := db.SEngine.Where("name=?", name).Get(service); err != nil {
-		return nil, err
+func GetAppID(serviceName string, serviceID int64, phase string) string {
+	return fmt.Sprintf("%s-%d-%s", serviceName, serviceID, phase)
+}
+
+func GetServiceInfo(name string) (*db.ServiceQuery, error) {
+	service := new(db.ServiceQuery)
+	if has, err := db.SEngine.Table("service").
+		Join("INNER", "namespace", "service.namespace_id = namespace.id").
+		Where("service.name = ?", name).Get(service); err != nil {
 	} else if !has {
 		return nil, fmt.Errorf(NOTFOUND)
 	}

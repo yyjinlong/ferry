@@ -26,7 +26,8 @@ create table if not exists service (
     replicas int default 0,                          -- 服务的副本数(在线的)
     volume json,                                     -- 服务的数据卷配置信息
     reserve_time int default 60,                     -- 服务停止时预留多长时间再关闭
-
+    port int,                                        -- 服务端口
+    container_port int,                              -- 容器端口
     online_group varchar(20) default '',             -- 当前在线组(blue、green), 默认是空
     multi_phase bool default true,                   -- 服务是否是多阶段部署(分级发布)
     lock varchar(100) not null default '',           -- 服务锁

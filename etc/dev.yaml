@@ -27,4 +27,4 @@ registry:
 
 k8s:
   deployment: "http://10.12.28.4:8080/apis/apps/v1/namespaces/%s/deployments"
-  service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services/%s"
+  service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services"

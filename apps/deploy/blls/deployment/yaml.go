@@ -16,6 +16,7 @@ type yaml struct {
 	pipelineID  int64  // 流水线ID
 	phase       string // 部署阶段
 	deployment  string // deployment名字
+	appid       string // 应用标识, 用于过滤
 	namespace   string // 当前服务所在命名空间
 	service     string // 服务名
 	imageURL    string // 镜像地址
@@ -98,6 +99,7 @@ func (y *yaml) labels() map[string]string {
 	return map[string]string{
 		"service": y.deployment,
 		"phase":   y.phase,
+		"appid":   y.appid,
 	}
 }
 
@@ -145,6 +147,9 @@ func (y *yaml) templateSpec() (interface{}, error) {
 		  dnsConfig:
 			...
 		  dnsPolicy:
+		  imagePullecrets:
+		  nodeSelector:
+			...
 		  terminationGracePeriodSeconds:
 		  volumes:
 			...
@@ -160,6 +165,7 @@ func (y *yaml) templateSpec() (interface{}, error) {
 	spec["dnsConfig"] = y.dnsConfig()
 	spec["dnsPolicy"] = "None"
 	spec["terminationGracePeriodSeconds"] = y.reserveTime
+	spec["nodeSelector"] = y.nodeSelector()
 
 	volumes, err := y.volumes()
 	if err != nil {
@@ -217,6 +223,16 @@ func (y *yaml) dnsConfig() interface{} {
 	dnsList := []string{"114.114.114.114"}
 	return map[string][]string{
 		"nameservers": dnsList,
+	}
+}
+
+func (y *yaml) nodeSelector() interface{} {
+	/*
+	   nodeSelector:
+	     ...
+	*/
+	return map[string]string{
+		"aggregate": "default",
 	}
 }
 

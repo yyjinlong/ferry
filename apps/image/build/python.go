@@ -104,13 +104,13 @@ func (p *pyBuild) copyDockerfile(buildPath string) error {
 }
 
 func (p *pyBuild) dockerBuild(service, imageURL, imageTag, releaseTag, buildPath string) error {
-	svc, err := objects.GetService(service)
+	si, err := objects.GetServiceInfo(service)
 	if err != nil {
 		log.Errorf("query service: %s failed: %s", service, err)
 		return err
 	}
 
-	repo := fmt.Sprintf("repo=%s", svc.ImageAddr)
+	repo := fmt.Sprintf("repo=%s", si.Service.ImageAddr)
 	log.Infof("docker build --build-arg %s -t %s %s", repo, releaseTag, buildPath)
 
 	if err := g.Execute("docker", "build", "--build-arg", repo, "-t", releaseTag, buildPath); err != nil {

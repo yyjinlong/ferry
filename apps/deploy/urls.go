@@ -24,6 +24,7 @@ func urls(r *gin.Engine) {
 		g1.GET("/deployment", v1.DeploymentQuery)
 		g1.POST("/deployment", v1.DeploymentBuild)
 
+		g1.POST("/tag", v1.BuildTag)
 		g1.POST("/image", v1.BuildImage)
 		g1.POST("/finish", v1.DeploymentFinish)
 
