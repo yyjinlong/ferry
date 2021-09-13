@@ -6,7 +6,6 @@
 package service
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 
 	"ferry/ops/base"
@@ -62,7 +61,6 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("----------tpl: ", tpl)
 	log.Infof("fetch service tpl: %s", tpl)
 
 	ss := newServices()
