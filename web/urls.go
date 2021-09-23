@@ -8,8 +8,8 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/apps/deploy/views"
-	"ferry/apps/deploy/views/v1"
+	"ferry/web/views"
+	"ferry/web/views/v1"
 )
 
 func urls(r *gin.Engine) {

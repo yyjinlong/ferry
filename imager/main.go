@@ -8,14 +8,14 @@ package main
 import (
 	"flag"
 
-	"ferry/apps/image/listen"
+	"ferry/imager/listen"
 	"ferry/ops/db"
 	"ferry/ops/g"
 	"ferry/ops/log"
 )
 
 var (
-	cfgFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
+	cfgFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
 	help    = flag.Bool("h", false, "show help info.")
 )
 

@@ -18,6 +18,7 @@ type Settings struct {
 	Postgres  PostgresInfo  `yaml:"postgres"`
 	RabbitMQ  RabbtimqInfo  `yaml:"rabbitmq"`
 	Build     BuildInfo     `yaml:"build"`
+	Watch     WatchInfo     `yaml:"watch"`
 	Registry  RegistryInfo  `yaml:"registry"`
 	K8S       K8SInfo       `yaml:"k8s"`
 }
@@ -48,11 +49,16 @@ type BuildInfo struct {
 	LogFile string `yaml:"logfile"`
 }
 
+type WatchInfo struct {
+	LogFile string `yaml:"logfile"`
+}
+
 type RegistryInfo struct {
 	Release string `yaml:"release"`
 }
 
 type K8SInfo struct {
+	Kubeconfig string `yaml:"kubeconfig"`
 	Deployment string `yaml:"deployment"`
 	Service    string `yaml:"service"`
 }

@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	cfgFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
+	cfgFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
 	help    = flag.Bool("h", false, "show help info.")
 )
 

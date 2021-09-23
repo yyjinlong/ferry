@@ -8,8 +8,8 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/apps/deploy/blls/pipeline"
 	"ferry/ops/base"
+	"ferry/web/blls/pipeline"
 )
 
 func PipelineCreate(c *gin.Context) {
