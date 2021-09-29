@@ -27,11 +27,14 @@ func (bt *BuildTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, erro
 	if err := c.ShouldBind(&data); err != nil {
 		return "", err
 	}
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": data.ID})
+	var (
+		pid    = data.ID
+		module = data.Module
+		tag    = data.Tag
+	)
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
 
-	module := data.Module
-	tag := data.Tag
-	if err := objects.UpdateTag(data.ID, module, tag); err != nil {
+	if err := objects.UpdateTag(pid, module, tag); err != nil {
 		return "", err
 	}
 	log.Infof("module: %s update tag: %s success", module, tag)
