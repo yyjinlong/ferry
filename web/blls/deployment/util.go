@@ -21,8 +21,10 @@ type deployments struct {
 }
 
 func (d *deployments) exist(namespace, deployment string) bool {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
-	header := map[string]string{"Content-Type": "application/json"}
+	var (
+		url    = fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
+		header = map[string]string{"Content-Type": "application/json"}
+	)
 	body, err := g.Get(url, header, nil, 5)
 	if err != nil {
 		log.Infof("check deployment: %s is not exist", deployment)
@@ -36,8 +38,10 @@ func (d *deployments) exist(namespace, deployment string) bool {
 }
 
 func (d *deployments) create(namespace, tpl string) error {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace)
-	header := map[string]string{"Content-Type": "application/json"}
+	var (
+		url    = fmt.Sprintf(g.Config().K8S.Deployment, namespace)
+		header = map[string]string{"Content-Type": "application/json"}
+	)
 	body, err := g.Post(url, header, []byte(tpl), 5)
 	if err != nil {
 		log.Errorf("request create deployment api error: %s", err)
@@ -47,8 +51,10 @@ func (d *deployments) create(namespace, tpl string) error {
 }
 
 func (d *deployments) update(namespace, deployment, tpl string) error {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
-	header := map[string]string{"Content-Type": "application/json"}
+	var (
+		url    = fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment
+		header = map[string]string{"Content-Type": "application/json"}
+	)
 	body, err := g.Put(url, header, []byte(tpl), 5)
 	if err != nil {
 		log.Errorf("request update deployment api error: %s", err)
@@ -75,9 +81,11 @@ func (d *deployments) result(body string) error {
 }
 
 func (d *deployments) scale(replicas int, namespace, deployment string) error {
-	url := fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment + "/scale"
-	header := map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
-	payload := fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
+	var (
+		url     = fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment + "/scale"
+		header  = map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
+		payload = fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
+	)
 	body, err := g.Patch(url, header, []byte(payload), 5)
 	if err != nil {
 		log.Errorf("scale deployment: %s replicas: %d error: %s", deployment, replicas, err)
@@ -86,7 +94,7 @@ func (d *deployments) scale(replicas int, namespace, deployment string) error {
 
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("scale response body json decode result error: %s", err)
+		log.Errorf("scale deployment: %s response json decode error: %s", deployment, err)
 		return err
 	}
 
