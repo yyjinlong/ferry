@@ -27,25 +27,25 @@ func Python(data base.Image) {
 type pyBuild struct {
 }
 
-func (p *pyBuild) getBuildPath(mainPath, service string, pid int64) string {
+func (p *pyBuild) GetBuildPath(mainPath, service string, pid int64) string {
 	buildPath := filepath.Join(mainPath, service, strconv.FormatInt(pid, 10))
 	if _, err := os.Stat(buildPath); os.IsNotExist(err) {
 		os.MkdirAll(buildPath, os.ModePerm)
 	}
-	log.Infof("build image directory: %s", buildPath)
+	log.Infof("get build image directory: %s", buildPath)
 	return buildPath
 }
 
-func (p *pyBuild) getCodePath(buildPath string) string {
+func (p *pyBuild) GetCodePath(buildPath string) string {
 	codePath := filepath.Join(buildPath, "code")
 	if _, err := os.Stat(codePath); os.IsNotExist(err) {
 		os.Mkdir(codePath, os.ModePerm)
 	}
-	log.Infof("download code directory: %s", codePath)
+	log.Infof("get download code directory: %s", codePath)
 	return codePath
 }
 
-func (p *pyBuild) download(codePath, module, repo, tag string) error {
+func (p *pyBuild) DownloadCode(codePath, module, repo, tag string) error {
 	git := g.NewGit(module, repo, tag, codePath)
 	if err := git.Clone(); err != nil {
 		log.Errorf("git clone code failed: %s", err)
@@ -61,10 +61,12 @@ func (p *pyBuild) download(codePath, module, repo, tag string) error {
 	return nil
 }
 
-func (p *pyBuild) release(buildPath, service string, pid int64) error {
-	imageURL := fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
-	imageTag := fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
-	releaseTag := fmt.Sprintf("%s:%s", imageURL, imageTag)
+func (p *pyBuild) ReleaseImage(buildPath, service string, pid int64) error {
+	var (
+		imageURL   = fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
+		imageTag   = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
+		releaseTag = fmt.Sprintf("%s:%s", imageURL, imageTag)
+	)
 
 	if err := p.copyDockerfile(buildPath); err != nil {
 		return err
@@ -82,19 +84,20 @@ func (p *pyBuild) release(buildPath, service string, pid int64) error {
 		return err
 	}
 
-	// 保存镜像信息
 	if err := objects.CreateImage(pid, imageURL, imageTag); err != nil {
 		return err
 	}
-	log.Info("(5) write image info to db success")
+	log.Info("write image info to db success")
 	return nil
 }
 
 func (p *pyBuild) copyDockerfile(buildPath string) error {
 	_, curPath, _, _ := runtime.Caller(1)
-	appPath := filepath.Dir(filepath.Dir(curPath))
-	srcFile := filepath.Join(appPath, "dockerfile", "Dockerfile")
-	dstFile := filepath.Join(buildPath, "Dockerfile")
+	var (
+		appPath = filepath.Dir(filepath.Dir(curPath))
+		srcFile = filepath.Join(appPath, "dockerfile", "Dockerfile")
+		dstFile = filepath.Join(buildPath, "Dockerfile")
+	)
 	if err := g.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
 		return err

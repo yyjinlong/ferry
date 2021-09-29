@@ -10,23 +10,36 @@ import (
 	"ferry/ops/g"
 )
 
-type builder interface {
-	getBuildPath(mainPath, service string, pid int64) string // 返回构建路径
-	getCodePath(buildPath string) string                     // 返回代码路径
-	download(codePath, module, repo, tag string) error       // 下载代码
-	release(buildPath, service string, pid int64) error      // 构建及发布镜像
+/*
+ * GetBuildPath 返回镜像构建路径(主路径/服务/服务ID) 如: /tmp/release/ivr/8
+ * GetCodePath  返回镜像代码路径(主路径/服务/服务ID/codela. 如: ) 如: /tmp/release/ivr/8/code
+ * DownloadCode 下载对应tag的代码 如: /tmp/release/ivr/8/code/ivr
+ * ReleaseImage 构建镜像、镜像打tag、镜像push
+ *
+ * 目录如下:
+ * ➜  ~ ls /tmp/release/ivr/8/
+ * Dockerfile code
+ *
+ */
+type Builder interface {
+	GetBuildPath(mainPath, service string, pid int64) string // 返回构建路径
+	GetCodePath(buildPath string) string                     // 返回代码路径
+	DownloadCode(codePath, module, repo, tag string) error   // 下载代码
+	ReleaseImage(buildPath, service string, pid int64) error // 构建及发布镜像
 }
 
-func handler(br builder, data base.Image) {
-	pid := data.PID
-	service := data.Service
+func handler(br Builder, data base.Image) {
+	var (
+		pid     = data.PID
+		service = data.Service
+	)
 
-	buildPath := br.getBuildPath(g.Config().Build.Dir, service, pid)
+	buildPath := br.GetBuildPath(g.Config().Build.Dir, service, pid)
 	for _, item := range data.Build {
-		codePath := br.getCodePath(buildPath)
-		if err := br.download(codePath, item.Module, item.Repo, item.Tag); err != nil {
+		codePath := br.GetCodePath(buildPath)
+		if err := br.DownloadCode(codePath, item.Module, item.Repo, item.Tag); err != nil {
 			return
 		}
 	}
-	br.release(buildPath, service, pid)
+	br.ReleaseImage(buildPath, service, pid)
 }
