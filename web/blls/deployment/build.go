@@ -48,7 +48,7 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 
 	tpl, err := b.createYaml(pipeline, deployment, appid)
 	if err != nil {
-		log.Errorf("create yaml error: %+v", err)
+		log.Errorf("create deployment: %s yaml error: %+v", deployment, err)
 		return nil, err
 	}
 	log.Infof("create deployment: %s yaml success", deployment)
@@ -56,13 +56,13 @@ func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	if err := b.publish(namespace, deployment, tpl); err != nil {
 		return nil, err
 	}
-	log.Infof("pubish deployment: %s success", deployment)
+	log.Infof("pubish deployment: %s to k8s success", deployment)
 
-	if err := objects.CreatePhase(b.pid, b.phase, db.PHProcess); err != nil {
-		log.Errorf("create db record error: %+v", err)
+	if err := objects.CreatePhase(b.pid, b.phase, db.PHProcess, tpl); err != nil {
+		log.Errorf("record deployment: %s to db error: %+v", deployment, err)
 		return nil, err
 	}
-	log.Info("create db record success")
+	log.Infof("record deployment: %s to db success", deployment)
 	return "", nil
 }
 

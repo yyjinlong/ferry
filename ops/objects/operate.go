@@ -84,7 +84,7 @@ func CreateImage(pipelineID int64, imageURL, imageTag string) error {
 	return nil
 }
 
-func CreatePhase(pipelineID int64, name string, status int) error {
+func CreatePhase(pipelineID int64, name string, status int, deployment string) error {
 	phase := new(db.PipelinePhase)
 	if has, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Get(phase); has {
 		return nil
@@ -95,6 +95,7 @@ func CreatePhase(pipelineID int64, name string, status int) error {
 	phase.Name = name
 	phase.Status = status
 	phase.PipelineID = pipelineID
+	phase.Deployment = deployment
 	if _, err := db.MEngine.Insert(phase); err != nil {
 		return err
 	}
