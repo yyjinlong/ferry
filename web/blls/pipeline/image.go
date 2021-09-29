@@ -18,38 +18,30 @@ import (
 )
 
 type BuildImage struct {
-	pid int64
 }
 
-func (bi *BuildImage) validate(c *gin.Context) error {
+func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {
 		ID int64 `form:"pipeline_id" binding:"required"`
 	}
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		return err
-	}
-	bi.pid = data.ID
-	return nil
-}
-
-func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
-	if err := bi.validate(c); err != nil {
-		return nil, err
-	}
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": bi.pid})
-
-	updateList, err := objects.FindUpdateInfo(bi.pid)
-	if err != nil {
-		log.Errorf("find pipeline update info error: %s", err)
 		return nil, err
 	}
 
 	var (
+		pid      = data.ID
 		service  string
 		language string
 	)
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
+
+	updateList, err := objects.FindUpdateInfo(pid)
+	if err != nil {
+		log.Errorf("find pipeline update info error: %s", err)
+		return nil, err
+	}
 
 	builds := make([]map[string]string, 0)
 	for _, item := range updateList {
@@ -64,7 +56,7 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	}
 
 	image := make(map[string]interface{})
-	image["pid"] = bi.pid
+	image["pid"] = pid
 	image["type"] = language
 	image["service"] = service
 	image["build"] = builds

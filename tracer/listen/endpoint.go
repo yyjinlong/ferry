@@ -36,6 +36,7 @@ func endpointUpdate(oldObj, newObj interface{}) {
 
 	newIpList := addresses(newData.Subsets)
 	log.Infof("service: %s update, new endpoint: %+v", service, newIpList)
+	// TODO: deployment完成后，将endpoint记录, 写到事件表里, 并对外提供接口获取最新节点的ip列表.
 }
 
 func endpointDelete(obj interface{}) {

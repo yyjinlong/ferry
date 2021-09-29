@@ -20,6 +20,27 @@ type Finish struct {
 	pid int64
 }
 
+func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
+	if err := f.validate(c); err != nil {
+		return nil, err
+	}
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})
+
+	pipeline, err := objects.GetPipelineInfo(f.pid)
+	if err != nil {
+		return nil, err
+	}
+
+	if !f.clearOld(pipeline) {
+		return nil, fmt.Errorf("old group deployment scale to 0 failed")
+	}
+
+	if err := f.setOnline(pipeline); err != nil {
+		return nil, err
+	}
+	return "", nil
+}
+
 func (f *Finish) validate(c *gin.Context) error {
 	type params struct {
 		ID int64 `form:"pipeline_id" binding:"required"`
@@ -66,26 +87,4 @@ func (f *Finish) setOnline(pipeline *db.PipelineQuery) error {
 	}
 	log.Infof("(2) set current group: %s online success.", group)
 	return nil
-}
-
-func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
-	if err := f.validate(c); err != nil {
-		return nil, err
-	}
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": f.pid})
-
-	pipeline, err := objects.GetPipelineInfo(f.pid)
-	if err != nil {
-		log.Errorf("get pipeline info error: %s", err)
-		return nil, err
-	}
-
-	if !f.clearOld(pipeline) {
-		return nil, fmt.Errorf("old group deployment scale to 0 failed")
-	}
-
-	if err := f.setOnline(pipeline); err != nil {
-		return nil, err
-	}
-	return "", nil
 }

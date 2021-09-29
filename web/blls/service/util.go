@@ -59,7 +59,7 @@ func (s *services) update(namespace, name, tpl string) error {
 func (s *services) response(body string) error {
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("json decode result error: %s", err)
+		log.Errorf("response json decode result error: %s", err)
 		return err
 	}
 

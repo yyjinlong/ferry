@@ -22,6 +22,50 @@ type Build struct {
 	phase string // 当前部署阶段
 }
 
+func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
+	if err := b.validate(c); err != nil {
+		return nil, err
+	}
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": b.pid, "phase": b.phase})
+
+	pipeline, err := objects.GetPipelineInfo(b.pid)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		namespace   = pipeline.Namespace.Name
+		serviceName = pipeline.Service.Name
+		serviceID   = pipeline.Service.ID
+	)
+
+	var (
+		group      = objects.GetDeployGroup(pipeline.Service.OnlineGroup)
+		deployment = objects.GetDeployment(serviceName, serviceID, b.phase, group)
+		appid      = objects.GetAppID(serviceName, serviceID, b.phase)
+	)
+	log.Infof("get current group: %s deployment: %s", group, deployment)
+
+	tpl, err := b.createYaml(pipeline, deployment, appid)
+	if err != nil {
+		log.Errorf("create yaml error: %+v", err)
+		return nil, err
+	}
+	log.Infof("create deployment: %s yaml success", deployment)
+
+	if err := b.publish(namespace, deployment, tpl); err != nil {
+		return nil, err
+	}
+	log.Infof("pubish deployment: %s success", deployment)
+
+	if err := objects.CreatePhase(b.pid, b.phase, db.PHProcess); err != nil {
+		log.Errorf("create db record error: %+v", err)
+		return nil, err
+	}
+	log.Info("create db record success")
+	return "", nil
+}
+
 func (b *Build) validate(c *gin.Context) error {
 	type params struct {
 		ID       int64  `form:"pipeline_id" binding:"required"`
@@ -77,71 +121,13 @@ func (b *Build) createYaml(pipeline *db.PipelineQuery, deployment, appid string)
 		volumeConf:  pipeline.Service.Volume,
 		reserveTime: pipeline.Service.ReserveTime,
 	}
-	tpl, err := yam.instance()
-	if err != nil {
-		return "", err
-	}
-	return tpl, nil
+	return yam.instance()
 }
 
 func (b *Build) publish(namespace, deployment, tpl string) error {
 	dep := newDeployments()
 	if !dep.exist(namespace, deployment) {
-		if err := dep.create(namespace, tpl); err != nil {
-			return err
-		}
-		log.Infof("create deployment: %s success", deployment)
-
-	} else {
-		if err := dep.update(namespace, deployment, tpl); err != nil {
-			return err
-		}
-		log.Infof("update deployment: %s success", deployment)
+		return dep.create(namespace, tpl)
 	}
-	return nil
-}
-
-func (b *Build) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
-	if err := b.validate(c); err != nil {
-		return nil, err
-	}
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": b.pid})
-
-	pipeline, err := objects.GetPipelineInfo(b.pid)
-	if err != nil {
-		log.Errorf("get pipeline info error: %s", err)
-		return nil, err
-	}
-
-	group := objects.GetDeployGroup(pipeline.Service.OnlineGroup)
-	log.Infof("get current deploy group: %s", group)
-
-	appid := objects.GetAppID(pipeline.Service.Name, pipeline.Service.ID, b.phase)
-	deployment := objects.GetDeployment(pipeline.Service.Name, pipeline.Service.ID, b.phase, group)
-	log.Infof("get current deployment name: %s appid: %s", deployment, appid)
-
-	if err := objects.CreatePhase(b.pid, b.phase, db.PHWait); err != nil {
-		log.Errorf("create %s phase error: %s", b.phase, err)
-		return nil, err
-	}
-	log.Infof("create %s phase success", b.phase)
-
-	tpl, err := b.createYaml(pipeline, deployment, appid)
-	if err != nil {
-		log.Errorf("create yaml error: %s", err)
-		return nil, err
-	}
-	log.Infof("create %s phase yaml success", b.phase)
-
-	if err := b.publish(pipeline.Namespace.Name, deployment, tpl); err != nil {
-		log.Errorf("publish deployment failed: %s", err)
-		return nil, err
-	}
-
-	if err = objects.UpdatePhase(b.pid, b.phase, db.PHSuccess, tpl); err != nil {
-		log.Errorf("update phase: %s error: %s", b.phase, err)
-		return nil, err
-	}
-	log.Infof("update phase: %s success", b.phase)
-	return "", nil
+	return dep.update(namespace, deployment, tpl)
 }

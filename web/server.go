@@ -47,18 +47,18 @@ func main() {
 	urls(r)
 
 	server := http.Server{
-		Addr:           g.Config().Bootstrap.Address,
+		Addr:           g.Config().Address,
 		Handler:        r,
-		ReadTimeout:    time.Duration(g.Config().Bootstrap.ReadTimeout),
-		WriteTimeout:   time.Duration(g.Config().Bootstrap.WriteTimeout),
-		MaxHeaderBytes: g.Config().Bootstrap.MaxHeaderBytes,
+		ReadTimeout:    time.Duration(g.Config().ReadTimeout),
+		WriteTimeout:   time.Duration(g.Config().WriteTimeout),
+		MaxHeaderBytes: g.Config().MaxHeaderBytes,
 	}
 
 	go func() {
 		if err := server.ListenAndServe(); err == http.ErrServerClosed {
-			log.Info("Listen and serve shutdown....")
+			log.Info("listen and serve shutdown....")
 		} else if err != nil {
-			log.Errorf("Listen and serve boot failed: %s", err)
+			log.Errorf("listen and serve failed: %s", err)
 			cancel()
 		}
 	}()
@@ -66,13 +66,11 @@ func main() {
 	select {
 	case sig := <-qs:
 		if sig == syscall.SIGINT || sig == syscall.SIGTERM || sig == syscall.SIGQUIT {
-			log.Info("Quit the server with Ctrl C")
+			log.Info("quit the server with ctrl c")
 			server.Shutdown(ctx)
 			cancel()
-		} else if sig == syscall.SIGPIPE {
-			log.Warn("Ignore broken pipe signal")
 		}
 	}
 
-	time.Sleep(time.Duration(g.Config().Bootstrap.ExitWaitSecond) * time.Second)
+	time.Sleep(time.Duration(g.Config().ExitWaitSecond) * time.Second)
 }

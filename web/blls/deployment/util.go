@@ -25,13 +25,13 @@ func (d *deployments) exist(namespace, deployment string) bool {
 	header := map[string]string{"Content-Type": "application/json"}
 	body, err := g.Get(url, header, nil, 5)
 	if err != nil {
-		log.Infof("check deployment: %s is not exist.", deployment)
+		log.Infof("check deployment: %s is not exist", deployment)
 		return false
 	}
 	if err := d.result(body); err != nil {
 		return false
 	}
-	log.Infof("check deplloyment: %s is exist.", deployment)
+	log.Infof("check deplloyment: %s is exist", deployment)
 	return true
 }
 
@@ -60,7 +60,7 @@ func (d *deployments) update(namespace, deployment, tpl string) error {
 func (d *deployments) result(body string) error {
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("json decode result error: %s", err)
+		log.Errorf("response body json decode error: %s", err)
 		return err
 	}
 
@@ -70,6 +70,7 @@ func (d *deployments) result(body string) error {
 		log.Errorf("request deployment api failed: %s", err)
 		return err
 	}
+	log.Info("deployment operate success")
 	return nil
 }
 
@@ -83,19 +84,15 @@ func (d *deployments) scale(replicas int, namespace, deployment string) error {
 		return err
 	}
 
-	log.Infof("scale deployment: %s response: %s", deployment, body)
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("json decode result error: %s", err)
+		log.Errorf("scale response body json decode result error: %s", err)
 		return err
 	}
 
 	spec := resp["spec"].(map[string]interface{})
-	if len(spec) != 0 {
-		log.Infof("scale deployment: %s spec result: %s", deployment, spec)
-		if spec["replicas"].(float64) == float64(replicas) {
-			log.Infof("scale deployment: %s replicas: %d success.", deployment, replicas)
-		}
+	if len(spec) != 0 && spec["replicas"].(float64) == float64(replicas) {
+		log.Infof("scale deployment: %s replicas: %d success.", deployment, replicas)
 	}
 	return nil
 }

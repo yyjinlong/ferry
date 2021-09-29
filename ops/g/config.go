@@ -13,22 +13,18 @@ import (
 )
 
 type Settings struct {
-	LogFile   string        `yaml:"logfile"`
-	Bootstrap BootstrapInfo `yaml:"bootstrap"`
-	Postgres  PostgresInfo  `yaml:"postgres"`
-	RabbitMQ  RabbtimqInfo  `yaml:"rabbitmq"`
-	Build     BuildInfo     `yaml:"build"`
-	Watch     WatchInfo     `yaml:"watch"`
-	Registry  RegistryInfo  `yaml:"registry"`
-	K8S       K8SInfo       `yaml:"k8s"`
-}
-
-type BootstrapInfo struct {
-	Address        string `yaml:"address"`
-	ReadTimeout    int    `yaml:"readTimeout"`
-	WriteTimeout   int    `yaml:"writeTimeout"`
-	MaxHeaderBytes int    `yaml:"maxHeaderBytes"`
-	ExitWaitSecond int    `yaml:"exitWaitSecond"`
+	Address        string       `yaml:"address"`
+	ReadTimeout    int          `yaml:"readTimeout"`
+	WriteTimeout   int          `yaml:"writeTimeout"`
+	MaxHeaderBytes int          `yaml:"maxHeaderBytes"`
+	ExitWaitSecond int          `yaml:"exitWaitSecond"`
+	LogFile        string       `yaml:"logfile"`
+	Postgres       PostgresInfo `yaml:"postgres"`
+	RabbitMQ       RabbtimqInfo `yaml:"rabbitmq"`
+	Build          BuildInfo    `yaml:"build"`
+	Watch          WatchInfo    `yaml:"watch"`
+	Registry       RegistryInfo `yaml:"registry"`
+	K8S            K8SInfo      `yaml:"k8s"`
 }
 
 type PostgresInfo struct {

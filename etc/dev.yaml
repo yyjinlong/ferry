@@ -1,11 +1,9 @@
+address: "0.0.0.0:8888"
+readTimeout: 0       # 0 means no limit
+writeTimeout: 0      # 0 means no limit
+maxHeaderBytes: 8192 # 8K
+exitWaitSecond: 1    # 退出等待时间
 logfile: "/tmp/ferry.log"
-
-bootstrap:
-  address: "0.0.0.0:8888"
-  readTimeout: 0       # 0 means no limit
-  writeTimeout: 0      # 0 means no limit
-  maxHeaderBytes: 8192 # 8K
-  exitWaitSecond: 1    # 退出等待时间
 
 postgres:
   master: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
