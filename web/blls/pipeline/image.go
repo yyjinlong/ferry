@@ -48,18 +48,20 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 		service = item.Service.Name
 		language = item.CodeModule.Language
 
-		tagInfo := make(map[string]string)
-		tagInfo["module"] = item.CodeModule.Name
-		tagInfo["repo"] = item.CodeModule.ReposAddr
-		tagInfo["tag"] = item.PipelineUpdate.CodeTag
+		tagInfo := map[string]string{
+			"module": item.CodeModule.Name,
+			"repo":   item.CodeModule.ReposAddr,
+			"tag":    item.PipelineUpdate.CodeTag,
+		}
 		builds = append(builds, tagInfo)
 	}
 
-	image := make(map[string]interface{})
-	image["pid"] = pid
-	image["type"] = language
-	image["service"] = service
-	image["build"] = builds
+	image := map[string]interface{}{
+		"pid":     pid,
+		"type":    language,
+		"service": service,
+		"build":   builds,
+	}
 	body, err := json.Marshal(image)
 	if err != nil {
 		return nil, err
