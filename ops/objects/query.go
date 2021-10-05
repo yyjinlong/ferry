@@ -84,7 +84,8 @@ func GetServicePipeline(serviceID int64) (*db.PipelineQuery, error) {
 	if has, err := db.SEngine.Table("pipeline").
 		Join("INNER", "service", "pipeline.service_id = service.id").
 		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("pipeline.service_id = ? and status = 1", serviceID).Desc("id").Get(pq); err != nil {
+		Where("pipeline.service_id = ? and status = 1", serviceID).
+		Desc("pipeline.id").Get(pq); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, fmt.Errorf(NOTFOUND)
