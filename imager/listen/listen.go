@@ -21,12 +21,11 @@ var (
 )
 
 func BuildImage() {
-	done := make(chan int)
-
 	go listenMQ()
 	go handlePy()
 	go handleGo()
 
+	done := make(chan int)
 	<-done
 }
 

@@ -102,10 +102,9 @@ func CreatePhase(pipelineID int64, name string, status int, deployment string) e
 	return nil
 }
 
-func UpdatePhase(pipelineID int64, name string, status int, deployment string) error {
+func UpdatePhase(pipelineID int64, name string, status int) error {
 	phase := new(db.PipelinePhase)
 	phase.Status = status
-	phase.Deployment = deployment
 	if affected, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {

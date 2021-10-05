@@ -43,9 +43,9 @@ func (e *Event) Deployment() {
 
 	deploymentInformer := e.sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    deploymentAdd,
-		UpdateFunc: deploymentUpdate,
-		DeleteFunc: deploymentDelete,
+		AddFunc:    DeploymentAdd,
+		UpdateFunc: DeploymentUpdate,
+		DeleteFunc: DeploymentDelete,
 	})
 	deploymentInformer.Run(stopCh)
 }
@@ -56,9 +56,9 @@ func (e *Event) Endpoint() {
 
 	endpointInformer := e.sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    endpointAdd,
-		UpdateFunc: endpointUpdate,
-		DeleteFunc: endpointDelete,
+		AddFunc:    EndpointAdd,
+		UpdateFunc: EndpointUpdate,
+		DeleteFunc: EndpointDelete,
 	})
 	endpointInformer.Run(stopCh)
 }

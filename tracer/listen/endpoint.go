@@ -6,66 +6,146 @@
 package listen
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 
-	"ferry/ops/g"
 	"ferry/ops/log"
+	"ferry/ops/objects"
 )
 
-func endpointAdd(obj interface{}) {
+func EndpointAdd(obj interface{}) {
+	epEvent := NewEndpointEvent(obj, "add")
+	if !epEvent.IsValidService() {
+		return
+	}
+	pipelineID, err := epEvent.Parse()
+	if err != nil {
+		log.Errorf("parser pipeline id error: %s", err)
+		return
+	}
+
+	result := map[string]interface{}{
+		"pipelineID": pipelineID,
+		"service":    epEvent.GetService(),
+		"add":        epEvent.GetIPList(),
+		"del":        make([]map[string]string, 0),
+	}
+	log.Infof("endpoint add result: %+v", result)
+}
+
+func EndpointUpdate(oldObj, newObj interface{}) {
+	oldEvent := NewEndpointEvent(oldObj, "update")
+	if !oldEvent.IsValidService() {
+		return
+	}
+	newEvent := NewEndpointEvent(newObj, "update")
+	if !newEvent.IsValidService() {
+		return
+	}
+	pipelineID, err := newEvent.Parse()
+	if err != nil {
+		log.Errorf("parser pipeline id error: %s", err)
+		return
+	}
+
+	result := map[string]interface{}{
+		"pipelineID": pipelineID,
+		"service":    newEvent.GetService(),
+		"add":        newEvent.GetIPList(),
+		"del":        oldEvent.GetIPList(),
+	}
+	log.Infof("endpoint update result: %+v", result)
+}
+
+func EndpointDelete(obj interface{}) {
+	epEvent := NewEndpointEvent(obj, "delete")
+	if !epEvent.IsValidService() {
+		return
+	}
+	pipelineID, err := epEvent.Parse()
+	if err != nil {
+		log.Errorf("parser pipeline id error: %s", err)
+		return
+	}
+
+	result := map[string]interface{}{
+		"pipelineID": pipelineID,
+		"service":    epEvent.GetService(),
+		"add":        make([]map[string]string, 0),
+		"del":        epEvent.GetIPList(),
+	}
+	log.Infof("endpoint delete result: %+v", result)
+}
+
+func NewEndpointEvent(obj interface{}, mode string) *EndpointEvent {
 	data := obj.(*corev1.Endpoints)
-	service := data.Name
-	if ignore(service) {
-		return
+	return &EndpointEvent{
+		mode:    mode,
+		service: data.Name,
+		subsets: data.Subsets,
 	}
-	ipList := addresses(data.Subsets)
-	log.Infof("service: %s added, endpoint: %+v", service, ipList)
 }
 
-func endpointUpdate(oldObj, newObj interface{}) {
-	oldData := oldObj.(*corev1.Endpoints)
-	newData := newObj.(*corev1.Endpoints)
-
-	service := oldData.Name
-	if ignore(service) {
-		return
-	}
-
-	oldIpList := addresses(oldData.Subsets)
-	log.Infof("service: %s update, old endpoint: %+v", service, oldIpList)
-
-	newIpList := addresses(newData.Subsets)
-	log.Infof("service: %s update, new endpoint: %+v", service, newIpList)
-	// TODO: deployment完成后，将endpoint记录, 写到事件表里, 并对外提供接口获取最新节点的ip列表.
+type EndpointEvent struct {
+	mode    string
+	service string
+	subsets []corev1.EndpointSubset
 }
 
-func endpointDelete(obj interface{}) {
-	data := obj.(*corev1.Endpoints)
-	service := data.Name
-	if ignore(service) {
-		return
+func (ee *EndpointEvent) IsValidService() bool {
+	reg := regexp.MustCompile(`[\w+-]+-\d+`)
+	if reg == nil {
+		return false
 	}
-	ipList := addresses(data.Subsets)
-	log.Infof("service: %s delete, old endpoint: %+v", service, ipList)
+	result := reg.FindAllStringSubmatch(ee.service, -1)
+	if len(result) == 0 {
+		return false
+	}
+	return true
 }
 
-func ignore(name string) bool {
-	list := []string{"kubernetes", "kube-scheduler", "kube-controller-manager", "cattle-cluster-agent"}
-	if g.In(name, list) {
-		return true
-	}
-	return false
-}
-
-func addresses(subsets []corev1.EndpointSubset) []map[string]string {
+func (ee *EndpointEvent) GetIPList() []map[string]string {
 	ipList := make([]map[string]string, 0)
-	for _, item := range subsets {
-		ipInfo := make(map[string]string)
+	for _, item := range ee.subsets {
 		for _, addrInfo := range item.Addresses {
+			ipInfo := make(map[string]string)
 			ipInfo["podIp"] = addrInfo.IP
 			ipInfo["podName"] = addrInfo.TargetRef.Name
 			ipList = append(ipList, ipInfo)
 		}
 	}
 	return ipList
+}
+
+func (ee *EndpointEvent) Parse() (int64, error) {
+	reg := regexp.MustCompile(`-\d+`)
+	if reg == nil {
+		return 0, fmt.Errorf("regexp compile error")
+	}
+
+	result := reg.FindAllStringSubmatch(ee.service, -1)
+	if len(result) == 0 {
+		return 0, fmt.Errorf("regexp is not match")
+	}
+
+	matchResult := result[0][0]
+	serviceIDStr := strings.Trim(matchResult, "-")
+	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	pipeline, err := objects.GetServicePipeline(serviceID)
+	if err != nil {
+		return 0, err
+	}
+	return pipeline.Pipeline.ID, nil
+}
+
+func (ee *EndpointEvent) GetService() string {
+	return ee.service
 }

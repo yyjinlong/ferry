@@ -79,28 +79,3 @@ func (d *deployments) result(body string) error {
 	log.Info("deployment operate success")
 	return nil
 }
-
-func (d *deployments) scale(replicas int, namespace, deployment string) error {
-	var (
-		url     = fmt.Sprintf(g.Config().K8S.Deployment, namespace) + "/" + deployment + "/scale"
-		header  = map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
-		payload = fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
-	)
-	body, err := g.Patch(url, header, []byte(payload), 5)
-	if err != nil {
-		log.Errorf("scale deployment: %s replicas: %d error: %s", deployment, replicas, err)
-		return err
-	}
-
-	resp := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("scale deployment: %s response json decode error: %s", deployment, err)
-		return err
-	}
-
-	spec := resp["spec"].(map[string]interface{})
-	if len(spec) != 0 && spec["replicas"].(float64) == float64(replicas) {
-		log.Infof("scale deployment: %s replicas: %d success.", deployment, replicas)
-	}
-	return nil
-}

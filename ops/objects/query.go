@@ -78,6 +78,20 @@ func GetPipelineInfo(pipelineID int64) (*db.PipelineQuery, error) {
 	return pq, nil
 }
 
+// GetServicePipeline 根据服务id返回最近一次的上线信息
+func GetServicePipeline(serviceID int64) (*db.PipelineQuery, error) {
+	pq := new(db.PipelineQuery)
+	if has, err := db.SEngine.Table("pipeline").
+		Join("INNER", "service", "pipeline.service_id = service.id").
+		Join("INNER", "namespace", "service.namespace_id = namespace.id").
+		Where("pipeline.service_id = ? and status = 1", serviceID).Desc("id").Get(pq); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf(NOTFOUND)
+	}
+	return pq, nil
+}
+
 // FindPhases 根据pipeline id返回对应的阶段
 func FindPhases(pipelineID int64) ([]db.PipelinePhase, error) {
 	ppList := make([]db.PipelinePhase, 0)
