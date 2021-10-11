@@ -84,7 +84,7 @@ func GetServicePipeline(serviceID int64) (*db.PipelineQuery, error) {
 	if has, err := db.SEngine.Table("pipeline").
 		Join("INNER", "service", "pipeline.service_id = service.id").
 		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("pipeline.service_id = ? and pipeline.status = 1", serviceID).
+		Where("pipeline.service_id = ?", serviceID).
 		Desc("pipeline.id").Get(pq); err != nil {
 		return nil, err
 	} else if !has {
@@ -100,6 +100,16 @@ func FindPhases(pipelineID int64) ([]db.PipelinePhase, error) {
 		return nil, err
 	}
 	return ppList, nil
+}
+
+func CheckPhaseIsDeploy(pipelineID int64, phase string) bool {
+	ph := new(db.PipelinePhase)
+	if has, err := db.SEngine.Where("pipeline_id=? and name=?", pipelineID, phase).Get(ph); err != nil {
+		return false
+	} else if !has {
+		return false
+	}
+	return true
 }
 
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息

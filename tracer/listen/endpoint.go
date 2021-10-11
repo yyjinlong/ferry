@@ -17,7 +17,7 @@ func EndpointAdd(obj interface{}) {
 	}
 	pipelineID, err := epEvent.Parse()
 	if err != nil {
-		log.Errorf("parser pipeline id error: %s", err)
+		log.Errorf("[add] parser pipeline id error: %s", err)
 		return
 	}
 
@@ -41,7 +41,7 @@ func EndpointUpdate(oldObj, newObj interface{}) {
 	}
 	pipelineID, err := newEvent.Parse()
 	if err != nil {
-		log.Errorf("parser pipeline id error: %s", err)
+		log.Errorf("[update] parser pipeline id error: %s", err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func EndpointDelete(obj interface{}) {
 	}
 	pipelineID, err := epEvent.Parse()
 	if err != nil {
-		log.Errorf("parser pipeline id error: %s", err)
+		log.Errorf("[delete] parser pipeline id error: %s", err)
 		return
 	}
 

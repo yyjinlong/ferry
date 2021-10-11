@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"ferry/ops/db"
 	"ferry/ops/g"
 	"ferry/ops/log"
 	"ferry/ops/objects"
@@ -33,26 +34,47 @@ type HandleDeployment struct {
 
 func (hd *HandleDeployment) ClearOld() {
 	hd.parse()
+
 	pipeline, err := objects.GetServicePipeline(hd.serviceID)
 	if err != nil {
 		log.Errorf("query pipeline by service error: %s", err)
 		return
 	}
 
+	if g.Ini(pipeline.Pipeline.Status, []int{db.PLSuccess, db.PLRollbackSuccess}) {
+		log.Infof("query pipeline: %d deploy finished, so ignore.", pipeline.Pipeline.ID)
+		return
+	}
+
 	var (
+		pipelineID   = pipeline.Pipeline.ID
 		namespace    = pipeline.Namespace.Name
 		offlineGroup = pipeline.Service.OnlineGroup // NOTE: 在确认时, 原有表记录的组则变为待下线组
 	)
-	log.Infof("scale need clear current offline group: %s", offlineGroup)
 	if offlineGroup == "" {
 		return
 	}
 
-	oldDeployment := objects.GetDeployment(hd.serviceName, pipeline.Service.ID, hd.phase, offlineGroup)
-	if err := hd.scale(0, namespace, oldDeployment); err != nil {
-		return
+	var (
+		publishGroup  = objects.GetDeployGroup(offlineGroup)
+		oldDeployment = objects.GetDeployment(hd.serviceName, pipeline.Service.ID, hd.phase, offlineGroup)
+	)
+
+	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment清零
+	if hd.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, hd.phase) {
+		log.Infof("scale clear offline group is: %s", offlineGroup)
+		log.Infof("scale clear offline deployment is: %s", oldDeployment)
+		if err := hd.scale(0, namespace, oldDeployment); err != nil {
+			return
+		}
+		log.Infof("scale clear offline deployment: %s replicas: 0 success", oldDeployment)
+
+		if err := objects.UpdatePhase(pipelineID, hd.phase, db.PHSuccess); err != nil {
+			log.Errorf("update pipeline: %d phase: %s failed: %s", pipelineID, hd.phase, err)
+			return
+		}
+		log.Infof("update pipeline: %d phase: %s success", pipelineID, hd.phase)
 	}
-	log.Infof("scale deployment: %s replicas: 0 success", oldDeployment)
 }
 
 func (hd *HandleDeployment) parse() {
