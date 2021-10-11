@@ -3,11 +3,12 @@
 // author: jinlong yang
 //
 
-package build
+package listen
 
 import (
 	"encoding/json"
 
+	"ferry/imager/build"
 	"ferry/imager/model"
 	"ferry/ops/g"
 	"ferry/ops/log"
@@ -19,7 +20,7 @@ var (
 	goChan = make(chan model.Image)
 )
 
-func ListenImage() {
+func BuildImage() {
 	go listenMQ()
 	go handlePy()
 	go handleGo()
@@ -59,7 +60,7 @@ func handlePy() {
 	for {
 		select {
 		case data := <-pyChan:
-			go BuildPython(data)
+			go build.BuildPython(data)
 		}
 	}
 }
@@ -68,7 +69,7 @@ func handleGo() {
 	for {
 		select {
 		case data := <-goChan:
-			go BuildGolang(data)
+			go build.BuildGolang(data)
 		}
 	}
 }
