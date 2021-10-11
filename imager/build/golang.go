@@ -6,9 +6,9 @@
 package build
 
 import (
-	"ferry/ops/base"
+	"ferry/imager/model"
 )
 
-func Golang(data base.Image) {
+func BuildGolang(data model.Image) {
 
 }

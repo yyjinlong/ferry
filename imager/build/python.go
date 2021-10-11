@@ -13,13 +13,13 @@ import (
 	"strconv"
 	"time"
 
-	"ferry/ops/base"
+	"ferry/imager/model"
 	"ferry/ops/g"
 	"ferry/ops/log"
 	"ferry/ops/objects"
 )
 
-func Python(data base.Image) {
+func BuildPython(data model.Image) {
 	py := &pyBuild{}
 	handler(py, data)
 }

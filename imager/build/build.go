@@ -6,7 +6,7 @@
 package build
 
 import (
-	"ferry/ops/base"
+	"ferry/imager/model"
 	"ferry/ops/g"
 )
 
@@ -28,7 +28,7 @@ type Builder interface {
 	ReleaseImage(buildPath, service string, pid int64) error // 构建及发布镜像
 }
 
-func handler(br Builder, data base.Image) {
+func handler(br Builder, data model.Image) {
 	var (
 		pid     = data.PID
 		service = data.Service

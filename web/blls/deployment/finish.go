@@ -8,9 +8,9 @@ package deployment
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/ops/base"
 	"ferry/ops/log"
 	"ferry/ops/objects"
+	"ferry/web/base"
 )
 
 type Finish struct {

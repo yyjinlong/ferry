@@ -10,11 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ferry/ops/base"
 	"ferry/ops/g"
 	"ferry/ops/log"
 	"ferry/ops/mq"
 	"ferry/ops/objects"
+	"ferry/web/base"
 )
 
 type BuildImage struct {

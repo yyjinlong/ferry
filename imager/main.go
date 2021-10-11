@@ -8,7 +8,7 @@ package main
 import (
 	"flag"
 
-	"ferry/imager/listen"
+	"ferry/imager/build"
 	"ferry/ops/db"
 	"ferry/ops/g"
 	"ferry/ops/log"
@@ -31,5 +31,5 @@ func main() {
 
 	db.Connect()
 
-	listen.BuildImage()
+	build.ListenImage()
 }

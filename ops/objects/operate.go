@@ -162,5 +162,14 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 	} else if affected == 0 {
 		return fmt.Errorf(NOT_EXISTS)
 	}
+
+	pipeline := new(db.Pipeline)
+	pipeline.Status = db.PLProcess
+	if affected, err := session.ID(pipelineID).Update(pipeline); err != nil {
+		return err
+	} else if affected == 0 {
+		return fmt.Errorf(NOT_EXISTS)
+	}
+
 	return session.Commit()
 }

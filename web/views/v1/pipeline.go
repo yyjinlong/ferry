@@ -8,7 +8,7 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/ops/base"
+	"ferry/web/base"
 	"ferry/web/blls/pipeline"
 )
 

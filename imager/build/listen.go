@@ -3,24 +3,23 @@
 // author: jinlong yang
 //
 
-package listen
+package build
 
 import (
 	"encoding/json"
 
-	"ferry/imager/build"
-	"ferry/ops/base"
+	"ferry/imager/model"
 	"ferry/ops/g"
 	"ferry/ops/log"
 	"ferry/ops/mq"
 )
 
 var (
-	pyChan = make(chan base.Image)
-	goChan = make(chan base.Image)
+	pyChan = make(chan model.Image)
+	goChan = make(chan model.Image)
 )
 
-func BuildImage() {
+func ListenImage() {
 	go listenMQ()
 	go handlePy()
 	go handleGo()
@@ -33,7 +32,7 @@ type mirror struct {
 }
 
 func (m *mirror) Consumer(body []byte) error {
-	var data base.Image
+	var data model.Image
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Errorf("consume mq json decode failed: %s", err)
 		return err
@@ -42,9 +41,9 @@ func (m *mirror) Consumer(body []byte) error {
 		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": data.Type})
 
 	switch data.Type {
-	case base.PYTHON:
+	case model.PYTHON:
 		pyChan <- data
-	case base.GOLANG:
+	case model.GOLANG:
 		goChan <- data
 	}
 	return nil
@@ -60,7 +59,7 @@ func handlePy() {
 	for {
 		select {
 		case data := <-pyChan:
-			go build.Python(data)
+			go BuildPython(data)
 		}
 	}
 }
@@ -69,7 +68,7 @@ func handleGo() {
 	for {
 		select {
 		case data := <-goChan:
-			go build.Golang(data)
+			go BuildGolang(data)
 		}
 	}
 }
