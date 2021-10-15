@@ -7,6 +7,8 @@ package pipeline
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 
@@ -38,7 +40,9 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
 
 	updateList, err := objects.FindUpdateInfo(pid)
-	if err != nil {
+	if errors.Is(err, objects.NotFound) {
+		return nil, fmt.Errorf("pipeline_id: %d 不存在!", pid)
+	} else if err != nil {
 		log.Errorf("find pipeline update info error: %s", err)
 		return nil, err
 	}

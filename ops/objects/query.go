@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	BLUE     = "blue"
-	GREEN    = "green"
-	NOTFOUND = "no data not found."
+	BLUE  = "blue"
+	GREEN = "green"
 )
 
 // GetDeployGroup 获取当前部署组
@@ -41,7 +40,7 @@ func GetServiceInfo(name string) (*db.ServiceQuery, error) {
 		Join("INNER", "namespace", "service.namespace_id = namespace.id").
 		Where("service.name = ?", name).Get(service); err != nil {
 	} else if !has {
-		return nil, fmt.Errorf(NOTFOUND)
+		return nil, NotFound
 	}
 	return service, nil
 }
@@ -59,7 +58,7 @@ func GetPipeline(pipelineID int64) (*db.Pipeline, error) {
 	if has, err := db.SEngine.ID(pipelineID).Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf(NOTFOUND)
+		return nil, NotFound
 	}
 	return pipeline, nil
 }
@@ -73,7 +72,7 @@ func GetPipelineInfo(pipelineID int64) (*db.PipelineQuery, error) {
 		Where("pipeline.id = ?", pipelineID).Get(pq); err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf(NOTFOUND)
+		return nil, NotFound
 	}
 	return pq, nil
 }
@@ -88,7 +87,7 @@ func GetServicePipeline(serviceID int64) (*db.PipelineQuery, error) {
 		Desc("pipeline.id").Get(pq); err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf(NOTFOUND)
+		return nil, NotFound
 	}
 	return pq, nil
 }
@@ -120,7 +119,7 @@ func FindImageInfo(pipelineID int64) (map[string]string, error) {
 		Where("pipeline.id = ?", pipelineID).Get(pi); err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf(NOTFOUND)
+		return nil, NotFound
 	}
 
 	imageInfo := map[string]string{

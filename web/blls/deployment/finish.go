@@ -6,6 +6,9 @@
 package deployment
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"ferry/ops/log"
@@ -30,7 +33,9 @@ func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
 
 	pipeline, err := objects.GetPipelineInfo(pid)
-	if err != nil {
+	if errors.Is(err, objects.NotFound) {
+		return nil, fmt.Errorf("pipeline_id: %d 不存在!", pid)
+	} else if err != nil {
 		return nil, err
 	}
 

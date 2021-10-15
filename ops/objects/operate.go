@@ -12,10 +12,6 @@ import (
 	"ferry/ops/log"
 )
 
-const (
-	NOT_EXISTS = "query match is not exists"
-)
-
 func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, moduleInfoList []map[string]string) error {
 	session := db.MEngine.NewSession()
 	defer session.Close()
@@ -58,7 +54,7 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(codeModule); err != nil {
 			return err
 		} else if !has {
-			return fmt.Errorf(NOT_EXISTS)
+			return NotFound
 		}
 
 		pipelineUpdate := new(db.PipelineUpdate)
@@ -108,7 +104,7 @@ func UpdatePhase(pipelineID int64, name string, status int) error {
 	if affected, err := db.MEngine.Where("pipeline_id=? and name=?", pipelineID, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
-		return fmt.Errorf(NOT_EXISTS)
+		return NotFound
 	}
 	return nil
 }
@@ -126,7 +122,7 @@ func UpdateGroup(pipelineID int64, serviceName, group string) error {
 	if affected, err := session.ID(pipelineID).Update(pipeline); err != nil {
 		return err
 	} else if affected == 0 {
-		return fmt.Errorf(NOT_EXISTS)
+		return NotFound
 	}
 
 	service := new(db.Service)
@@ -135,7 +131,7 @@ func UpdateGroup(pipelineID int64, serviceName, group string) error {
 	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "lock").Update(service); err != nil {
 		return err
 	} else if affected == 0 {
-		return fmt.Errorf(NOT_EXISTS)
+		return NotFound
 	}
 	return session.Commit()
 }
@@ -160,7 +156,7 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 	if affected, err := session.Where("pipeline_id=? and code_module_id=?",
 		pipelineID, codeModule.ID).Update(pu); err != nil {
 	} else if affected == 0 {
-		return fmt.Errorf(NOT_EXISTS)
+		return NotFound
 	}
 
 	pipeline := new(db.Pipeline)
@@ -168,7 +164,7 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 	if affected, err := session.ID(pipelineID).Update(pipeline); err != nil {
 		return err
 	} else if affected == 0 {
-		return fmt.Errorf(NOT_EXISTS)
+		return NotFound
 	}
 
 	return session.Commit()
