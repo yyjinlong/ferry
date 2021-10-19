@@ -17,8 +17,7 @@ func newServices() *services {
 	return &services{}
 }
 
-type services struct {
-}
+type services struct{}
 
 func (s *services) exist(namespace, name string) bool {
 	var (

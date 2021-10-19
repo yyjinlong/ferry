@@ -19,8 +19,7 @@ import (
 	"ferry/web/base"
 )
 
-type BuildImage struct {
-}
+type BuildImage struct{}
 
 func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {

@@ -17,8 +17,7 @@ func newDeployments() *deployments {
 	return &deployments{}
 }
 
-type deployments struct {
-}
+type deployments struct{}
 
 func (d *deployments) exist(namespace, deployment string) bool {
 	var (

@@ -16,8 +16,7 @@ import (
 	"ferry/web/base"
 )
 
-type Finish struct {
-}
+type Finish struct{}
 
 func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {

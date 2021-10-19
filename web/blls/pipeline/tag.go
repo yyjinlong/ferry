@@ -13,8 +13,7 @@ import (
 	"ferry/web/base"
 )
 
-type BuildTag struct {
-}
+type BuildTag struct{}
 
 func (bt *BuildTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {

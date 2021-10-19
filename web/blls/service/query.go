@@ -13,8 +13,7 @@ import (
 	"ferry/web/base"
 )
 
-type Query struct {
-}
+type Query struct{}
 
 func (q *Query) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	fmt.Println("service query....")
