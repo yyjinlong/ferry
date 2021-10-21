@@ -18,10 +18,7 @@ rabbitmq:
 
 build:
   dir: "/tmp/release"
-  logfile: "/tmp/image.log"
-
-watch:
-  logfile: "/tmp/deploy.log"
+  logfile: "/tmp/ferryd.log"
 
 registry:
   release: "10.12.28.4:80/release"

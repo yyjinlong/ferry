@@ -22,7 +22,6 @@ type Settings struct {
 	Postgres       PostgresInfo `yaml:"postgres"`
 	RabbitMQ       RabbtimqInfo `yaml:"rabbitmq"`
 	Build          BuildInfo    `yaml:"build"`
-	Watch          WatchInfo    `yaml:"watch"`
 	Registry       RegistryInfo `yaml:"registry"`
 	K8S            K8SInfo      `yaml:"k8s"`
 }
@@ -42,10 +41,6 @@ type RabbtimqInfo struct {
 
 type BuildInfo struct {
 	Dir     string `yaml:"dir"`
-	LogFile string `yaml:"logfile"`
-}
-
-type WatchInfo struct {
 	LogFile string `yaml:"logfile"`
 }
 
