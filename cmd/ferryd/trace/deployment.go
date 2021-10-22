@@ -21,11 +21,16 @@ import (
 	"ferry/server/objects"
 )
 
+var (
+	resourceVersionMap = make(map[string]string)
+)
+
 func handleDeployment(obj interface{}, mode string) {
 	data := obj.(*appsv1.Deployment)
 	dep := &deploymentEvent{
 		mode:              mode,
 		deployment:        data.ObjectMeta.Name,
+		resourceVersion:   data.ObjectMeta.ResourceVersion,
 		replicas:          *data.Spec.Replicas,
 		updatedReplicas:   data.Status.UpdatedReplicas,
 		availableReplicas: data.Status.AvailableReplicas,
@@ -38,6 +43,7 @@ func handleDeployment(obj interface{}, mode string) {
 type deploymentEvent struct {
 	mode              string
 	deployment        string
+	resourceVersion   string
 	replicas          int32
 	updatedReplicas   int32
 	availableReplicas int32
@@ -59,8 +65,8 @@ func (de *deploymentEvent) worker() {
 	if !de.isReadiness() {
 		return
 	}
-	log.Infof("[%s] deployment: %s is ready, replicas: %d", de.mode, de.deployment, de.replicas)
 
+	log.Infof("[%s] deployment: %s is ready, replicas: %d", de.mode, de.deployment, de.replicas)
 	if !de.getServiceID() {
 		return
 	}
@@ -68,12 +74,23 @@ func (de *deploymentEvent) worker() {
 		return
 	}
 
+	key := fmt.Sprintf("%s_%s_%s", de.serviceName, de.phase, de.group)
+	log.Infof("[%s] deployment: %s key: %s resouce version: %s", de.mode, de.deployment, key, de.resourceVersion)
+
 	pipeline, err := objects.GetServicePipeline(de.serviceID)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("[%s] query pipeline by service error: %s", de.mode, err)
 		return
 	}
 	if g.Ini(pipeline.Pipeline.Status, []int{db.PLSuccess, db.PLRollbackSuccess}) {
+		delete(resourceVersionMap, key) // NOTE: 上线完成删除对应的key
+		log.Infof("[%s] deployment: %s deploy finish so stop", de.mode, de.deployment)
+		return
+	}
+
+	version, ok := resourceVersionMap[key]
+	if ok && version == de.resourceVersion {
+		log.Infof("[%s] deployment: %s key: %s resource version same so stop", de.mode, de.deployment, key)
 		return
 	}
 
@@ -103,6 +120,7 @@ func (de *deploymentEvent) worker() {
 		}
 		fallthrough
 	default:
+		resourceVersionMap[key] = de.resourceVersion
 		de.updateDB(pipelineID)
 	}
 }
