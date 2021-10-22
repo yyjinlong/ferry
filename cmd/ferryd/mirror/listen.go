@@ -14,12 +14,10 @@ import (
 )
 
 var (
-	pyChan = make(chan Image)
-	goChan = make(chan Image)
+	msgChan = make(chan Image)
 )
 
-type mirror struct {
-}
+type mirror struct{}
 
 func (m *mirror) Consumer(body []byte) error {
 	var data Image
@@ -28,14 +26,8 @@ func (m *mirror) Consumer(body []byte) error {
 		return err
 	}
 	log.InitFields(log.Fields{
-		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": data.Type})
-
-	switch data.Type {
-	case PYTHON:
-		pyChan <- data
-	case GOLANG:
-		goChan <- data
-	}
+		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": "mirror"})
+	msgChan <- data
 	return nil
 }
 
@@ -45,20 +37,11 @@ func ListenMQ() {
 	rmq.Consume(&mirror{})
 }
 
-func HandlePy() {
+func HandleMsg() {
 	for {
 		select {
-		case data := <-pyChan:
-			go Execute(data)
-		}
-	}
-}
-
-func HandleGo() {
-	for {
-		select {
-		case data := <-goChan:
-			go Execute(data)
+		case data := <-msgChan:
+			go worker(data)
 		}
 	}
 }

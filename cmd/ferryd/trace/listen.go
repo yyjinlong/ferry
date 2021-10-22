@@ -18,7 +18,15 @@ import (
 	"ferry/pkg/log"
 )
 
-func NewEvent() *Event {
+const (
+	Create = "create"
+	Update = "update"
+	Delete = "delete"
+)
+
+func ListenEvent() {
+	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "trace"})
+
 	config, err := ioutil.ReadFile(g.Config().K8S.Kubeconfig)
 	if err != nil {
 		log.Panicf("read kubeconfig file error: %s", err)
@@ -34,38 +42,34 @@ func NewEvent() *Event {
 		log.Panicf("get clientset from kubeconfig error: %s", err)
 	}
 
-	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
-	return &Event{
-		sharedInformer: sharedInformer,
-	}
-}
-
-type Event struct {
-	sharedInformer informers.SharedInformerFactory
-}
-
-func (e *Event) Deployment() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	deploymentInformer := e.sharedInformer.Apps().V1().Deployments().Informer()
+	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
+
+	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    DeploymentAdd,
-		UpdateFunc: DeploymentUpdate,
-		DeleteFunc: DeploymentDelete,
+		AddFunc: func(obj interface{}) {
+			handleDeployment(obj, Create)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			handleDeployment(newObj, Update)
+		},
+		DeleteFunc: func(obj interface{}) {},
 	})
 	deploymentInformer.Run(stopCh)
-}
 
-func (e *Event) Endpoint() {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	endpointInformer := e.sharedInformer.Core().V1().Endpoints().Informer()
+	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    EndpointAdd,
-		UpdateFunc: EndpointUpdate,
-		DeleteFunc: EndpointDelete,
+		AddFunc: func(obj interface{}) {
+			handleEndpoint(nil, obj, Create)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			handleEndpoint(oldObj, newObj, Create)
+		},
+		DeleteFunc: func(obj interface{}) {
+			handleEndpoint(nil, obj, Create)
+		},
 	})
 	endpointInformer.Run(stopCh)
 }

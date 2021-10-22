@@ -6,6 +6,7 @@
 package trace
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -17,117 +18,64 @@ import (
 	"ferry/server/objects"
 )
 
-func EndpointAdd(obj interface{}) {
-	epEvent := NewEndpointEvent(obj, "add")
-	if !epEvent.IsValidService() {
-		return
-	}
-	pipelineID, err := epEvent.Parse()
-	if err != nil {
-		log.Errorf("[add] parser pipeline id error: %s", err)
+func handleEndpoint(oldObj, newObj interface{}, mode string) {
+	var (
+		data    = newObj.(*corev1.Endpoints)
+		service = data.Name
+		subsets = data.Subsets
+	)
+
+	if !isValidService(service) {
 		return
 	}
 
+	pipelineID, err := getPipelineID(service)
+	if !errors.Is(err, objects.NotFound) && err != nil {
+		log.Errorf("[%s] get pipeline id error: %s", mode, err)
+		return
+	}
+
+	switch mode {
+	case Create:
+		wrap(pipelineID, service, getIPList(subsets), nil)
+	case Update:
+		oldData := oldObj.(*corev1.Endpoints)
+		wrap(pipelineID, service, getIPList(subsets), getIPList(oldData.Subsets))
+	case Delete:
+		wrap(pipelineID, service, nil, getIPList(subsets))
+	}
+}
+
+func wrap(pipelineID int64, service string, addList, delList []string) map[string]interface{} {
 	result := map[string]interface{}{
 		"pipelineID": pipelineID,
-		"service":    epEvent.GetService(),
-		"add":        epEvent.GetIPList(),
-		"del":        make([]map[string]string, 0),
+		"service":    service,
+		"add":        addList,
+		"del":        delList,
 	}
-	log.Infof("endpoint add result: %+v", result)
+	log.Infof("endpoint result: %+v", result)
+	return result
 }
 
-func EndpointUpdate(oldObj, newObj interface{}) {
-	oldEvent := NewEndpointEvent(oldObj, "update")
-	if !oldEvent.IsValidService() {
-		return
-	}
-	newEvent := NewEndpointEvent(newObj, "update")
-	if !newEvent.IsValidService() {
-		return
-	}
-	pipelineID, err := newEvent.Parse()
-	if err != nil {
-		log.Errorf("[update] parser pipeline id error: %s", err)
-		return
-	}
-
-	result := map[string]interface{}{
-		"pipelineID": pipelineID,
-		"service":    newEvent.GetService(),
-		"add":        newEvent.GetIPList(),
-		"del":        oldEvent.GetIPList(),
-	}
-	log.Infof("endpoint update result: %+v", result)
-}
-
-func EndpointDelete(obj interface{}) {
-	epEvent := NewEndpointEvent(obj, "delete")
-	if !epEvent.IsValidService() {
-		return
-	}
-	pipelineID, err := epEvent.Parse()
-	if err != nil {
-		log.Errorf("[delete] parser pipeline id error: %s", err)
-		return
-	}
-
-	result := map[string]interface{}{
-		"pipelineID": pipelineID,
-		"service":    epEvent.GetService(),
-		"add":        make([]map[string]string, 0),
-		"del":        epEvent.GetIPList(),
-	}
-	log.Infof("endpoint delete result: %+v", result)
-}
-
-func NewEndpointEvent(obj interface{}, mode string) *EndpointEvent {
-	data := obj.(*corev1.Endpoints)
-	return &EndpointEvent{
-		mode:    mode,
-		service: data.Name,
-		subsets: data.Subsets,
-	}
-}
-
-type EndpointEvent struct {
-	mode    string
-	service string
-	subsets []corev1.EndpointSubset
-}
-
-func (ee *EndpointEvent) IsValidService() bool {
+func isValidService(service string) bool {
 	reg := regexp.MustCompile(`[\w+-]+-\d+`)
 	if reg == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(ee.service, -1)
+	result := reg.FindAllStringSubmatch(service, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (ee *EndpointEvent) GetIPList() []map[string]string {
-	ipList := make([]map[string]string, 0)
-	for _, item := range ee.subsets {
-		for _, addrInfo := range item.Addresses {
-			ipInfo := make(map[string]string)
-			ipInfo["podIp"] = addrInfo.IP
-			ipInfo["podName"] = addrInfo.TargetRef.Name
-			ipList = append(ipList, ipInfo)
-		}
-	}
-	return ipList
-}
-
-func (ee *EndpointEvent) Parse() (int64, error) {
+func getPipelineID(service string) (int64, error) {
 	reg := regexp.MustCompile(`-\d+`)
 	if reg == nil {
 		return 0, fmt.Errorf("regexp compile error")
 	}
 
-	result := reg.FindAllStringSubmatch(ee.service, -1)
+	result := reg.FindAllStringSubmatch(service, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
@@ -142,6 +90,12 @@ func (ee *EndpointEvent) Parse() (int64, error) {
 	return pipeline.Pipeline.ID, nil
 }
 
-func (ee *EndpointEvent) GetService() string {
-	return ee.service
+func getIPList(subsets []corev1.EndpointSubset) []string {
+	ipList := make([]string, 0)
+	for _, item := range subsets {
+		for _, addrInfo := range item.Addresses {
+			ipList = append(ipList, addrInfo.IP)
+		}
+	}
+	return ipList
 }

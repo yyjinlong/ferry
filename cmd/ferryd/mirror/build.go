@@ -17,21 +17,37 @@ import (
 	"ferry/server/objects"
 )
 
-func Execute(data Image) {
-	p := &Pipeline{
-		pid:      data.PID,
-		service:  data.Service,
-		imageURL: fmt.Sprintf("%s/%s", g.Config().Registry.Release, data.Service),
-		imageTag: fmt.Sprintf("v-%s", time.Now().Format("20060102_150405")),
-	}
-	p.appPath = filepath.Dir(filepath.Dir(p.getCurPath()))
-	p.buildPath = filepath.Join(g.Config().Build.Dir, p.service, strconv.FormatInt(p.pid, 10))
-	p.codePath = filepath.Join(p.buildPath, "code")
-	p.targetURL = fmt.Sprintf("%s:%s", p.imageURL, p.imageTag)
-	p.Run(data)
+func getCurPath() string {
+	_, curPath, _, _ := runtime.Caller(1)
+	return curPath
 }
 
-type Pipeline struct {
+func worker(data Image) {
+	var (
+		pid       = data.PID
+		service   = data.Service
+		buildPath = filepath.Join(g.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
+		appPath   = filepath.Dir(filepath.Dir(getCurPath()))
+		codePath  = filepath.Join(buildPath, "code")
+		imageURL  = fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
+		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
+		targetURL = fmt.Sprintf("%s:%s", imageURL, imageTag)
+	)
+
+	p := &pipeline{
+		pid:       data.PID,
+		service:   data.Service,
+		appPath:   appPath,
+		buildPath: buildPath,
+		codePath:  codePath,
+		imageURL:  imageURL,
+		imageTag:  imageTag,
+		targetURL: targetURL,
+	}
+	p.run(data)
+}
+
+type pipeline struct {
 	pid       int64
 	service   string
 	appPath   string
@@ -42,15 +58,11 @@ type Pipeline struct {
 	targetURL string
 }
 
-func (p *Pipeline) getCurPath() string {
-	_, curPath, _, _ := runtime.Caller(1)
-	return curPath
-}
-
-func (p *Pipeline) Run(data Image) {
+func (p *pipeline) run(data Image) {
 	g.Mkdir(p.buildPath) // 构建路径: 主路径/服务/上线单ID
 	g.Mkdir(p.codePath)  // 代码路径: 主路径/服务/上线单ID/code
 	log.Infof("current code path: %s", p.codePath)
+
 	for _, item := range data.Build {
 		g.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath)
 	}
@@ -60,21 +72,18 @@ func (p *Pipeline) Run(data Image) {
 	p.dockerBuild()
 	p.dockerTag()
 	p.dockerPush()
-	if err := objects.CreateImage(p.pid, p.imageURL, p.imageTag); err != nil {
-		log.Errorf("write image info to db error: %s", err)
-		return
-	}
-	log.Info("release image: %s to registry success.", p.targetURL)
+	p.writeImageToDB()
+	log.Infof("push image: %s to registry success.", p.targetURL)
 }
 
-func (p *Pipeline) compile(language string) {
+func (p *pipeline) compile(language string) {
 	switch language {
 	case PYTHON:
 	case GOLANG:
 	}
 }
 
-func (p *Pipeline) copyDockerfile() {
+func (p *pipeline) copyDockerfile() {
 	var (
 		srcFile = filepath.Join(p.appPath, "mirror", "Dockerfile")
 		dstFile = filepath.Join(p.buildPath, "Dockerfile")
@@ -86,7 +95,7 @@ func (p *Pipeline) copyDockerfile() {
 	log.Infof("copy dockerfile: %s success.", dstFile)
 }
 
-func (p *Pipeline) dockerBuild() {
+func (p *pipeline) dockerBuild() {
 	si, err := objects.GetServiceInfo(p.service)
 	if err != nil {
 		log.Errorf("query service: %s failed: %s", p.service, err)
@@ -97,27 +106,35 @@ func (p *Pipeline) dockerBuild() {
 		repo = fmt.Sprintf("repo=%s", si.Service.ImageAddr)
 		cmd  = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
 	)
-	log.Infof(cmd)
+
+	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker build error: %s", err)
 		return
 	}
 }
 
-func (p *Pipeline) dockerTag() {
+func (p *pipeline) dockerTag() {
 	cmd := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
-	log.Infof(cmd)
+	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker tag error: %s", err)
 		return
 	}
 }
 
-func (p *Pipeline) dockerPush() {
+func (p *pipeline) dockerPush() {
 	cmd := fmt.Sprintf("docker push %s", p.targetURL)
-	log.Infof(cmd)
+	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker push error: %s", err)
+		return
+	}
+}
+
+func (p *pipeline) writeImageToDB() {
+	if err := objects.CreateImage(p.pid, p.imageURL, p.imageTag); err != nil {
+		log.Errorf("write image info to db error: %s", err)
 		return
 	}
 }

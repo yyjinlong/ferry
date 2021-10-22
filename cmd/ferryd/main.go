@@ -33,12 +33,9 @@ func main() {
 	db.Connect()
 
 	go mirror.ListenMQ()
-	go mirror.HandlePy()
-	go mirror.HandleGo()
+	go mirror.HandleMsg()
 
-	ee := trace.NewEvent()
-	go ee.Deployment()
-	go ee.Endpoint()
+	go trace.ListenEvent()
 
 	done := make(chan int)
 	<-done

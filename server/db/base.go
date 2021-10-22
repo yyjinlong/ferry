@@ -48,7 +48,7 @@ func Connect() {
 		log.Panicf("Ping connect error: %s", err)
 	}
 
-	eg.ShowSQL(true)
+	//eg.ShowSQL(true)
 	eg.SetMapper(names.GonicMapper{})
 
 	// 单列模式
