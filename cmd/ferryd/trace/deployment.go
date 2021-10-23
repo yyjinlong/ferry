@@ -109,8 +109,7 @@ func (de *deploymentEvent) worker() {
 		oldDeployment = objects.GetDeployment(de.serviceName, pipeline.Service.ID, de.phase, offlineGroup)
 	)
 
-	switch de.mode {
-	case Update:
+	if de.mode == Update {
 		// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
 		if de.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, de.phase) {
 			if err := de.scale(0, namespace, oldDeployment); err != nil {
@@ -118,11 +117,9 @@ func (de *deploymentEvent) worker() {
 			}
 			log.Infof("scale clear offline deployment: %s replicas: 0 success", oldDeployment)
 		}
-		fallthrough
-	default:
-		resourceVersionMap[key] = de.resourceVersion
-		de.updateDB(pipelineID)
 	}
+	resourceVersionMap[key] = de.resourceVersion
+	de.updateDB(pipelineID)
 }
 
 func (de *deploymentEvent) isValidDeployment() bool {
@@ -215,6 +212,5 @@ func (de *deploymentEvent) updateDB(pipelineID int64) {
 	err := objects.UpdatePhase(pipelineID, de.phase, db.PHSuccess)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("update pipeline: %d phase: %s failed: %s", pipelineID, de.phase, err)
-		return
 	}
 }
