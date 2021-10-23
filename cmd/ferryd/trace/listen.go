@@ -24,7 +24,7 @@ const (
 	Delete = "delete"
 )
 
-func ListenEvent() {
+func GetClientset() *kubernetes.Clientset {
 	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "trace"})
 
 	config, err := ioutil.ReadFile(g.Config().K8S.Kubeconfig)
@@ -41,12 +41,14 @@ func ListenEvent() {
 	if err != nil {
 		log.Panicf("get clientset from kubeconfig error: %s", err)
 	}
+	return clientset
+}
 
+func Deployment(clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
 	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
-
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -58,17 +60,23 @@ func ListenEvent() {
 		DeleteFunc: func(obj interface{}) {},
 	})
 	deploymentInformer.Run(stopCh)
+}
 
+func Endpoint(clientset *kubernetes.Clientset) {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			handleEndpoint(nil, obj, Create)
+			handleEndpoint(obj, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			handleEndpoint(oldObj, newObj, Create)
+			handleEndpoint(newObj, Update)
 		},
 		DeleteFunc: func(obj interface{}) {
-			handleEndpoint(nil, obj, Create)
+			handleEndpoint(obj, Delete)
 		},
 	})
 	endpointInformer.Run(stopCh)

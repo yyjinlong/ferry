@@ -18,9 +18,9 @@ import (
 	"ferry/server/objects"
 )
 
-func handleEndpoint(oldObj, newObj interface{}, mode string) {
+func handleEndpoint(obj interface{}, mode string) {
 	var (
-		data    = newObj.(*corev1.Endpoints)
+		data    = obj.(*corev1.Endpoints)
 		service = data.Name
 		subsets = data.Subsets
 	)
@@ -31,30 +31,16 @@ func handleEndpoint(oldObj, newObj interface{}, mode string) {
 
 	pipelineID, err := getPipelineID(service)
 	if !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("[%s] get pipeline id error: %s", mode, err)
+		log.Errorf("[%s] service: %s get pipeline id error: %s", mode, service, err)
 		return
 	}
 
-	switch mode {
-	case Create:
-		wrap(pipelineID, service, getIPList(subsets), nil)
-	case Update:
-		oldData := oldObj.(*corev1.Endpoints)
-		wrap(pipelineID, service, getIPList(subsets), getIPList(oldData.Subsets))
-	case Delete:
-		wrap(pipelineID, service, nil, getIPList(subsets))
-	}
-}
-
-func wrap(pipelineID int64, service string, addList, delList []string) map[string]interface{} {
 	result := map[string]interface{}{
 		"pipelineID": pipelineID,
 		"service":    service,
-		"add":        addList,
-		"del":        delList,
+		"new":        getIPList(subsets),
 	}
-	log.Infof("endpoint result: %+v", result)
-	return result
+	log.Infof("[%s] service: %s endpoints: %+v", mode, service, result)
 }
 
 func isValidService(service string) bool {

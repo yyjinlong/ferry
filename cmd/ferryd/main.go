@@ -35,7 +35,9 @@ func main() {
 	go mirror.ListenMQ()
 	go mirror.HandleMsg()
 
-	go trace.ListenEvent()
+	clientset := trace.GetClientset()
+	go trace.Deployment(clientset)
+	go trace.Endpoint(clientset)
 
 	done := make(chan int)
 	<-done
