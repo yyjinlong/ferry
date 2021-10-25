@@ -25,7 +25,7 @@ Jinlong Yang
     2) run层     : python(conda环境)、go(go mod环境)
     3) service层 : 具体的服务环境
 
-    4) release层 : 由image基于代码自动构建
+    4) release层 : 由ferryd进程基于代码自动构建
 
 
 ## 3 节点标签
