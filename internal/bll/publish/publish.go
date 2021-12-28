@@ -63,6 +63,7 @@ func (d *Deploy) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 		return nil, err
 	}
 	log.Infof("[deploy] generate deployment yaml(%s) success", d.deployment)
+	fmt.Println(tpl)
 
 	if err := d.execute(tpl); err != nil {
 		return nil, err

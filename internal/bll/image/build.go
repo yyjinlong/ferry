@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package mirror
+package image
 
 import (
 	"fmt"
@@ -12,9 +12,10 @@ import (
 	"strconv"
 	"time"
 
+	"ferry/internal/objects"
 	"ferry/pkg/g"
+	"ferry/pkg/git"
 	"ferry/pkg/log"
-	"ferry/server/objects"
 )
 
 func getCurPath() string {
@@ -64,42 +65,56 @@ func (p *pipeline) run(data Image) {
 	log.Infof("current code path: %s", p.codePath)
 
 	for _, item := range data.Build {
-		g.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath)
+		git.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath)
 	}
 
-	p.compile(data.Type)
-	p.copyDockerfile()
-	p.dockerBuild()
-	p.dockerTag()
-	p.dockerPush()
-	p.writeImageToDB()
+	if !p.compile(data.Type) {
+		return
+	}
+	if !p.copyDockerfile() {
+		return
+	}
+	if !p.dockerBuild() {
+		return
+	}
+	if !p.dockerTag() {
+		return
+	}
+	if !p.dockerPush() {
+		return
+	}
+	if !p.writeImageToDB() {
+		return
+	}
 	log.Infof("push image: %s to registry success.", p.targetURL)
 }
 
-func (p *pipeline) compile(language string) {
+func (p *pipeline) compile(language string) bool {
 	switch language {
 	case PYTHON:
 	case GOLANG:
 	}
+	return true
 }
 
-func (p *pipeline) copyDockerfile() {
+func (p *pipeline) copyDockerfile() bool {
 	var (
-		srcFile = filepath.Join(p.appPath, "mirror", "Dockerfile")
+		srcFile = filepath.Join(p.appPath, "image", "Dockerfile")
 		dstFile = filepath.Join(p.buildPath, "Dockerfile")
 	)
 	if err := g.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
-		return
+		return false
 	}
 	log.Infof("copy dockerfile: %s success.", dstFile)
+	return true
 }
 
-func (p *pipeline) dockerBuild() {
+func (p *pipeline) dockerBuild() bool {
 	si, err := objects.GetServiceInfo(p.service)
 	if err != nil {
 		log.Errorf("query service: %s failed: %s", p.service, err)
-		return
+		return false
 	}
 
 	var (
@@ -110,31 +125,35 @@ func (p *pipeline) dockerBuild() {
 	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker build error: %s", err)
-		return
+		return false
 	}
+	return true
 }
 
-func (p *pipeline) dockerTag() {
+func (p *pipeline) dockerTag() bool {
 	cmd := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
 	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker tag error: %s", err)
-		return
+		return false
 	}
+	return true
 }
 
-func (p *pipeline) dockerPush() {
+func (p *pipeline) dockerPush() bool {
 	cmd := fmt.Sprintf("docker push %s", p.targetURL)
 	log.Info(cmd)
 	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
 		log.Errorf("docker push error: %s", err)
-		return
+		return false
 	}
+	return true
 }
 
-func (p *pipeline) writeImageToDB() {
+func (p *pipeline) writeImageToDB() bool {
 	if err := objects.CreateImage(p.pid, p.imageURL, p.imageTag); err != nil {
 		log.Errorf("write image info to db error: %s", err)
-		return
+		return false
 	}
+	return true
 }

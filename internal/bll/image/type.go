@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package mirror
+package image
 
 const (
 	PYTHON = "python"

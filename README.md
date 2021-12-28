@@ -64,11 +64,11 @@ Jinlong Yang
 
     4) 发布沙盒
 
-        curl -d "pipeline_id=4&phase=sandbox&username=yangjinlong" http://127.0.0.1:8888/v1/deployment | jq .
+        curl -d "pipeline_id=4&phase=sandbox&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
 
     5) 发布全量
 
-        curl -d "pipeline_id=4&phase=online&username=yangjinlong" http://127.0.0.1:8888/v1/deployment | jq .
+        curl -d "pipeline_id=4&phase=online&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
 
     6) 部署完成
 

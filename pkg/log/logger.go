@@ -6,9 +6,9 @@
 package log
 
 import (
+	"io"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,11 +26,14 @@ func InitLogger(logFile string) {
 	}
 
 	logging.SetFormatter(&logrus.JSONFormatter{})
-	if gin.Mode() == gin.DebugMode {
-		logging.SetOutput(os.Stdout)
-	} else {
-		logging.SetOutput(f)
+
+	writers := []io.Writer{
+		f,
+		os.Stdout,
 	}
+	// 同时写文件和屏幕
+	allWriters := io.MultiWriter(writers...)
+	logging.SetOutput(allWriters)
 	logging.SetLevel(logrus.InfoLevel)
 
 	// NOTE: 初始默认设置logger实例

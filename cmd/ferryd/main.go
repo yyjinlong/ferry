@@ -8,11 +8,11 @@ package main
 import (
 	"flag"
 
-	"ferry/cmd/ferryd/mirror"
-	"ferry/cmd/ferryd/trace"
+	"ferry/internal/bll/image"
+	//"ferry/internal/listen"
+	"ferry/pkg/db"
 	"ferry/pkg/g"
 	"ferry/pkg/log"
-	"ferry/server/db"
 )
 
 var (
@@ -32,12 +32,12 @@ func main() {
 
 	db.Connect()
 
-	go mirror.ListenMQ()
-	go mirror.HandleMsg()
+	go image.ListenMQ()
+	go image.HandleMsg()
 
-	clientset := trace.GetClientset()
-	go trace.Deployment(clientset)
-	go trace.Endpoint(clientset)
+	//clientset := trace.GetClientset()
+	//go trace.Deployment(clientset)
+	//go trace.Endpoint(clientset)
 
 	done := make(chan int)
 	<-done

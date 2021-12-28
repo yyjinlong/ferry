@@ -44,7 +44,7 @@ type MyGit struct {
 func (mg *MyGit) Clone() error {
 	directory := filepath.Join(mg.codePath, mg.module)
 	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		if _, err := g.Cmd("git", "clone", g.repo, directory); err != nil {
+		if _, err := g.Cmd("git", "clone", mg.repo, directory); err != nil {
 			return err
 		}
 	}
@@ -53,7 +53,7 @@ func (mg *MyGit) Clone() error {
 
 func (mg *MyGit) CheckoutTag() error {
 	directory := filepath.Join(mg.codePath, mg.module)
-	if _, err := g.Cmd2(directory, "git", "checkout", g.tag); err != nil {
+	if _, err := g.Cmd2(directory, "git", "checkout", mg.tag); err != nil {
 		return err
 	}
 	return nil

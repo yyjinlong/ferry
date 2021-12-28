@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package mirror
+package image
 
 import (
 	"encoding/json"
@@ -17,16 +17,16 @@ var (
 	msgChan = make(chan Image)
 )
 
-type mirror struct{}
+type receiver struct{}
 
-func (m *mirror) Consumer(body []byte) error {
+func (r *receiver) Consumer(body []byte) error {
 	var data Image
 	if err := json.Unmarshal(body, &data); err != nil {
-		log.Errorf("consume mq json decode failed: %s", err)
+		log.Errorf("consume rabbitmq json decode failed: %s", err)
 		return err
 	}
 	log.InitFields(log.Fields{
-		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": "mirror"})
+		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": "image"})
 	msgChan <- data
 	return nil
 }
@@ -34,7 +34,7 @@ func (m *mirror) Consumer(body []byte) error {
 func ListenMQ() {
 	mqConf := g.Config().RabbitMQ
 	rmq := mq.NewRabbitMQ(mqConf.Address, mqConf.Exchange, mqConf.Queue, mqConf.RoutingKey)
-	rmq.Consume(&mirror{})
+	rmq.Consume(&receiver{})
 }
 
 func HandleMsg() {

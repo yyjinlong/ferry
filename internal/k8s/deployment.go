@@ -38,25 +38,18 @@ func (y *Yaml) Instance() (string, error) {
 		spec:
 		  ...
 	*/
-	type controller struct {
-		apiVersion string
-		kind       string
-		metadata   interface{}
-		spec       interface{}
-	}
 
 	spec, err := y.spec()
 	if err != nil {
 		return "", err
 	}
-
-	ctl := controller{
-		apiVersion: "apps/v1",
-		kind:       "Deployment",
-		metadata:   y.metadata(),
-		spec:       spec,
+	controller := map[string]interface{}{
+		"apiVersion": "apps/v1",
+		"kind":       "Deployment",
+		"metadata":   y.metadata(),
+		"spec":       spec,
 	}
-	config, err := json.Marshal(ctl)
+	config, err := json.Marshal(controller)
 	if err != nil {
 		return "", err
 	}
@@ -413,17 +406,12 @@ func (y *Yaml) security() interface{} {
 	     capabilities:
 	       add:
 	*/
-
-	type capabilities struct {
-		add []string
-	}
-
-	type securityContext struct {
-		capabilities
-	}
-
 	sysList := []string{"SYS_ADMIN", "SYS_PTRACE"}
-	return securityContext{capabilities{sysList}}
+	capabilities := map[string][]string{"add": sysList}
+	context := map[string]interface{}{
+		"capabilities": capabilities,
+	}
+	return context
 }
 
 func (y *Yaml) lifecycle() interface{} {
@@ -470,78 +458,70 @@ func (y *Yaml) mountContainerVolume() (interface{}, error) {
 		return nil, err
 	}
 
-	type volumeMounts struct {
-		name      string
-		mountPath string
-	}
-	containerVolumeMounts := make([]volumeMounts, 0)
-
+	containerVolumeMounts := make([]map[string]string, 0)
 	for _, item := range volumes {
-		containerVolumeMounts = append(containerVolumeMounts, volumeMounts{
-			name:      item.Name,
-			mountPath: item.Container.ContainerPath,
-		})
+		containerVolume := map[string]string{
+			"name":      item.Name,
+			"mountPath": item.Container.ContainerPath,
+		}
+		containerVolumeMounts = append(containerVolumeMounts, containerVolume)
 		log.Infof("container volume mount path: %s to: %s", item.Container.ContainerPath, item.Name)
 	}
 	return containerVolumeMounts, nil
 }
 
 func (y *Yaml) liveness() interface{} {
-	type live struct {
-		exec                interface{}
-		initialDelaySeconds int
-		timeoutSeconds      int
-		periodSeconds       int
-		successThreshold    int
-		failureThreshold    int
-	}
+	/*
+		exec:
+		  command:
+		    ...
+		initialDelaySeconds:
+		timeoutSeconds:
+		periodSeconds:
+		successThreshold:
+		failureThreshold:
+	*/
 
-	type execute struct {
-		command []string
-	}
-
-	cmd := []string{
+	command := []string{
 		"/bin/sh",
 		"/home/tong/opbin/liveness-prob.sh",
 	}
-	exec := execute{command: cmd}
+	exec := map[string][]string{"command": command}
 
-	return live{
-		exec:                exec,
-		initialDelaySeconds: 5,
-		timeoutSeconds:      5,
-		periodSeconds:       60,
-		successThreshold:    1,
-		failureThreshold:    3,
+	return map[string]interface{}{
+		"exec":                exec,
+		"initialDelaySeconds": 5,
+		"timeoutSeconds":      5,
+		"periodSeconds":       60,
+		"successThreshold":    1,
+		"failureThreshold":    3,
 	}
 }
 
 func (y *Yaml) readiness() interface{} {
-	type ready struct {
-		exec                interface{}
-		initialDelaySeconds int
-		timeoutSeconds      int
-		periodSeconds       int
-		successThreshold    int
-		failureThreshold    int
-	}
+	/*
+		exec:
+		  command:
+		    ...
+		initialDelaySeconds:
+		timeoutSeconds:
+		periodSeconds:
+		successThreshold:
+		failureThreshold:
+	*/
 
-	type execute struct {
-		command []string
-	}
-
-	cmd := []string{
+	command := []string{
 		"/bin/sh",
 		"/home/tong/opbin/readiness-probe.sh",
 	}
-	exec := execute{command: cmd}
+	exec := map[string][]string{"command": command}
 
-	return ready{
-		exec:                exec,
-		initialDelaySeconds: 5,
-		timeoutSeconds:      10,
-		periodSeconds:       10,
-		successThreshold:    1,
-		failureThreshold:    10,
+	return map[string]interface{}{
+		"exec":                exec,
+		"initialDelaySeconds": 5,
+		"timeoutSeconds":      10,
+		"periodSeconds":       10,
+		"successThreshold":    1,
+		"failureThreshold":    10,
 	}
 }
