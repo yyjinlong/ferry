@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package trace
+package listen
 
 import (
 	"errors"
@@ -13,28 +13,24 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"ferry/internal/model"
+	"ferry/internal/objects"
 	"ferry/pkg/g"
 	"ferry/pkg/log"
-	"ferry/server/db"
-	"ferry/server/objects"
 )
 
-var (
-	endResourceVersionMap = make(map[string]string)
-)
-
-func handleEndpoint(obj interface{}, mode string) {
+func CheckEndpointIsFinish(obj interface{}, mode string) {
 	data := obj.(*corev1.Endpoints)
-	ept := &endpoint{
+	ef := &endpointFinish{
 		mode:            mode,
 		service:         data.Name,
 		subsets:         data.Subsets,
 		resourceVersion: data.ObjectMeta.ResourceVersion,
 	}
-	ept.worker()
+	ef.worker()
 }
 
-type endpoint struct {
+type endpointFinish struct {
 	mode            string
 	service         string
 	serviceID       int64
@@ -43,87 +39,87 @@ type endpoint struct {
 	resourceVersion string
 }
 
-func (e *endpoint) worker() {
-	if !e.isValidService() {
+func (ef *endpointFinish) worker() {
+	if !ef.isValidService() {
 		return
 	}
-	if !e.parseServiceID() {
+	if !ef.parseServiceID() {
 		return
 	}
-	if !e.parseServiceName() {
+	if !ef.parseServiceName() {
 		return
 	}
 
-	key := e.serviceName
+	key := ef.serviceName
 	version, ok := endResourceVersionMap[key]
-	if ok && version == e.resourceVersion {
-		log.Infof("[%s] service: %s resource version same so stop", e.mode, e.service)
+	if ok && version == ef.resourceVersion {
+		log.Infof("[%s] service: %s resource version same so stop", ef.mode, ef.service)
 		return
 	}
-	endResourceVersionMap[key] = e.resourceVersion
+	endResourceVersionMap[key] = ef.resourceVersion
 
-	pipeline, err := objects.GetServicePipeline(e.serviceID)
+	pipeline, err := objects.GetServicePipeline(ef.serviceID)
 	if !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("[%s] service: %s get pipeline id error: %s", e.mode, e.service, err)
+		log.Errorf("[%s] service: %s get pipeline id error: %s", ef.mode, ef.service, err)
 		return
 	}
-	if g.Ini(pipeline.Pipeline.Status, []int{db.PLSuccess, db.PLRollbackSuccess}) {
+	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		delete(endResourceVersionMap, key) // NOTE: 上线完成删除对应的key
-		log.Infof("[%s] service: %s deploy finish so stop", e.mode, e.service)
+		log.Infof("[%s] service: %s deploy finish so stop", ef.mode, ef.service)
 		return
 	}
 
 	result := map[string]interface{}{
 		"pipelineID": pipeline.Pipeline.ID,
-		"service":    e.service,
-		"new":        e.getIPList(),
+		"service":    ef.service,
+		"new":        ef.getIPList(),
 	}
-	log.Infof("[%s] service: %s endpoints: %+v", e.mode, e.service, result)
+	log.Infof("[%s] service: %s endpoints: %+v", ef.mode, ef.service, result)
 }
 
-func (e *endpoint) isValidService() bool {
+func (ef *endpointFinish) isValidService() bool {
 	reg := regexp.MustCompile(`[\w+-]+-\d+`)
 	if reg == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(e.service, -1)
+	result := reg.FindAllStringSubmatch(ef.service, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (e *endpoint) parseServiceID() bool {
+func (ef *endpointFinish) parseServiceID() bool {
 	reg := regexp.MustCompile(`-\d+`)
 	if reg == nil {
 		return false
 	}
 
-	result := reg.FindAllStringSubmatch(e.service, -1)
+	result := reg.FindAllStringSubmatch(ef.service, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
 	if err != nil {
-		log.Errorf("[%s] service: %s convert to int64 error: %s", e.mode, e.service, err)
+		log.Errorf("[%s] service: %s convert to int64 error: %s", ef.mode, ef.service, err)
 		return false
 	}
-	e.serviceID = serviceID
+	ef.serviceID = serviceID
 	return true
 }
 
-func (e *endpoint) parseServiceName() bool {
+func (ef *endpointFinish) parseServiceName() bool {
 	reg := regexp.MustCompile(`-\d+`)
 	if reg == nil {
 		return false
 	}
-	matchList := reg.Split(e.service, -1)
-	e.serviceName = matchList[0]
+	matchList := reg.Split(ef.service, -1)
+	ef.serviceName = matchList[0]
 	return true
 }
 
-func (e *endpoint) getIPList() []string {
+func (ef *endpointFinish) getIPList() []string {
 	ipList := make([]string, 0)
-	for _, item := range e.subsets {
+	for _, item := range ef.subsets {
 		for _, addrInfo := range item.Addresses {
 			ipList = append(ipList, addrInfo.IP)
 		}

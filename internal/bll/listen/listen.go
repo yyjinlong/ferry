@@ -3,11 +3,10 @@
 // author: jinlong yang
 //
 
-package trace
+package listen
 
 import (
 	"io/ioutil"
-	"time"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -18,13 +17,7 @@ import (
 	"ferry/pkg/log"
 )
 
-const (
-	Create = "create"
-	Update = "update"
-	Delete = "delete"
-)
-
-func GetClientset() *kubernetes.Clientset {
+func getClientset() *kubernetes.Clientset {
 	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "trace"})
 
 	config, err := ioutil.ReadFile(g.Config().K8S.Kubeconfig)
@@ -44,40 +37,48 @@ func GetClientset() *kubernetes.Clientset {
 	return clientset
 }
 
-func Deployment(clientset *kubernetes.Clientset) {
+func DeploymentFinishEvent() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
+	clientset := getClientset()
+	// NOTE: 实例化SharedInformer对象, 参数clientset用于与api server交互, time.Minute设定resync周期，0为禁用resync
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			handleDeployment(obj, Create)
+			CheckDeploymentIsFinish(obj, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			handleDeployment(newObj, Update)
+			CheckDeploymentIsFinish(newObj, Update)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
 	deploymentInformer.Run(stopCh)
 }
 
-func Endpoint(clientset *kubernetes.Clientset) {
+func EndpointFinishEvent() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
+	clientset := getClientset()
+	// NOTE: 实例化SharedInformer对象, 参数clientset用于与api server交互, time.Minute设定resync周期，0为禁用resync
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			handleEndpoint(obj, Create)
+			CheckEndpointIsFinish(obj, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			handleEndpoint(newObj, Update)
+			CheckEndpointIsFinish(newObj, Update)
 		},
 		DeleteFunc: func(obj interface{}) {
-			handleEndpoint(obj, Delete)
+			CheckEndpointIsFinish(obj, Delete)
 		},
 	})
 	endpointInformer.Run(stopCh)
+}
+
+func GetProcessEvent() {
+
 }

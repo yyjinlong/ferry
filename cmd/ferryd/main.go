@@ -9,7 +9,7 @@ import (
 	"flag"
 
 	"ferry/internal/bll/image"
-	//"ferry/internal/listen"
+	"ferry/internal/bll/listen"
 	"ferry/pkg/db"
 	"ferry/pkg/g"
 	"ferry/pkg/log"
@@ -35,9 +35,8 @@ func main() {
 	go image.ListenMQ()
 	go image.HandleMsg()
 
-	//clientset := trace.GetClientset()
-	//go trace.Deployment(clientset)
-	//go trace.Endpoint(clientset)
+	go listen.DeploymentFinishEvent()
+	go listen.EndpointFinishEvent()
 
 	done := make(chan int)
 	<-done
