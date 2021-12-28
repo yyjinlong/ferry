@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package deployment
+package k8s
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"ferry/pkg/log"
 )
 
+// NewDeployments deployment相关操作
 func NewDeployments(namespace, deployment string) *Deployments {
 	return &Deployments{}
 }
@@ -29,7 +30,7 @@ func (d *Deployments) Exist() bool {
 	)
 	body, err := g.Get(url, header, nil, 5)
 	if err != nil {
-		log.Infof("check deployment: %s is not exist", deployment)
+		log.Infof("check deployment: %s is not exist", d.deployment)
 		return false
 	}
 	if err := d.result(body); err != nil {
@@ -49,7 +50,7 @@ func (d *Deployments) Create(tpl string) error {
 		log.Errorf("request create deployment api error: %s", err)
 		return err
 	}
-	return d.result(body)
+	return response(body)
 }
 
 func (d *Deployments) Update(tpl string) error {
@@ -62,22 +63,73 @@ func (d *Deployments) Update(tpl string) error {
 		log.Errorf("request update deployment api error: %s", err)
 		return err
 	}
-	return d.result(body)
+	return response(body)
 }
 
-func (d *Deployments) result(body string) error {
+// NewServices service相关操作
+func NewServices() *Services {
+	return &services{}
+}
+
+type Services struct {
+	namespace string
+	name      string
+}
+
+func (s *Services) Exist() bool {
+	var (
+		url = fmt.Sprintf(g.Config().K8S.Service, s.namespace) + "/" + s.name
+	)
+	body, err := g.Get(url, nil, nil, 5)
+	if err != nil {
+		log.Infof("check service: %s is not exists", s.name)
+		return false
+	}
+	if err := s.response(body); err != nil {
+		return false
+	}
+	log.Infof("check service: %s is exist.", s.name)
+	return true
+}
+
+func (s *Services) Create(tpl string) error {
+	var (
+		url    = fmt.Sprintf(g.Config().K8S.Service, s.namespace)
+		header = map[string]string{"Content-Type": "application/json"}
+	)
+	body, err := g.Post(url, header, []byte(tpl), 5)
+	if err != nil {
+		log.Errorf("request create service api error: %s", err)
+		return err
+	}
+	return response(body)
+}
+
+func (s *Services) Update(tpl string) error {
+	var (
+		url    = fmt.Sprintf(g.Config().K8S.Service, s.namespace) + "/" + s.name
+		header = map[string]string{"Content-Type": "application/json"}
+	)
+	body, err := g.Put(url, header, []byte(tpl), 5)
+	if err != nil {
+		log.Errorf("request update service api error: %s", err)
+		return err
+	}
+	return response(body)
+}
+
+func response(body string) error {
 	resp := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("response body json decode error: %s", err)
+		log.Errorf("k8s response body json decode error: %s", err)
 		return err
 	}
 
 	status, ok := resp["status"].(string)
 	if ok && status == "Failure" {
 		err := fmt.Errorf("%s", resp["message"].(string))
-		log.Errorf("request deployment api failed: %s", err)
+		log.Errorf("request k8s api failed: %s", err)
 		return err
 	}
-	log.Info("deployment operate success")
 	return nil
 }

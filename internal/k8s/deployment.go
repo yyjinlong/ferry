@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package deployment
+package k8s
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"ferry/pkg/log"
 )
 
-type yaml struct {
-	pipelineID  int64  // 流水线ID
+type Yaml struct {
+	pipelineID  int64  // 流程ID
 	phase       string // 部署阶段
 	deployment  string // deployment名字
 	appid       string // 应用标识, 用于过滤
@@ -30,7 +30,7 @@ type yaml struct {
 	reserveTime int    // 终止后的预留时间
 }
 
-func (y *yaml) instance() (string, error) {
+func (y *Yaml) Instance() (string, error) {
 	/*
 		apiVersion
 		kind
@@ -64,14 +64,14 @@ func (y *yaml) instance() (string, error) {
 	return string(config), nil
 }
 
-func (y *yaml) metadata() map[string]string {
+func (y *Yaml) metadata() map[string]string {
 	return map[string]string{
 		"name":      y.deployment,
 		"namespace": y.namespace,
 	}
 }
 
-func (y *yaml) spec() (map[string]interface{}, error) {
+func (y *Yaml) spec() (map[string]interface{}, error) {
 	/*
 		spec:
 		  replicas:
@@ -95,14 +95,14 @@ func (y *yaml) spec() (map[string]interface{}, error) {
 	return spec, nil
 }
 
-func (y *yaml) selector() map[string]interface{} {
+func (y *Yaml) selector() map[string]interface{} {
 	selector := map[string]interface{}{
 		"matchLabels": y.labels(),
 	}
 	return selector
 }
 
-func (y *yaml) labels() map[string]string {
+func (y *Yaml) labels() map[string]string {
 	return map[string]string{
 		"service": y.deployment,
 		"phase":   y.phase,
@@ -110,7 +110,7 @@ func (y *yaml) labels() map[string]string {
 	}
 }
 
-func (y *yaml) strategy() map[string]interface{} {
+func (y *Yaml) strategy() map[string]interface{} {
 	rollingUpdate := map[string]interface{}{
 		"maxSurge":       0,
 		"maxUnavailable": "100%",
@@ -121,7 +121,7 @@ func (y *yaml) strategy() map[string]interface{} {
 	}
 }
 
-func (y *yaml) template() (map[string]interface{}, error) {
+func (y *Yaml) template() (map[string]interface{}, error) {
 	/*
 		template:
 		  metadata:
@@ -140,13 +140,13 @@ func (y *yaml) template() (map[string]interface{}, error) {
 	return tpl, nil
 }
 
-func (y *yaml) templateMetadata() interface{} {
+func (y *Yaml) templateMetadata() interface{} {
 	labels := make(map[string]interface{})
 	labels["labels"] = y.labels()
 	return labels
 }
 
-func (y *yaml) templateSpec() (interface{}, error) {
+func (y *Yaml) templateSpec() (interface{}, error) {
 	/*
 		spec:
 		  hostAliases:
@@ -189,7 +189,7 @@ func (y *yaml) templateSpec() (interface{}, error) {
 	return spec, nil
 }
 
-func (y *yaml) hostAliases() interface{} {
+func (y *Yaml) hostAliases() interface{} {
 	/*
 	   hostAliases:
 	     - hostnames:
@@ -221,7 +221,7 @@ func (y *yaml) hostAliases() interface{} {
 	return hostAliaseList
 }
 
-func (y *yaml) dnsConfig() interface{} {
+func (y *Yaml) dnsConfig() interface{} {
 	/*
 		dnsConfig:
 			nameservers:
@@ -233,7 +233,7 @@ func (y *yaml) dnsConfig() interface{} {
 	}
 }
 
-func (y *yaml) nodeSelector() interface{} {
+func (y *Yaml) nodeSelector() interface{} {
 	/*
 	   nodeSelector:
 	     ...
@@ -243,7 +243,7 @@ func (y *yaml) nodeSelector() interface{} {
 	}
 }
 
-func (y *yaml) volumes() (interface{}, error) {
+func (y *Yaml) volumes() (interface{}, error) {
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath类型.
 	volumes := make([]interface{}, 0)
 	defineVolume, err := y.createDefineVolume()
@@ -254,7 +254,7 @@ func (y *yaml) volumes() (interface{}, error) {
 	return volumes, nil
 }
 
-func (y *yaml) createDefineVolume() (interface{}, error) {
+func (y *Yaml) createDefineVolume() (interface{}, error) {
 	/*
 	   创建自定义的数据卷(服务需要的数据卷)
 	   volumes:
@@ -295,7 +295,7 @@ func (y *yaml) createDefineVolume() (interface{}, error) {
 	return defineVolume, nil
 }
 
-func (y *yaml) affinity() interface{} {
+func (y *Yaml) affinity() interface{} {
 	/*
 		同一deployment下的pod散列在不同node上.
 		podAntiAffinity:
@@ -330,7 +330,7 @@ func (y *yaml) affinity() interface{} {
 	return map[string]interface{}{"podAntiAffinity": softLimit}
 }
 
-func (y *yaml) containers() (interface{}, error) {
+func (y *Yaml) containers() (interface{}, error) {
 	/*
 	   - name:
 	     image:
@@ -374,7 +374,7 @@ func (y *yaml) containers() (interface{}, error) {
 	return containerList, nil
 }
 
-func (y *yaml) setEnv() interface{} {
+func (y *Yaml) setEnv() interface{} {
 	/*
 	   - env:
 	       - name:
@@ -386,7 +386,7 @@ func (y *yaml) setEnv() interface{} {
 	return env
 }
 
-func (y *yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
+func (y *Yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	/*
 		resources:
 		    requests:
@@ -408,7 +408,7 @@ func (y *yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	}
 }
 
-func (y *yaml) security() interface{} {
+func (y *Yaml) security() interface{} {
 	/*
 	   securityContext:
 	     capabilities:
@@ -427,7 +427,7 @@ func (y *yaml) security() interface{} {
 	return securityContext{capabilities{sysList}}
 }
 
-func (y *yaml) lifecycle() interface{} {
+func (y *Yaml) lifecycle() interface{} {
 	/*
 	   在容器被终结之前, Kubernetes 将发送一个 preStop 事件.
 	   优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 30秒等待未处理完的请求,
@@ -448,7 +448,7 @@ func (y *yaml) lifecycle() interface{} {
 	return life
 }
 
-func (y *yaml) mountContainerVolume() (interface{}, error) {
+func (y *Yaml) mountContainerVolume() (interface{}, error) {
 	/*
 	   volumeMounts:
 	     - name:
@@ -487,7 +487,7 @@ func (y *yaml) mountContainerVolume() (interface{}, error) {
 	return containerVolumeMounts, nil
 }
 
-func (y *yaml) liveness() interface{} {
+func (y *Yaml) liveness() interface{} {
 	type live struct {
 		exec                interface{}
 		initialDelaySeconds int
@@ -517,7 +517,7 @@ func (y *yaml) liveness() interface{} {
 	}
 }
 
-func (y *yaml) readiness() interface{} {
+func (y *Yaml) readiness() interface{} {
 	type ready struct {
 		exec                interface{}
 		initialDelaySeconds int
