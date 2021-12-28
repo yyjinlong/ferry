@@ -11,11 +11,11 @@ import (
 )
 
 type ServiceYaml struct {
-	serviceName   string
-	serviceID     int64
-	appid         string
-	exposePort    int
-	containerPort int
+	ServiceName   string
+	ServiceID     int64
+	AppID         string
+	ExposePort    int
+	ContainerPort int
 }
 
 func (sy *ServiceYaml) Instance() (string, error) {
@@ -33,7 +33,7 @@ func (sy *ServiceYaml) Instance() (string, error) {
 	}
 	ctl := controller{"v1", "Service", sy.metadata(), sy.spec()}
 
-	config, err := json.Marshal(vip)
+	config, err := json.Marshal(ctl)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +42,7 @@ func (sy *ServiceYaml) Instance() (string, error) {
 
 func (sy *ServiceYaml) metadata() interface{} {
 	return map[string]interface{}{
-		"name": fmt.Sprintf("%s-%d", sy.serviceName, sy.serviceID),
+		"name": fmt.Sprintf("%s-%d", sy.ServiceName, sy.ServiceID),
 	}
 }
 
@@ -63,13 +63,13 @@ func (sy *ServiceYaml) spec() interface{} {
 
 func (sy *ServiceYaml) selector() interface{} {
 	return map[string]string{
-		"appid": sy.appid,
+		"appid": sy.AppID,
 	}
 }
 
 func (sy *ServiceYaml) ports() interface{} {
 	cluster := make(map[string]interface{})
-	cluster["port"] = sy.exposePort
-	cluster["targetPort"] = sy.containerPort
+	cluster["port"] = sy.ExposePort
+	cluster["targetPort"] = sy.ContainerPort
 	return []interface{}{cluster}
 }

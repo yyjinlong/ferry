@@ -9,7 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ferry/internal/k8s"
+	"ferry/internal/model"
+	"ferry/internal/objects"
 	"ferry/pkg/base"
+	"ferry/pkg/log"
 )
 
 type Service struct {
@@ -39,11 +42,11 @@ func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error)
 	log.Infof("[service] fetch service appid: %s", appid)
 
 	yaml := k8s.ServiceYaml{
-		serviceName:   serviceName,
-		serviceID:     serviceObj.Service.ID,
-		appid:         appid,
-		exposePort:    serviceObj.Service.Port,
-		containerPort: serviceObj.Service.ContainerPort,
+		ServiceName:   s.serviceName,
+		ServiceID:     serviceObj.Service.ID,
+		AppID:         appid,
+		ExposePort:    serviceObj.Service.Port,
+		ContainerPort: serviceObj.Service.ContainerPort,
 	}
 	tpl, err := yaml.Instance()
 	if err != nil {
@@ -58,8 +61,8 @@ func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error)
 	return nil, nil
 }
 
-func (s *Service) execute() error {
-	ss := k8s.NewServices(s.namespace, s.service)
+func (s *Service) execute(tpl string) error {
+	ss := k8s.NewServices(s.namespace, s.serviceName)
 	if !ss.Exist() {
 		return ss.Create(tpl)
 	}

@@ -99,21 +99,20 @@ func (d *Deploy) createYaml(pipeline *model.PipelineQuery) (string, error) {
 	}
 
 	yaml := &k8s.Yaml{
-		pipelineID:  d.pid,
-		phase:       d.phase,
-		deployment:  d.deployment,
-		appid:       d.appid,
-		namespace:   pipeline.Namespace.Name,
-		service:     pipeline.Service.Name,
-		imageURL:    imageInfo["image_url"],
-		imageTag:    imageInfo["image_tag"],
-		replicas:    replicas,
-		quotaCpu:    pipeline.Service.QuotaCpu,
-		quotaMaxCpu: pipeline.Service.QuotaMaxCpu,
-		quotaMem:    pipeline.Service.QuotaMem,
-		quotaMaxMem: pipeline.Service.QuotaMaxMem,
-		volumeConf:  pipeline.Service.Volume,
-		reserveTime: pipeline.Service.ReserveTime,
+		Phase:       d.phase,
+		Deployment:  d.deployment,
+		AppID:       d.appid,
+		Namespace:   pipeline.Namespace.Name,
+		Service:     pipeline.Service.Name,
+		ImageURL:    imageInfo["image_url"],
+		ImageTag:    imageInfo["image_tag"],
+		Replicas:    replicas,
+		QuotaCpu:    pipeline.Service.QuotaCpu,
+		QuotaMaxCpu: pipeline.Service.QuotaMaxCpu,
+		QuotaMem:    pipeline.Service.QuotaMem,
+		QuotaMaxMem: pipeline.Service.QuotaMaxMem,
+		VolumeConf:  pipeline.Service.Volume,
+		ReserveTime: pipeline.Service.ReserveTime,
 	}
 	return yaml.Instance()
 }

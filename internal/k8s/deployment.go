@@ -13,21 +13,20 @@ import (
 )
 
 type Yaml struct {
-	pipelineID  int64  // 流程ID
-	phase       string // 部署阶段
-	deployment  string // deployment名字
-	appid       string // 应用标识, 用于过滤
-	namespace   string // 当前服务所在命名空间
-	service     string // 服务名
-	imageURL    string // 镜像地址
-	imageTag    string // 镜像tag
-	replicas    int    // 副本数
-	quotaCpu    int    // cpu配额
-	quotaMaxCpu int    // cpu最大配额
-	quotaMem    int    // 内存配额
-	quotaMaxMem int    // 内存最大配额
-	volumeConf  string // 数据卷配置
-	reserveTime int    // 终止后的预留时间
+	Phase       string // 部署阶段
+	Deployment  string // deployment名字
+	AppID       string // 应用标识, 用于过滤
+	Namespace   string // 当前服务所在命名空间
+	Service     string // 服务名
+	ImageURL    string // 镜像地址
+	ImageTag    string // 镜像tag
+	Replicas    int    // 副本数
+	QuotaCpu    int    // cpu配额
+	QuotaMaxCpu int    // cpu最大配额
+	QuotaMem    int    // 内存配额
+	QuotaMaxMem int    // 内存最大配额
+	VolumeConf  string // 数据卷配置
+	ReserveTime int    // 终止后的预留时间
 }
 
 func (y *Yaml) Instance() (string, error) {
@@ -66,8 +65,8 @@ func (y *Yaml) Instance() (string, error) {
 
 func (y *Yaml) metadata() map[string]string {
 	return map[string]string{
-		"name":      y.deployment,
-		"namespace": y.namespace,
+		"name":      y.Deployment,
+		"namespace": y.Namespace,
 	}
 }
 
@@ -83,7 +82,7 @@ func (y *Yaml) spec() (map[string]interface{}, error) {
 		    ...
 	*/
 	spec := make(map[string]interface{})
-	spec["replicas"] = y.replicas
+	spec["replicas"] = y.Replicas
 	spec["selector"] = y.selector()
 	spec["strategy"] = y.strategy()
 
@@ -104,9 +103,9 @@ func (y *Yaml) selector() map[string]interface{} {
 
 func (y *Yaml) labels() map[string]string {
 	return map[string]string{
-		"service": y.deployment,
-		"phase":   y.phase,
-		"appid":   y.appid,
+		"service": y.Deployment,
+		"phase":   y.Phase,
+		"appid":   y.AppID,
 	}
 }
 
@@ -171,7 +170,7 @@ func (y *Yaml) templateSpec() (interface{}, error) {
 	spec["hostAliases"] = y.hostAliases()
 	spec["dnsConfig"] = y.dnsConfig()
 	spec["dnsPolicy"] = "None"
-	spec["terminationGracePeriodSeconds"] = y.reserveTime
+	spec["terminationGracePeriodSeconds"] = y.ReserveTime
 	spec["nodeSelector"] = y.nodeSelector()
 
 	volumes, err := y.volumes()
@@ -276,7 +275,7 @@ func (y *Yaml) createDefineVolume() (interface{}, error) {
 	}
 
 	var volumes []volume
-	if err := json.Unmarshal([]byte(y.volumeConf), &volumes); err != nil {
+	if err := json.Unmarshal([]byte(y.VolumeConf), &volumes); err != nil {
 		return nil, err
 	}
 
@@ -314,7 +313,7 @@ func (y *Yaml) affinity() interface{} {
 	compare := make(map[string]interface{})
 	compare["key"] = "service"
 	compare["operator"] = "In"
-	compare["values"] = []string{y.deployment}
+	compare["values"] = []string{y.Deployment}
 	matchExpression := []interface{}{compare}
 	labelSelector := map[string]interface{}{"matchExpressions": matchExpression}
 
@@ -354,11 +353,11 @@ func (y *Yaml) containers() (interface{}, error) {
 
 	containerList := make([]interface{}, 0)
 	container := make(map[string]interface{})
-	container["name"] = y.service
-	container["image"] = fmt.Sprintf("%s:%s", y.imageURL, y.imageTag)
+	container["name"] = y.Service
+	container["image"] = fmt.Sprintf("%s:%s", y.ImageURL, y.ImageTag)
 	container["imagePullPolicy"] = "IfNotPresent"
 	container["env"] = y.setEnv()
-	container["resources"] = y.setResource(y.quotaCpu, y.quotaMaxCpu, y.quotaMem, y.quotaMaxMem)
+	container["resources"] = y.setResource(y.QuotaCpu, y.QuotaMaxCpu, y.QuotaMem, y.QuotaMaxMem)
 	container["securityContext"] = y.security()
 	container["lifecycle"] = y.lifecycle()
 	volumeMounts, err := y.mountContainerVolume()
@@ -381,7 +380,7 @@ func (y *Yaml) setEnv() interface{} {
 	         value:
 	*/
 	env := []map[string]string{
-		{"name": "SERVICE", "value": y.service},
+		{"name": "SERVICE", "value": y.Service},
 	}
 	return env
 }
@@ -467,7 +466,7 @@ func (y *Yaml) mountContainerVolume() (interface{}, error) {
 	}
 
 	var volumes []volume
-	if err := json.Unmarshal([]byte(y.volumeConf), &volumes); err != nil {
+	if err := json.Unmarshal([]byte(y.VolumeConf), &volumes); err != nil {
 		return nil, err
 	}
 
@@ -505,7 +504,7 @@ func (y *Yaml) liveness() interface{} {
 		"/bin/sh",
 		"/home/tong/opbin/liveness-prob.sh",
 	}
-	exec := execute{"command": cmd}
+	exec := execute{command: cmd}
 
 	return live{
 		exec:                exec,
@@ -535,7 +534,7 @@ func (y *Yaml) readiness() interface{} {
 		"/bin/sh",
 		"/home/tong/opbin/readiness-probe.sh",
 	}
-	exec := execute{"command": cmd}
+	exec := execute{command: cmd}
 
 	return ready{
 		exec:                exec,

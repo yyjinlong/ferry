@@ -15,7 +15,10 @@ import (
 
 // NewDeployments deployment相关操作
 func NewDeployments(namespace, deployment string) *Deployments {
-	return &Deployments{}
+	return &Deployments{
+		namespace:  namespace,
+		deployment: deployment,
+	}
 }
 
 type Deployments struct {
@@ -33,10 +36,10 @@ func (d *Deployments) Exist() bool {
 		log.Infof("check deployment: %s is not exist", d.deployment)
 		return false
 	}
-	if err := d.result(body); err != nil {
+	if err := response(body); err != nil {
 		return false
 	}
-	log.Infof("check deplloyment: %s is exist", deployment)
+	log.Infof("check deplloyment: %s is exist", d.deployment)
 	return true
 }
 
@@ -67,8 +70,11 @@ func (d *Deployments) Update(tpl string) error {
 }
 
 // NewServices service相关操作
-func NewServices() *Services {
-	return &services{}
+func NewServices(namespace, name string) *Services {
+	return &Services{
+		namespace: namespace,
+		name:      name,
+	}
 }
 
 type Services struct {
@@ -85,7 +91,7 @@ func (s *Services) Exist() bool {
 		log.Infof("check service: %s is not exists", s.name)
 		return false
 	}
-	if err := s.response(body); err != nil {
+	if err := response(body); err != nil {
 		return false
 	}
 	log.Infof("check service: %s is exist.", s.name)
