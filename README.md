@@ -33,16 +33,24 @@ Jinlong Yang
     kubectl label node x.x.x.x aggregate=default
 
 
-## 4 创建service
+## 4 业务逻辑
 
-    1) 创建服务
+    bll
+    ├── image        -- 构建镜像
+    ├── listen       -- 监听事件
+    ├── pipeline     -- 构建相关流程
+    ├── publish      -- 发布
+    └── rollback     -- 回滚
 
-        curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
+
+## 5 创建服务
+
+    curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
 
 
-## 5 创建deployment
+## 6 发布流程
 
-    1) 创建pipeline
+    1) 创建job
 
         curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "master"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
 
@@ -50,7 +58,7 @@ Jinlong Yang
 
         curl -d 'pipeline_id=4&module=ivr&tag=release_ivr_20210827_155942' http://127.0.0.1:8888/v1/tag
 
-    3) 创建镜像
+    3) 构建镜像
 
         curl -d 'pipeline_id=4'  http://127.0.0.1:8888/v1/image
 
