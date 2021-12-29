@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-func Get(url string, header map[string]string, param []byte, timeout int) (string, error) {
-	return do(http.MethodGet, url, header, param, timeout)
+func Get(url string, header map[string]string, timeout int) (string, error) {
+	return do(http.MethodGet, url, header, nil, timeout)
 }
 
 func Post(url string, header map[string]string, payload []byte, timeout int) (string, error) {

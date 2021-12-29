@@ -31,7 +31,7 @@ func (d *Deployments) Exist() bool {
 		url    = fmt.Sprintf(g.Config().K8S.Deployment, d.namespace) + "/" + d.deployment
 		header = map[string]string{"Content-Type": "application/json"}
 	)
-	body, err := g.Get(url, header, nil, 5)
+	body, err := g.Get(url, header, 5)
 	if err != nil {
 		log.Infof("check deployment: %s is not exist", d.deployment)
 		return false
@@ -112,7 +112,7 @@ func (s *Services) Exist() bool {
 	var (
 		url = fmt.Sprintf(g.Config().K8S.Service, s.namespace) + "/" + s.name
 	)
-	body, err := g.Get(url, nil, nil, 5)
+	body, err := g.Get(url, nil, 5)
 	if err != nil {
 		log.Infof("check service: %s is not exists", s.name)
 		return false
