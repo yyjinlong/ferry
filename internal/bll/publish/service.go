@@ -41,7 +41,7 @@ func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error)
 	appid := objects.GetAppID(s.serviceName, serviceObj.Service.ID, model.PHASE_ONLINE)
 	log.Infof("[service] fetch service appid: %s", appid)
 
-	yaml := k8s.ServiceYaml{
+	yaml := &k8s.ServiceYaml{
 		ServiceName:   s.serviceName,
 		ServiceID:     serviceObj.Service.ID,
 		AppID:         appid,
