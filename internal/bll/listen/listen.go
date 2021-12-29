@@ -42,7 +42,6 @@ func DeploymentFinishEvent() {
 	defer close(stopCh)
 
 	clientset := getClientset()
-	// NOTE: 实例化SharedInformer对象, 参数clientset用于与api server交互, time.Minute设定resync周期，0为禁用resync
 	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -62,19 +61,16 @@ func EndpointFinishEvent() {
 	defer close(stopCh)
 
 	clientset := getClientset()
-	// NOTE: 实例化SharedInformer对象, 参数clientset用于与api server交互, time.Minute设定resync周期，0为禁用resync
 	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			CheckEndpointIsFinish(obj, Create)
+			CheckEndpointIsFinish(obj, nil, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			CheckEndpointIsFinish(newObj, Update)
+			CheckEndpointIsFinish(newObj, oldObj, Update)
 		},
-		DeleteFunc: func(obj interface{}) {
-			CheckEndpointIsFinish(obj, Delete)
-		},
+		DeleteFunc: func(obj interface{}) {},
 	})
 	endpointInformer.Run(stopCh)
 }

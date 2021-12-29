@@ -52,7 +52,8 @@ type finishEvent struct {
 }
 
 func (fe *finishEvent) worker() {
-	log.InitFields(log.Fields{"logid": g.UniqueID(), "mode": fe.mode, "deployment": fe.deployment})
+	log.InitFields(log.Fields{
+		"logid": g.UniqueID(), "mode": fe.mode, "deployment": fe.deployment, "version": fe.resourceVersion})
 	if !fe.isValidDeployment() {
 		return
 	}
@@ -78,6 +79,7 @@ func (fe *finishEvent) worker() {
 		return
 	}
 	depResourceVersionMap[key] = fe.resourceVersion
+	log.Infof("get service: %s phase: %s group: %s", fe.serviceName, fe.phase, fe.group)
 
 	pipeline, err := objects.GetServicePipeline(fe.serviceID)
 	if !errors.Is(err, objects.NotFound) && err != nil {
@@ -133,7 +135,6 @@ func (fe *finishEvent) parseServiceID() bool {
 		return false
 	}
 	fe.serviceID = serviceID
-	log.Infof("get service id: %d", fe.serviceID)
 	return true
 }
 
@@ -147,7 +148,6 @@ func (fe *finishEvent) parsePublishGroup() bool {
 	fe.serviceName = matchList[0]
 	fe.phase = afterList[0]
 	fe.group = afterList[1]
-	log.Infof("get service name: %s phase: %s group: %s", fe.serviceName, fe.phase, fe.group)
 	return true
 }
 
