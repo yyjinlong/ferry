@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"ferry/internal/model"
-	"ferry/pkg/db"
 )
 
 const (
@@ -37,9 +36,8 @@ func GetAppID(serviceName string, serviceID int64, phase string) string {
 
 func GetServiceInfo(name string) (*model.ServiceQuery, error) {
 	service := new(model.ServiceQuery)
-	if has, err := db.SEngine.Table("service").
-		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("service.name = ?", name).Get(service); err != nil {
+	session := getServiceSession()
+	if has, err := session.Where("service.name = ?", name).Get(service); err != nil {
 	} else if !has {
 		return nil, NotFound
 	}
@@ -48,7 +46,7 @@ func GetServiceInfo(name string) (*model.ServiceQuery, error) {
 
 func GetCodeModules(serviceID int64) ([]model.CodeModule, error) {
 	moduleList := make([]model.CodeModule, 0)
-	if err := db.SEngine.Where("service_id=?", serviceID).Find(&moduleList); err != nil {
+	if err := model.SEngine().Where("service_id = ?", serviceID).Find(&moduleList); err != nil {
 		return nil, err
 	}
 	return moduleList, nil
@@ -56,7 +54,7 @@ func GetCodeModules(serviceID int64) ([]model.CodeModule, error) {
 
 func GetPipeline(pipelineID int64) (*model.Pipeline, error) {
 	pipeline := new(model.Pipeline)
-	if has, err := db.SEngine.ID(pipelineID).Get(pipeline); err != nil {
+	if has, err := model.SEngine().ID(pipelineID).Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -67,10 +65,8 @@ func GetPipeline(pipelineID int64) (*model.Pipeline, error) {
 // GetPipelineInfo 根据pipeline id返回pipeline、namespace、service信息
 func GetPipelineInfo(pipelineID int64) (*model.PipelineQuery, error) {
 	pq := new(model.PipelineQuery)
-	if has, err := db.SEngine.Table("pipeline").
-		Join("INNER", "service", "pipeline.service_id = service.id").
-		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("pipeline.id = ?", pipelineID).Get(pq); err != nil {
+	session := getPipelineSession()
+	if has, err := session.Where("pipeline.id = ?", pipelineID).Get(pq); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -81,11 +77,8 @@ func GetPipelineInfo(pipelineID int64) (*model.PipelineQuery, error) {
 // GetServicePipeline 根据服务id返回最近一次的上线信息
 func GetServicePipeline(serviceID int64) (*model.PipelineQuery, error) {
 	pq := new(model.PipelineQuery)
-	if has, err := db.SEngine.Table("pipeline").
-		Join("INNER", "service", "pipeline.service_id = service.id").
-		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("pipeline.service_id = ?", serviceID).
-		Desc("pipeline.id").Get(pq); err != nil {
+	session := getPipelineSession()
+	if has, err := session.Where("pipeline.service_id = ?", serviceID).Desc("pipeline.id").Get(pq); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -96,7 +89,7 @@ func GetServicePipeline(serviceID int64) (*model.PipelineQuery, error) {
 // FindPhases 根据pipeline id返回对应的阶段
 func FindPhases(pipelineID int64) ([]model.PipelinePhase, error) {
 	ppList := make([]model.PipelinePhase, 0)
-	if err := db.SEngine.Where("pipeline_id=?", pipelineID).Find(&ppList); err != nil {
+	if err := model.SEngine().Where("pipeline_id=?", pipelineID).Find(&ppList); err != nil {
 		return nil, err
 	}
 	return ppList, nil
@@ -104,7 +97,7 @@ func FindPhases(pipelineID int64) ([]model.PipelinePhase, error) {
 
 func CheckPhaseIsDeploy(pipelineID int64, phase string) bool {
 	ph := new(model.PipelinePhase)
-	if has, err := db.SEngine.Where("pipeline_id=? and name=?", pipelineID, phase).Get(ph); err != nil {
+	if has, err := model.SEngine().Where("pipeline_id=? and name=?", pipelineID, phase).Get(ph); err != nil {
 		return false
 	} else if !has {
 		return false
@@ -115,9 +108,8 @@ func CheckPhaseIsDeploy(pipelineID int64, phase string) bool {
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
 func FindImageInfo(pipelineID int64) (map[string]string, error) {
 	pi := new(model.ImageQuery)
-	if has, err := db.SEngine.Table("pipeline_image").
-		Join("INNER", "pipeline", "pipeline.id = pipeline_image.pipeline_id").
-		Where("pipeline.id = ?", pipelineID).Get(pi); err != nil {
+	session := getImageSession()
+	if has, err := session.Where("pipeline.id = ?", pipelineID).Get(pi); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -133,10 +125,8 @@ func FindImageInfo(pipelineID int64) (map[string]string, error) {
 // FindPipelineInfo 根据service返回pipeline相关信息
 func FindPipelineInfo(service string) ([]model.PipelineQuery, error) {
 	pqList := make([]model.PipelineQuery, 0)
-	if err := db.SEngine.Table("pipeline").
-		Join("INNER", "service", "pipeline.service_id = service.id").
-		Join("INNER", "namespace", "service.namespace_id = namespace.id").
-		Where("service.name = ? AND pipeline.status = ?", service, model.PLSuccess).
+	session := getPipelineSession()
+	if err := session.Where("service.name = ? AND pipeline.status = ?", service, model.PLSuccess).
 		Find(&pqList); err != nil {
 		return nil, err
 	}
@@ -145,12 +135,19 @@ func FindPipelineInfo(service string) ([]model.PipelineQuery, error) {
 
 func FindUpdateInfo(pipelineID int64) ([]model.UpdateQuery, error) {
 	uqList := make([]model.UpdateQuery, 0)
-	if err := db.SEngine.Table("pipeline_update").
-		Join("INNER", "pipeline", "pipeline_update.pipeline_id = pipeline.id").
-		Join("INNER", "code_module", "pipeline_update.code_module_id = code_module.id").
-		Join("INNER", "service", "pipeline.service_id = service.id").
-		Where("pipeline_update.pipeline_id = ?", pipelineID).Find(&uqList); err != nil {
+	session := getUpdateSession()
+	if err := session.Where("pipeline_update.pipeline_id = ?", pipelineID).Find(&uqList); err != nil {
 		return nil, err
 	}
 	return uqList, nil
+}
+
+func GetPhaseInfo(pipelineID int64, kind, phase string) (*model.PipelinePhase, error) {
+	phaseObj := new(model.PipelinePhase)
+	if has, err := model.SEngine().Where("pipeline_id = ? and kind = ? and name = ?", pipelineID, kind, phase).Get(phaseObj); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return phaseObj, nil
 }

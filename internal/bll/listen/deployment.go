@@ -7,7 +7,6 @@ package listen
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,20 +22,44 @@ import (
 
 func CheckDeploymentIsFinish(obj interface{}, mode string) {
 	data := obj.(*appsv1.Deployment)
-	fe := &finishEvent{
+	var (
+		deployment      = data.ObjectMeta.Name
+		resourceVersion = data.ObjectMeta.ResourceVersion
+		replicas        = *data.Spec.Replicas
+	)
+
+	log.InitFields(log.Fields{
+		"logid":      g.UniqueID(),
+		"mode":       mode,
+		"deployment": deployment,
+		"version":    resourceVersion,
+	})
+
+	dh := &dephandler{
 		mode:              mode,
-		deployment:        data.ObjectMeta.Name,
-		resourceVersion:   data.ObjectMeta.ResourceVersion,
-		replicas:          *data.Spec.Replicas,
+		deployment:        deployment,
+		resourceVersion:   resourceVersion,
+		replicas:          replicas,
 		updatedReplicas:   data.Status.UpdatedReplicas,
 		availableReplicas: data.Status.AvailableReplicas,
 		metaGeneration:    data.ObjectMeta.Generation,
 		statGeneration:    data.Status.ObservedGeneration,
 	}
-	fe.worker()
+	if !dh.valid() {
+		return
+	}
+	if !dh.parse() {
+		return
+	}
+	log.Infof("check deployment is ready, replicas: %d", dh.replicas)
+
+	if !dh.operate() {
+		return
+	}
+	log.Infof("check deployment is finished")
 }
 
-type finishEvent struct {
+type dephandler struct {
 	mode              string
 	deployment        string
 	resourceVersion   string
@@ -51,134 +74,113 @@ type finishEvent struct {
 	group             string
 }
 
-func (fe *finishEvent) worker() {
-	log.InitFields(log.Fields{
-		"logid": g.UniqueID(), "mode": fe.mode, "deployment": fe.deployment, "version": fe.resourceVersion})
-	if !fe.isValidDeployment() {
-		return
-	}
-	if !fe.isOldDeployment() {
-		return
-	}
-	if !fe.isReadiness() {
-		return
-	}
-
-	log.Infof("deployment is ready, replicas: %d", fe.replicas)
-	if !fe.parseServiceID() {
-		return
-	}
-	if !fe.parsePublishGroup() {
-		return
-	}
-
-	key := fmt.Sprintf("%s_%s_%s", fe.serviceName, fe.phase, fe.group)
-	version, ok := depResourceVersionMap[key]
-	if ok && version == fe.resourceVersion {
-		log.Infof("check key: %s resource version: %s same so stop", key, fe.resourceVersion)
-		return
-	}
-	depResourceVersionMap[key] = fe.resourceVersion
-	log.Infof("get service: %s phase: %s group: %s", fe.serviceName, fe.phase, fe.group)
-
-	pipeline, err := objects.GetServicePipeline(fe.serviceID)
-	if !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("query pipeline by service error: %s", err)
-		return
-	}
-	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
-		delete(depResourceVersionMap, key) // NOTE: 上线完成删除对应的key
-		log.Info("check deploy is finished so stop")
-		return
-	}
-	fe.execute(pipeline)
-}
-
-func (fe *finishEvent) isValidDeployment() bool {
+func (h *dephandler) valid() bool {
+	// NOTE: 检测是否是业务的deployment
 	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
 	if reg == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(fe.deployment, -1)
+	result := reg.FindAllStringSubmatch(h.deployment, -1)
 	if len(result) == 0 {
 		return false
 	}
-	return true
-}
 
-func (fe *finishEvent) isOldDeployment() bool {
-	if fe.replicas == 0 {
+	// NOTE: 忽略副本数为0的deployment
+	if h.replicas == 0 {
+		return false
+	}
+
+	// NOTE: 检查deployment是否就绪
+	if !(h.metaGeneration == h.statGeneration && h.replicas == h.updatedReplicas && h.replicas == h.availableReplicas) {
 		return false
 	}
 	return true
 }
 
-func (fe *finishEvent) isReadiness() bool {
-	if fe.metaGeneration == fe.statGeneration &&
-		fe.replicas == fe.updatedReplicas && fe.replicas == fe.availableReplicas {
-		return true
-	}
-	return false
-}
-
-func (fe *finishEvent) parseServiceID() bool {
+func (h *dephandler) parse() bool {
 	reg := regexp.MustCompile(`-\d+-`)
 	if reg == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(fe.deployment, -1)
+
+	// 获取服务名、阶段、蓝绿组
+	matchList := reg.Split(h.deployment, -1)
+	h.serviceName = matchList[0]
+
+	afterList := strings.Split(matchList[1], "-")
+	h.phase = afterList[0]
+	h.group = afterList[1]
+
+	// 获取服务ID
+	result := reg.FindAllStringSubmatch(h.deployment, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
 	if err != nil {
-		log.Errorf("service id convert to int64 error: %s", err)
+		log.Errorf("parse service id convert to int64 error: %s", err)
 		return false
 	}
-	fe.serviceID = serviceID
+	h.serviceID = serviceID
 	return true
 }
 
-func (fe *finishEvent) parsePublishGroup() bool {
-	reg := regexp.MustCompile(`-\d+-`)
-	if reg == nil {
+func (h *dephandler) operate() bool {
+	pipeline, err := objects.GetServicePipeline(h.serviceID)
+	if !errors.Is(err, objects.NotFound) && err != nil {
+		log.Errorf("query pipeline by service error: %s", err)
 		return false
 	}
-	matchList := reg.Split(fe.deployment, -1)
-	afterList := strings.Split(matchList[1], "-")
-	fe.serviceName = matchList[0]
-	fe.phase = afterList[0]
-	fe.group = afterList[1]
-	return true
-}
 
-func (fe *finishEvent) execute(pipeline *model.PipelineQuery) {
+	// 判断该上线流程是否完成
+	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+		log.Info("check deploy is finished so stop")
+		return false
+	}
+
 	var (
 		pipelineID   = pipeline.Pipeline.ID
 		namespace    = pipeline.Namespace.Name
-		offlineGroup = pipeline.Service.OnlineGroup // NOTE: 在确认时, 原有表记录的组则变为待下线组
+		offlineGroup = pipeline.Service.OnlineGroup // NOTE: 当前在线的组为待下线组
 	)
 
 	if offlineGroup == "" {
-		return
+		return true
+	}
+
+	phaseObj, err := objects.GetPhaseInfo(pipelineID, model.PHASE_DEPLOY, h.phase)
+	if err != nil {
+		log.Errorf("query phase info error: %s", err)
+		return false
+	}
+
+	// 判断resourceVersion是否相同
+	if phaseObj.ResourceVersion == h.resourceVersion {
+		return true
+	}
+
+	// 判断该阶段是否完成
+	if g.Ini(phaseObj.Status, []int{model.PHSuccess, model.PHFailed}) {
+		return true
 	}
 
 	var (
 		publishGroup  = objects.GetDeployGroup(offlineGroup)
-		oldDeployment = objects.GetDeployment(fe.serviceName, pipeline.Service.ID, fe.phase, offlineGroup)
+		oldDeployment = objects.GetDeployment(h.serviceName, h.serviceID, h.phase, offlineGroup)
 	)
 
 	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
-	if fe.mode == Update && fe.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, fe.phase) {
+	if h.mode == Update && h.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, h.phase) {
 		dep := k8s.NewDeployments(namespace, oldDeployment)
 		if err := dep.Scale(0); err != nil {
-			return
+			return false
 		}
-		log.Infof("phase: %s scale offline deployment: %s replicas: 0 success", fe.phase, oldDeployment)
+		log.Infof("---- scale deployment: %s replicas: 0 on phase: %s success", oldDeployment, h.phase)
 	}
 
-	if err := objects.UpdatePhase(pipelineID, fe.phase, model.PHSuccess); !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("phase: %s update pipeline: %d  failed: %s", fe.phase, pipelineID, err)
-		return
+	if err := objects.UpdatePhaseV2(pipelineID, h.phase, model.PHSuccess, h.resourceVersion); err != nil {
+		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, h.phase, err)
+		return false
 	}
-	log.Infof("phase: %s update pipeline: %d to db success.", fe.phase, pipelineID)
+	log.Infof("update pipeline: %d to db on phase: %s success.", pipelineID, h.phase)
+	return true
 }

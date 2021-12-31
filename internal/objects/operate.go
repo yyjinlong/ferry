@@ -110,6 +110,19 @@ func UpdatePhase(pipelineID int64, name string, status int) error {
 	return nil
 }
 
+func UpdatePhaseV2(pipelineID int64, name string, status int, version string) error {
+	phase := new(model.PipelinePhase)
+	phase.Status = status
+	phase.ResourceVersion = version
+	if affected, err := model.MEngine().Cols("status", "resource_version").Where("pipeline_id=? and name=?",
+		pipelineID, name).Update(phase); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+	return nil
+}
+
 func UpdateGroup(pipelineID int64, serviceName, group string) error {
 	session := model.MEngine().NewSession()
 	defer session.Close()

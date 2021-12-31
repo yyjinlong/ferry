@@ -94,14 +94,16 @@ type PipelineImage struct {
 }
 
 type PipelinePhase struct {
-	ID         int64
-	PipelineID int64     `xorm:"bigint notnull"`
-	Name       string    `xorm:"varchar(20)"`
-	Status     int       `xorm:"int notnull"`
-	Log        string    `xorm:"text"`
-	Deployment string    `xorm:"text"`
-	CreateAt   time.Time `xorm:"timestamp notnull created"`
-	UpdateAt   time.Time `xorm:"timestamp notnull updated"`
+	ID              int64
+	PipelineID      int64     `xorm:"bigint notnull"`
+	Name            string    `xorm:"varchar(20)"`
+	Kind            string    `xorm:"varchar(20)"`
+	Status          int       `xorm:"int notnull"`
+	Log             string    `xorm:"text"`
+	Deployment      string    `xorm:"text"`
+	ResourceVersion string    `xorm:"varchar(32)"`
+	CreateAt        time.Time `xorm:"timestamp notnull created"`
+	UpdateAt        time.Time `xorm:"timestamp notnull updated"`
 }
 
 // 状态定义
@@ -124,36 +126,17 @@ const (
 	PHFailed             // 执行失败
 )
 
-// 关联查询定义
-
-type PipelineQuery struct {
-	Pipeline  `xorm:"extends"`
-	Service   `xorm:"extends"`
-	Namespace `xorm:"extends"`
-}
-
-type ImageQuery struct {
-	PipelineImage `xorm:"extends"`
-	Pipeline      `xorm:"extends"`
-}
-
-type UpdateQuery struct {
-	PipelineUpdate `xorm:"extends"`
-	Pipeline       `xorm:"extends"`
-	CodeModule     `xorm:"extends"`
-	Service        `xorm:"extends"`
-}
-
-type ServiceQuery struct {
-	Service   `xorm:"extends"`
-	Namespace `xorm:"extends"`
-}
-
 // 阶段名称
 const (
 	PHASE_IMAGE   = "image"
 	PHASE_SANDBOX = "sandbox"
 	PHASE_ONLINE  = "online"
+)
+
+// 阶段类别
+const (
+	PHASE_DEPLOY   = "deploy"
+	PHASE_ROLLBACK = "rollback"
 )
 
 var (
