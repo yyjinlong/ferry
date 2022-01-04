@@ -89,7 +89,7 @@ func GetServicePipeline(serviceID int64) (*model.PipelineQuery, error) {
 // FindPhases 根据pipeline id返回对应的阶段
 func FindPhases(pipelineID int64) ([]model.PipelinePhase, error) {
 	ppList := make([]model.PipelinePhase, 0)
-	if err := model.SEngine().Where("pipeline_id=?", pipelineID).Find(&ppList); err != nil {
+	if err := model.SEngine().Where("pipeline_id=?", pipelineID).Desc("id").Find(&ppList); err != nil {
 		return nil, err
 	}
 	return ppList, nil

@@ -20,116 +20,130 @@ import (
 )
 
 func CheckEndpointIsFinish(newObj interface{}, oldObj interface{}, mode string) {
-	oldSubsets := make([]corev1.EndpointSubset, 0)
-	if oldObj != nil {
-		oldData := oldObj.(*corev1.Endpoints)
-		oldSubsets = oldData.Subsets
-	}
+	var (
+		newData         = newObj.(*corev1.Endpoints)
+		oldData         = oldObj.(*corev1.Endpoints)
+		service         = newData.Name
+		resourceVersion = newData.ObjectMeta.ResourceVersion
+	)
 
-	newData := newObj.(*corev1.Endpoints)
-	ef := &endpointFinish{
+	log.InitFields(log.Fields{
+		"logid":   g.UniqueID(),
+		"mode":    mode,
+		"service": service,
+		"version": resourceVersion,
+	})
+
+	eh := &endhandler{
 		mode:            mode,
-		service:         newData.Name,
+		service:         service,
 		newSubsets:      newData.Subsets,
-		oldSubsets:      oldSubsets,
-		resourceVersion: newData.ObjectMeta.ResourceVersion,
+		oldSubsets:      oldData.Subsets,
+		resourceVersion: resourceVersion,
 	}
-	ef.worker()
+	if !eh.valid() {
+		return
+	}
+	if !eh.parse() {
+		return
+	}
+	if !eh.operate() {
+		return
+	}
 }
 
-type endpointFinish struct {
+type endhandler struct {
 	mode            string
 	service         string
+	resourceVersion string
 	serviceID       int64
 	serviceName     string
 	newSubsets      []corev1.EndpointSubset
 	oldSubsets      []corev1.EndpointSubset
-	resourceVersion string
 }
 
-func (ef *endpointFinish) worker() {
-	log.InitFields(log.Fields{
-		"logid": g.UniqueID(), "mode": ef.mode, "type": "endpoint", "version": ef.resourceVersion})
-	if !ef.isValidService() {
-		return
-	}
-	if !ef.parseServiceName() {
-		return
-	}
-	if !ef.parseServiceID() {
-		return
-	}
-
-	key := ef.serviceName
-	version, ok := endResourceVersionMap[key]
-	if ok && version == ef.resourceVersion {
-		log.Infof("service: %s resource version same so stop", ef.service)
-		return
-	}
-	endResourceVersionMap[key] = ef.resourceVersion
-
-	pipeline, err := objects.GetServicePipeline(ef.serviceID)
-	if !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("service: %s get pipeline id error: %s", ef.service, err)
-		return
-	}
-	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
-		delete(endResourceVersionMap, key) // NOTE: 上线完成删除对应的key
-		log.Infof("service: %s deploy finish so stop", ef.service)
-		return
-	}
-
-	result := map[string]interface{}{
-		"pipelineID": pipeline.Pipeline.ID,
-		"service":    ef.service,
-		"online":     ef.getIPList(ef.newSubsets),
-		"offline":    ef.getIPList(ef.oldSubsets),
-	}
-	log.Infof("service: %s endpoints: %+v", ef.service, result)
-}
-
-func (ef *endpointFinish) isValidService() bool {
+func (h *endhandler) valid() bool {
+	// 检查是否是业务的servicej
 	reg := regexp.MustCompile(`[\w+-]+-\d+`)
 	if reg == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(ef.service, -1)
+
+	result := reg.FindAllStringSubmatch(h.service, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (ef *endpointFinish) parseServiceName() bool {
-	reg := regexp.MustCompile(`-\d+`)
-	if reg == nil {
-		return false
-	}
-	matchList := reg.Split(ef.service, -1)
-	ef.serviceName = matchList[0]
-	return true
-}
-
-func (ef *endpointFinish) parseServiceID() bool {
+func (h *endhandler) parse() bool {
 	reg := regexp.MustCompile(`-\d+`)
 	if reg == nil {
 		return false
 	}
 
-	result := reg.FindAllStringSubmatch(ef.service, -1)
+	// 获取服务ID
+	result := reg.FindAllStringSubmatch(h.service, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
 	if err != nil {
-		log.Errorf("service: %s convert to int64 error: %s", ef.service, err)
+		log.Errorf("parse service: %s convert to int64 error: %s", h.service, err)
 		return false
 	}
-	ef.serviceID = serviceID
+	h.serviceID = serviceID
+
+	// 获取服务名
+	matchList := reg.Split(h.service, -1)
+	h.serviceName = matchList[0]
+
 	return true
 }
 
-func (ef *endpointFinish) getIPList(subsets []corev1.EndpointSubset) []string {
+func (h *endhandler) operate() bool {
+	pipeline, err := objects.GetServicePipeline(h.serviceID)
+	if !errors.Is(err, objects.NotFound) && err != nil {
+		log.Errorf("query pipeline by service id: %d error: %s", h.serviceID, err)
+		return false
+	}
+
+	// 判断该上线流程是否完成
+	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+		log.Infof("check service: %s deploy finish so stop", h.service)
+		return false
+	}
+
+	pipelineID := pipeline.Pipeline.ID
+	phaseList, err := objects.FindPhases(pipelineID)
+	if err != nil {
+		log.Errorf("query pipeline phases error: %s", err)
+		return false
+	}
+	lastPhase := phaseList[0]
+	currentPhase := lastPhase.Name
+
+	// 判断该阶段是否完成
+	if g.Ini(lastPhase.Status, []int{model.PHSuccess, model.PHFailed}) {
+		return true
+	}
+
+	// 拼成最后结果
+	result := map[string]interface{}{
+		"pipelineID": pipelineID,
+		"service":    h.serviceName,
+		"phase":      currentPhase,
+		"online":     h.getIPList(h.newSubsets),
+		"offline":    h.getIPList(h.oldSubsets),
+	}
+	log.Infof("service: %s endpoints: %+v", h.service, result)
+	return true
+}
+
+func (h *endhandler) getIPList(subsets []corev1.EndpointSubset) []string {
 	ipList := make([]string, 0)
+	if h.mode == Create {
+		return ipList
+	}
 	for _, item := range subsets {
 		for _, addrInfo := range item.Addresses {
 			ipList = append(ipList, addrInfo.IP)

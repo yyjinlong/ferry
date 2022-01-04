@@ -17,6 +17,12 @@ import (
 	"ferry/pkg/log"
 )
 
+const (
+	Create = "create"
+	Update = "update"
+	Delete = "delete"
+)
+
 func getClientset() *kubernetes.Clientset {
 	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "trace"})
 
@@ -65,7 +71,7 @@ func EndpointFinishEvent() {
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			CheckEndpointIsFinish(obj, nil, Create)
+			CheckEndpointIsFinish(obj, obj, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			CheckEndpointIsFinish(newObj, oldObj, Update)
