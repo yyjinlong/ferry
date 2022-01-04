@@ -147,6 +147,12 @@ func (h *dephandler) operate() bool {
 		return true
 	}
 
+	kind := model.PHASE_DEPLOY
+	if g.Ini(pipeline.Pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
+		kind = model.PHASE_ROLLBACK
+	}
+
+	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, h.phase)
 	phaseObj, err := objects.GetPhaseInfo(pipelineID, model.PHASE_DEPLOY, h.phase)
 	if err != nil {
 		log.Errorf("query phase info error: %s", err)
@@ -177,7 +183,7 @@ func (h *dephandler) operate() bool {
 		log.Infof("---- scale deployment: %s replicas: 0 on phase: %s success", oldDeployment, h.phase)
 	}
 
-	if err := objects.UpdatePhaseV2(pipelineID, h.phase, model.PHSuccess, h.resourceVersion); err != nil {
+	if err := objects.UpdatePhaseV2(pipelineID, kind, h.phase, model.PHSuccess, h.resourceVersion); err != nil {
 		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, h.phase, err)
 		return false
 	}

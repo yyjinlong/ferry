@@ -80,15 +80,16 @@ func CreateImage(pipelineID int64, imageURL, imageTag string) error {
 	return nil
 }
 
-func CreatePhase(pipelineID int64, name string, status int, deployment string) error {
+func CreatePhase(pipelineID int64, kind, name string, status int, deployment string) error {
 	phase := new(model.PipelinePhase)
-	if has, err := model.MEngine().Where("pipeline_id=? and name=?", pipelineID, name).Get(phase); has {
+	if has, err := model.MEngine().Where("pipeline_id=? and kind =? and name=?", pipelineID, kind, name).Get(phase); has {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
 	phase.Name = name
+	phase.Kind = kind
 	phase.Status = status
 	phase.PipelineID = pipelineID
 	phase.Deployment = deployment
@@ -98,11 +99,11 @@ func CreatePhase(pipelineID int64, name string, status int, deployment string) e
 	return nil
 }
 
-func UpdatePhase(pipelineID int64, name string, status int) error {
+func UpdatePhase(pipelineID int64, kind, name string, status int) error {
 	phase := new(model.PipelinePhase)
 	phase.Status = status
-	if affected, err := model.MEngine().Cols("status").Where("pipeline_id=? and name=?",
-		pipelineID, name).Update(phase); err != nil {
+	if affected, err := model.MEngine().Cols("status").Where("pipeline_id=? and kind=? and name=?",
+		pipelineID, kind, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound
@@ -110,12 +111,12 @@ func UpdatePhase(pipelineID int64, name string, status int) error {
 	return nil
 }
 
-func UpdatePhaseV2(pipelineID int64, name string, status int, version string) error {
+func UpdatePhaseV2(pipelineID int64, kind, name string, status int, version string) error {
 	phase := new(model.PipelinePhase)
 	phase.Status = status
 	phase.ResourceVersion = version
-	if affected, err := model.MEngine().Cols("status", "resource_version").Where("pipeline_id=? and name=?",
-		pipelineID, name).Update(phase); err != nil {
+	if affected, err := model.MEngine().Cols("status", "resource_version").Where(
+		"pipeline_id=? and kind=? and name=?", pipelineID, kind, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound

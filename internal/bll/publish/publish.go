@@ -70,7 +70,7 @@ func (d *Deploy) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	}
 	log.Infof("[deploy] pubish deployment: %s to k8s success", d.deployment)
 
-	if err := objects.CreatePhase(d.pid, d.phase, model.PHProcess, tpl); err != nil {
+	if err := objects.CreatePhase(d.pid, model.PHASE_DEPLOY, d.phase, model.PHProcess, tpl); err != nil {
 		log.Errorf("[deploy] record deployment: %s to db error: %+v", d.deployment, err)
 		return nil, err
 	}
