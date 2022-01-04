@@ -19,10 +19,9 @@ import (
 	"ferry/pkg/log"
 )
 
-func CheckEndpointIsFinish(newObj interface{}, oldObj interface{}, mode string) {
+func CheckEndpointIsFinish(newObj interface{}, mode string) {
 	var (
 		newData         = newObj.(*corev1.Endpoints)
-		oldData         = oldObj.(*corev1.Endpoints)
 		service         = newData.Name
 		resourceVersion = newData.ObjectMeta.ResourceVersion
 	)
@@ -38,7 +37,6 @@ func CheckEndpointIsFinish(newObj interface{}, oldObj interface{}, mode string) 
 		mode:            mode,
 		service:         service,
 		newSubsets:      newData.Subsets,
-		oldSubsets:      oldData.Subsets,
 		resourceVersion: resourceVersion,
 	}
 	if !eh.valid() {
@@ -60,7 +58,6 @@ type endhandler struct {
 	serviceName     string
 	resourceVersion string
 	newSubsets      []corev1.EndpointSubset
-	oldSubsets      []corev1.EndpointSubset
 }
 
 func (h *endhandler) valid() bool {
@@ -133,7 +130,6 @@ func (h *endhandler) operate() bool {
 		"service":    h.serviceName,
 		"phase":      h.phase,
 		"online":     h.getIPList(h.newSubsets),
-		"offline":    h.getIPList(h.oldSubsets),
 	}
 	log.Infof("service: %s endpoints: %+v", h.service, result)
 	return true
@@ -141,9 +137,6 @@ func (h *endhandler) operate() bool {
 
 func (h *endhandler) getIPList(subsets []corev1.EndpointSubset) []string {
 	ipList := make([]string, 0)
-	if h.mode == Create {
-		return ipList
-	}
 	for _, item := range subsets {
 		for _, addrInfo := range item.Addresses {
 			ipList = append(ipList, addrInfo.IP)

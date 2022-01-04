@@ -7,6 +7,7 @@ package listen
 
 import (
 	"io/ioutil"
+	"time"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -67,14 +68,14 @@ func EndpointFinishEvent() {
 	defer close(stopCh)
 
 	clientset := getClientset()
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
+	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			CheckEndpointIsFinish(obj, obj, Create)
+			CheckEndpointIsFinish(obj, Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			CheckEndpointIsFinish(newObj, oldObj, Update)
+			CheckEndpointIsFinish(newObj, Update)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
