@@ -55,16 +55,17 @@ func CheckEndpointIsFinish(newObj interface{}, oldObj interface{}, mode string) 
 type endhandler struct {
 	mode            string
 	service         string
-	resourceVersion string
+	phase           string
 	serviceID       int64
 	serviceName     string
+	resourceVersion string
 	newSubsets      []corev1.EndpointSubset
 	oldSubsets      []corev1.EndpointSubset
 }
 
 func (h *endhandler) valid() bool {
-	// 检查是否是业务的servicej
-	reg := regexp.MustCompile(`[\w+-]+-\d+`)
+	// 检查是否是业务的service
+	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
 	if reg == nil {
 		return false
 	}
@@ -77,7 +78,7 @@ func (h *endhandler) valid() bool {
 }
 
 func (h *endhandler) parse() bool {
-	reg := regexp.MustCompile(`-\d+`)
+	reg := regexp.MustCompile(`-\d+-`)
 	if reg == nil {
 		return false
 	}
@@ -96,7 +97,7 @@ func (h *endhandler) parse() bool {
 	// 获取服务名
 	matchList := reg.Split(h.service, -1)
 	h.serviceName = matchList[0]
-
+	h.phase = matchList[1]
 	return true
 }
 
@@ -120,7 +121,6 @@ func (h *endhandler) operate() bool {
 		return false
 	}
 	lastPhase := phaseList[0]
-	currentPhase := lastPhase.Name
 
 	// 判断该阶段是否完成
 	if g.Ini(lastPhase.Status, []int{model.PHSuccess, model.PHFailed}) {
@@ -131,7 +131,7 @@ func (h *endhandler) operate() bool {
 	result := map[string]interface{}{
 		"pipelineID": pipelineID,
 		"service":    h.serviceName,
-		"phase":      currentPhase,
+		"phase":      h.phase,
 		"online":     h.getIPList(h.newSubsets),
 		"offline":    h.getIPList(h.oldSubsets),
 	}

@@ -13,6 +13,7 @@ import (
 type ServiceYaml struct {
 	ServiceName   string
 	ServiceID     int64
+	Phase         string
 	AppID         string
 	ExposePort    int
 	ContainerPort int
@@ -25,15 +26,13 @@ func (sy *ServiceYaml) Instance() (string, error) {
 	  metadata:
 	  spec:
 	*/
-	type controller struct {
-		apiVersion string
-		kind       string
-		metadata   interface{}
-		spec       interface{}
+	controller := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Service",
+		"metadata":   sy.metadata(),
+		"spec":       sy.spec(),
 	}
-	ctl := controller{"v1", "Service", sy.metadata(), sy.spec()}
-
-	config, err := json.Marshal(ctl)
+	config, err := json.Marshal(controller)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +41,7 @@ func (sy *ServiceYaml) Instance() (string, error) {
 
 func (sy *ServiceYaml) metadata() interface{} {
 	return map[string]interface{}{
-		"name": fmt.Sprintf("%s-%d", sy.ServiceName, sy.ServiceID),
+		"name": fmt.Sprintf("%s-%d-%s", sy.ServiceName, sy.ServiceID, sy.Phase),
 	}
 }
 

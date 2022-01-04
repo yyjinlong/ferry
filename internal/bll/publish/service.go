@@ -6,6 +6,8 @@
 package publish
 
 import (
+	"sync"
+
 	"github.com/gin-gonic/gin"
 
 	"ferry/internal/k8s"
@@ -16,8 +18,11 @@ import (
 )
 
 type Service struct {
-	namespace   string
-	serviceName string
+	namespace     string
+	serviceName   string
+	serviceID     int64
+	exposePort    int
+	containerPort int
 }
 
 func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
@@ -37,28 +42,46 @@ func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error)
 		return "", err
 	}
 	s.namespace = serviceObj.Namespace.Name
+	s.serviceID = serviceObj.Service.ID
+	s.exposePort = serviceObj.Service.Port
+	s.containerPort = serviceObj.Service.ContainerPort
 
-	appid := objects.GetAppID(s.serviceName, serviceObj.Service.ID, model.PHASE_ONLINE)
+	var wg sync.WaitGroup
+	wg.Add(len(model.PHASE_NAME_LIST))
+
+	for _, phase := range model.PHASE_NAME_LIST {
+		go func(phase string) {
+			defer wg.Done()
+			s.worker(phase)
+		}(phase)
+	}
+	wg.Wait()
+	return nil, nil
+}
+
+func (s *Service) worker(phase string) error {
+	appid := objects.GetAppID(s.serviceName, s.serviceID, phase)
 	log.Infof("[service] fetch service appid: %s", appid)
 
 	yaml := &k8s.ServiceYaml{
 		ServiceName:   s.serviceName,
-		ServiceID:     serviceObj.Service.ID,
+		ServiceID:     s.serviceID,
+		Phase:         phase,
 		AppID:         appid,
-		ExposePort:    serviceObj.Service.Port,
-		ContainerPort: serviceObj.Service.ContainerPort,
+		ExposePort:    s.exposePort,
+		ContainerPort: s.containerPort,
 	}
 	tpl, err := yaml.Instance()
 	if err != nil {
-		return "", err
+		return err
 	}
 	log.Infof("[service] fetch service tpl: %s", tpl)
 
 	if err := s.execute(tpl); err != nil {
-		return "", err
+		return err
 	}
 	log.Infof("[service] build service success")
-	return nil, nil
+	return nil
 }
 
 func (s *Service) execute(tpl string) error {
