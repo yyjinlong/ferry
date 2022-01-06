@@ -154,7 +154,7 @@ func (h *dephandler) operate() bool {
 
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, h.phase)
 	phaseObj, err := objects.GetPhaseInfo(pipelineID, model.PHASE_DEPLOY, h.phase)
-	if err != nil {
+	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("query phase info error: %s", err)
 		return false
 	}

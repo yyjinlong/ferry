@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"ferry/internal/model"
+	"ferry/pkg/g"
 	"ferry/pkg/log"
 )
 
@@ -183,4 +184,27 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 	}
 
 	return session.Commit()
+}
+
+func RealtimeLog(pipelineID int64, kind, name, msg string) error {
+	phase := new(model.PipelinePhase)
+	if has, err := model.MEngine().Where("pipeline_id=? and kind=? and name=?",
+		pipelineID, kind, name).Get(phase); err != nil {
+		return err
+	} else if !has {
+		return NotFound
+	}
+
+	if g.Ini(phase.Status, []int{model.PHSuccess, model.PHFailed}) {
+		return nil
+	}
+
+	phase.Log = phase.Log + "\n" + msg
+	if affected, err := model.MEngine().Cols("log").Where("pipeline_id=? and kind=? and name=?",
+		pipelineID, kind, name).Update(phase); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+	return nil
 }

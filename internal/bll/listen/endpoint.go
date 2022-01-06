@@ -19,11 +19,11 @@ import (
 	"ferry/pkg/log"
 )
 
-func CheckEndpointIsFinish(newObj interface{}, mode string) {
+func CheckEndpointIsFinish(obj interface{}, mode string) {
 	var (
-		newData         = newObj.(*corev1.Endpoints)
-		service         = newData.Name
-		resourceVersion = newData.ObjectMeta.ResourceVersion
+		data            = obj.(*corev1.Endpoints)
+		service         = data.Name
+		resourceVersion = data.ObjectMeta.ResourceVersion
 	)
 
 	log.InitFields(log.Fields{
@@ -36,7 +36,7 @@ func CheckEndpointIsFinish(newObj interface{}, mode string) {
 	eh := &endhandler{
 		mode:            mode,
 		service:         service,
-		newSubsets:      newData.Subsets,
+		newSubsets:      data.Subsets,
 		resourceVersion: resourceVersion,
 	}
 	if !eh.valid() {

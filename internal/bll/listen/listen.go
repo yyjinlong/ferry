@@ -7,7 +7,6 @@ package listen
 
 import (
 	"io/ioutil"
-	"time"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -25,7 +24,7 @@ const (
 )
 
 func getClientset() *kubernetes.Clientset {
-	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "trace"})
+	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "listen"})
 
 	config, err := ioutil.ReadFile(g.Config().K8S.Kubeconfig)
 	if err != nil {
@@ -48,8 +47,7 @@ func DeploymentFinishEvent() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	clientset := getClientset()
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
+	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -67,8 +65,7 @@ func EndpointFinishEvent() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	clientset := getClientset()
-	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
+	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -83,5 +80,19 @@ func EndpointFinishEvent() {
 }
 
 func GetProcessEvent() {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
 
+	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
+	eventInformer := sharedInformer.Core().V1().Events().Informer()
+	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			FetchPublishEvent(obj, Create)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			FetchPublishEvent(newObj, Update)
+		},
+		DeleteFunc: func(obj interface{}) {},
+	})
+	eventInformer.Run(stopCh)
 }
