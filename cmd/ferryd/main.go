@@ -37,7 +37,7 @@ func main() {
 
 	go listen.DeploymentFinishEvent()
 	go listen.EndpointFinishEvent()
-	go listen.GetProcessEvent()
+	go listen.PublishLogEvent()
 
 	done := make(chan int)
 	<-done

@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package listen
+package event
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ import (
 	"ferry/pkg/log"
 )
 
-func CheckEndpointIsFinish(obj interface{}, mode string) {
+func HandleEndpointCapturer(obj interface{}, mode string) {
 	var (
 		data            = obj.(*corev1.Endpoints)
 		service         = data.Name
@@ -33,24 +33,15 @@ func CheckEndpointIsFinish(obj interface{}, mode string) {
 		"version": resourceVersion,
 	})
 
-	eh := &endhandler{
+	handleEvent(&endpointCapturer{
 		mode:            mode,
 		service:         service,
 		newSubsets:      data.Subsets,
 		resourceVersion: resourceVersion,
-	}
-	if !eh.valid() {
-		return
-	}
-	if !eh.parse() {
-		return
-	}
-	if !eh.operate() {
-		return
-	}
+	})
 }
 
-type endhandler struct {
+type endpointCapturer struct {
 	mode            string
 	service         string
 	phase           string
@@ -60,54 +51,58 @@ type endhandler struct {
 	newSubsets      []corev1.EndpointSubset
 }
 
-func (h *endhandler) valid() bool {
+func (c *endpointCapturer) valid() bool {
 	// 检查是否是业务的service
 	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
 	if reg == nil {
 		return false
 	}
 
-	result := reg.FindAllStringSubmatch(h.service, -1)
+	result := reg.FindAllStringSubmatch(c.service, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (h *endhandler) parse() bool {
+func (c *endpointCapturer) ready() bool {
+	return true
+}
+
+func (c *endpointCapturer) parse() bool {
 	reg := regexp.MustCompile(`-\d+-`)
 	if reg == nil {
 		return false
 	}
 
 	// 获取服务ID
-	result := reg.FindAllStringSubmatch(h.service, -1)
+	result := reg.FindAllStringSubmatch(c.service, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
 	if err != nil {
-		log.Errorf("parse service: %s convert to int64 error: %s", h.service, err)
+		log.Errorf("parse service: %s convert to int64 error: %s", c.service, err)
 		return false
 	}
-	h.serviceID = serviceID
+	c.serviceID = serviceID
 
 	// 获取服务名
-	matchList := reg.Split(h.service, -1)
-	h.serviceName = matchList[0]
-	h.phase = matchList[1]
+	matchList := reg.Split(c.service, -1)
+	c.serviceName = matchList[0]
+	c.phase = matchList[1]
 	return true
 }
 
-func (h *endhandler) operate() bool {
-	pipeline, err := objects.GetServicePipeline(h.serviceID)
+func (c *endpointCapturer) operate() bool {
+	pipeline, err := objects.GetServicePipeline(c.serviceID)
 	if !errors.Is(err, objects.NotFound) && err != nil {
-		log.Errorf("query pipeline by service id: %d error: %s", h.serviceID, err)
+		log.Errorf("query pipeline by service id: %d error: %s", c.serviceID, err)
 		return false
 	}
 
 	// 判断该上线流程是否完成
 	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
-		log.Infof("check service: %s deploy finish so stop", h.service)
+		log.Infof("check service: %s deploy finish so stop", c.service)
 		return false
 	}
 
@@ -127,15 +122,15 @@ func (h *endhandler) operate() bool {
 	// 拼成最后结果
 	result := map[string]interface{}{
 		"pipelineID": pipelineID,
-		"service":    h.serviceName,
-		"phase":      h.phase,
-		"online":     h.getIPList(h.newSubsets),
+		"service":    c.serviceName,
+		"phase":      c.phase,
+		"online":     c.getIPList(c.newSubsets),
 	}
-	log.Infof("service: %s endpoints: %+v", h.service, result)
+	log.Infof("service: %s endpoints: %+v", c.service, result)
 	return true
 }
 
-func (h *endhandler) getIPList(subsets []corev1.EndpointSubset) []string {
+func (c *endpointCapturer) getIPList(subsets []corev1.EndpointSubset) []string {
 	ipList := make([]string, 0)
 	for _, item := range subsets {
 		for _, addrInfo := range item.Addresses {

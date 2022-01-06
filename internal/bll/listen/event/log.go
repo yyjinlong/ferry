@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package listen
+package event
 
 import (
 	"errors"
@@ -21,7 +21,7 @@ import (
 	"ferry/pkg/log"
 )
 
-func FetchPublishEvent(obj interface{}, mode string) {
+func HandleLogCapturer(obj interface{}, mode string) {
 	var (
 		data       = obj.(*corev1.Event)
 		objectMeta = data.ObjectMeta
@@ -36,23 +36,14 @@ func FetchPublishEvent(obj interface{}, mode string) {
 		"event": name,
 	})
 
-	pe := &publishEvent{
+	handleEvent(&logCapturer{
 		name:    name,
 		message: message,
 		fields:  fields,
-	}
-	if !pe.valid() {
-		return
-	}
-	if !pe.parse() {
-		return
-	}
-	if !pe.operate() {
-		return
-	}
+	})
 }
 
-type publishEvent struct {
+type logCapturer struct {
 	name      string
 	message   string
 	fields    []metav1.ManagedFieldsEntry
@@ -61,31 +52,35 @@ type publishEvent struct {
 	phase     string
 }
 
-func (pe *publishEvent) valid() bool {
+func (c *logCapturer) valid() bool {
 	re := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
 	if re == nil {
 		return false
 	}
-	result := re.FindAllStringSubmatch(pe.name, -1)
+	result := re.FindAllStringSubmatch(c.name, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (pe *publishEvent) parse() bool {
+func (c *logCapturer) ready() bool {
+	return true
+}
+
+func (c *logCapturer) parse() bool {
 	re := regexp.MustCompile(`-\d+-`)
 	if re == nil {
 		return false
 	}
 
-	matchList := re.Split(pe.name, -1)
-	pe.service = matchList[0]
+	matchList := re.Split(c.name, -1)
+	c.service = matchList[0]
 
 	afterList := strings.Split(matchList[1], "-")
-	pe.phase = afterList[0]
+	c.phase = afterList[0]
 
-	result := re.FindAllStringSubmatch(pe.name, -1)
+	result := re.FindAllStringSubmatch(c.name, -1)
 	matchResult := result[0][0]
 	serviceIDStr := strings.Trim(matchResult, "-")
 	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
@@ -93,12 +88,12 @@ func (pe *publishEvent) parse() bool {
 		log.Errorf("parse service id convert to int64 error: %s", err)
 		return false
 	}
-	pe.serviceID = serviceID
+	c.serviceID = serviceID
 	return true
 }
 
-func (pe *publishEvent) operate() bool {
-	pipeline, err := objects.GetServicePipeline(pe.serviceID)
+func (c *logCapturer) operate() bool {
+	pipeline, err := objects.GetServicePipeline(c.serviceID)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("query pipeline by service error: %s", err)
 		return false
@@ -116,13 +111,13 @@ func (pe *publishEvent) operate() bool {
 		kind = model.PHASE_ROLLBACK
 	}
 
-	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, pe.phase)
+	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
 
-	info := pe.fields[0]
+	info := c.fields[0]
 	operTime := info.Time
 
-	msg := fmt.Sprintf("[%s] %v\n%s", operTime, pe.name, pe.message)
-	err = objects.RealtimeLog(pipelineID, kind, pe.phase, msg)
+	msg := fmt.Sprintf("[%s] %v\n%s", operTime, c.name, c.message)
+	err = objects.RealtimeLog(pipelineID, kind, c.phase, msg)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("write event log to db error: %s", err)
 		return false

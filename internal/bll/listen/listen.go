@@ -13,14 +13,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"ferry/internal/bll/listen/event"
 	"ferry/pkg/g"
 	"ferry/pkg/log"
-)
-
-const (
-	Create = "create"
-	Update = "update"
-	Delete = "delete"
 )
 
 func getClientset() *kubernetes.Clientset {
@@ -51,10 +46,10 @@ func DeploymentFinishEvent() {
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			CheckDeploymentIsFinish(obj, Create)
+			event.HandleDeploymentCapturer(obj, event.Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			CheckDeploymentIsFinish(newObj, Update)
+			event.HandleDeploymentCapturer(newObj, event.Update)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
@@ -69,17 +64,17 @@ func EndpointFinishEvent() {
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			CheckEndpointIsFinish(obj, Create)
+			event.HandleEndpointCapturer(obj, event.Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			CheckEndpointIsFinish(newObj, Update)
+			event.HandleEndpointCapturer(newObj, event.Update)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
 	endpointInformer.Run(stopCh)
 }
 
-func GetProcessEvent() {
+func PublishLogEvent() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
@@ -87,10 +82,10 @@ func GetProcessEvent() {
 	eventInformer := sharedInformer.Core().V1().Events().Informer()
 	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			FetchPublishEvent(obj, Create)
+			event.HandleLogCapturer(obj, event.Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			FetchPublishEvent(newObj, Update)
+			event.HandleLogCapturer(newObj, event.Update)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
