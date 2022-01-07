@@ -95,9 +95,10 @@ func FindPhases(pipelineID int64) ([]model.PipelinePhase, error) {
 	return ppList, nil
 }
 
-func CheckPhaseIsDeploy(pipelineID int64, phase string) bool {
+func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 	ph := new(model.PipelinePhase)
-	if has, err := model.SEngine().Where("pipeline_id=? and name=?", pipelineID, phase).Get(ph); err != nil {
+	if has, err := model.SEngine().Where("pipeline_id=? and kind=? and name=?",
+		pipelineID, kind, phase).Get(ph); err != nil {
 		return false
 	} else if !has {
 		return false

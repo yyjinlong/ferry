@@ -146,7 +146,7 @@ func (c *deploymentCapturer) operate() bool {
 	}
 
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
-	phaseObj, err := objects.GetPhaseInfo(pipelineID, model.PHASE_DEPLOY, c.phase)
+	phaseObj, err := objects.GetPhaseInfo(pipelineID, kind, c.phase)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("query phase info error: %s", err)
 		return false
@@ -168,7 +168,7 @@ func (c *deploymentCapturer) operate() bool {
 	)
 
 	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
-	if c.mode == Update && c.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, c.phase) {
+	if c.mode == Update && c.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
 		dep := k8s.NewDeployments(namespace, oldDeployment)
 		if err := dep.Scale(0); err != nil {
 			return false

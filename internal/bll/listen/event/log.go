@@ -23,11 +23,10 @@ import (
 
 func HandleLogCapturer(obj interface{}, mode string) {
 	var (
-		data       = obj.(*corev1.Event)
-		objectMeta = data.ObjectMeta
-		message    = data.Message
-		name       = data.Name
-		fields     = objectMeta.ManagedFields
+		data    = obj.(*corev1.Event)
+		message = data.Message
+		name    = data.Name
+		fields  = data.ObjectMeta.ManagedFields
 	)
 
 	log.InitFields(log.Fields{
