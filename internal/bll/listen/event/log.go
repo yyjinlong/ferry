@@ -113,7 +113,7 @@ func (c *logCapturer) operate() bool {
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
 
 	info := c.fields[0]
-	operTime := info.Time
+	operTime := info.Time.Format("15:04:05")
 
 	msg := fmt.Sprintf("[%s] %v\n%s", operTime, c.name, c.message)
 	err = objects.RealtimeLog(pipelineID, kind, c.phase, msg)

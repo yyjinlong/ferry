@@ -8,6 +8,7 @@ package g
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/satori/go.uuid"
 )
@@ -28,6 +29,10 @@ func Ini(num int, numList []int) bool {
 		}
 	}
 	return false
+}
+
+func TimeString(curTime time.Time) string {
+	return curTime.Format("2006-01-02 15:04:05")
 }
 
 func UniqueID() string {
