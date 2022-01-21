@@ -10,7 +10,7 @@ import (
 
 	"github.com/streadway/amqp"
 
-	"ferry/pkg/log"
+	"nautilus/pkg/log"
 )
 
 var (

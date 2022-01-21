@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 func DownloadCode(module, repo, tag, codePath string) {

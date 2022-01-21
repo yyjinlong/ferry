@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 // NewDeployments deployment相关操作

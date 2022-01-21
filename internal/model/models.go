@@ -10,7 +10,7 @@ import (
 
 	"xorm.io/xorm"
 
-	"ferry/pkg/db"
+	"nautilus/pkg/db"
 )
 
 func MEngine() *xorm.Engine {

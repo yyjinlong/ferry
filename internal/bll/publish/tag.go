@@ -8,9 +8,9 @@ package publish
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/objects"
-	"ferry/pkg/base"
-	"ferry/pkg/log"
+	"nautilus/internal/objects"
+	"nautilus/pkg/base"
+	"nautilus/pkg/log"
 )
 
 type BuildTag struct{}

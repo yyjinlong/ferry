@@ -15,10 +15,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"ferry/internal/model"
-	"ferry/internal/objects"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/internal/model"
+	"nautilus/internal/objects"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 func HandleLogCapturer(obj interface{}, mode string) {
@@ -115,7 +115,14 @@ func (c *logCapturer) operate() bool {
 	info := c.fields[0]
 	operTime := info.Time.Format("15:04:05")
 
-	msg := fmt.Sprintf("[%s] %v\n%s", operTime, c.name, c.message)
+	re := regexp.MustCompile(`[\w+-]+-\d+-\w+-\w+`)
+	result := re.FindAllStringSubmatch(c.name, -1)
+	if len(result) == 0 {
+		return false
+	}
+	operName := result[0][0]
+
+	msg := fmt.Sprintf("[%s] %v\n%s", operTime, operName, c.message)
 	err = objects.RealtimeLog(pipelineID, kind, c.phase, msg)
 	if !errors.Is(err, objects.NotFound) && err != nil {
 		log.Errorf("write event log to db error: %s", err)

@@ -8,8 +8,8 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/bll/pipeline"
-	"ferry/pkg/base"
+	"nautilus/internal/bll/pipeline"
+	"nautilus/pkg/base"
 )
 
 func CreatePipeline(c *gin.Context) {

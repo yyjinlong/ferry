@@ -12,11 +12,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/objects"
-	"ferry/pkg/base"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
-	"ferry/pkg/mq"
+	"nautilus/internal/objects"
+	"nautilus/pkg/base"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
+	"nautilus/pkg/mq"
 )
 
 type BuildImage struct{}

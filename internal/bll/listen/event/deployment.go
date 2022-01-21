@@ -13,11 +13,11 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 
-	"ferry/internal/k8s"
-	"ferry/internal/model"
-	"ferry/internal/objects"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/internal/k8s"
+	"nautilus/internal/model"
+	"nautilus/internal/objects"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 func HandleDeploymentCapturer(obj interface{}, mode string) {
@@ -147,7 +147,10 @@ func (c *deploymentCapturer) operate() bool {
 
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
 	phaseObj, err := objects.GetPhaseInfo(pipelineID, kind, c.phase)
-	if !errors.Is(err, objects.NotFound) && err != nil {
+	if errors.Is(err, objects.NotFound) {
+		return false
+	}
+	if err != nil {
 		log.Errorf("query phase info error: %s", err)
 		return false
 	}

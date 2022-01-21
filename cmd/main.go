@@ -17,13 +17,13 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"ferry/pkg/db"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/pkg/db"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 var (
-	cfgFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
+	cfgFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
 	help    = flag.Bool("h", false, "show help info.")
 )
 

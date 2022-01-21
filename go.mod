@@ -1,4 +1,4 @@
-module ferry
+module nautilus
 
 go 1.14
 

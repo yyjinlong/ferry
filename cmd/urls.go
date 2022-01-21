@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/api"
+	"nautilus/internal/api"
 )
 
 func URLs(r *gin.Engine) {

@@ -8,7 +8,7 @@ package objects
 import (
 	"xorm.io/xorm"
 
-	"ferry/internal/model"
+	"nautilus/internal/model"
 )
 
 func getServiceSession() *xorm.Session {

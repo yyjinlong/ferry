@@ -8,11 +8,11 @@ package main
 import (
 	"flag"
 
-	"ferry/internal/bll/image"
-	"ferry/internal/bll/listen"
-	"ferry/pkg/db"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/internal/bll/image"
+	"nautilus/internal/bll/listen"
+	"nautilus/pkg/db"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 var (
@@ -36,7 +36,6 @@ func main() {
 	go image.HandleMsg()
 
 	go listen.DeploymentFinishEvent()
-	go listen.EndpointFinishEvent()
 	go listen.PublishLogEvent()
 
 	done := make(chan int)

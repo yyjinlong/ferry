@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	"ferry/internal/objects"
-	"ferry/pkg/g"
-	"ferry/pkg/git"
-	"ferry/pkg/log"
+	"nautilus/internal/objects"
+	"nautilus/pkg/g"
+	"nautilus/pkg/git"
+	"nautilus/pkg/log"
 )
 
 func getCurPath() string {

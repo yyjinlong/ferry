@@ -13,9 +13,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"ferry/internal/bll/listen/event"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/internal/bll/listen/event"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 func getClientset() *kubernetes.Clientset {
@@ -54,24 +54,6 @@ func DeploymentFinishEvent() {
 		DeleteFunc: func(obj interface{}) {},
 	})
 	deploymentInformer.Run(stopCh)
-}
-
-func EndpointFinishEvent() {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
-	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
-	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			event.HandleEndpointCapturer(obj, event.Create)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			event.HandleEndpointCapturer(newObj, event.Update)
-		},
-		DeleteFunc: func(obj interface{}) {},
-	})
-	endpointInformer.Run(stopCh)
 }
 
 func PublishLogEvent() {

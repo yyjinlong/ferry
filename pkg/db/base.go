@@ -12,8 +12,8 @@ import (
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
 
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 var (

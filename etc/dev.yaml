@@ -3,22 +3,22 @@ readTimeout: 0       # 0 means no limit
 writeTimeout: 0      # 0 means no limit
 maxHeaderBytes: 8192 # 8K
 exitWaitSecond: 1    # 退出等待时间
-logfile: "/tmp/ferry.log"
+logfile: "/tmp/nautilus.log"
 
 postgres:
-  master: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
-  slave1: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
-  slave2: "postgres://jinlong:postgres@localhost:5432/ferry?sslmode=disable"
+  master: "postgres://jinlong:postgres@localhost:5432/nautilus?sslmode=disable"
+  slave1: "postgres://jinlong:postgres@localhost:5432/nautilus?sslmode=disable"
+  slave2: "postgres://jinlong:postgres@localhost:5432/nautilus?sslmode=disable"
 
 rabbitmq:
   address: "amqp://rabbit:yangjinlong@10.12.24.19:5672/core"
-  exchange: "ferry"
+  exchange: "nautilus"
   queue: "all-build-image"
   routingKey: "build-image"
 
 build:
   dir: "/tmp/release"
-  logfile: "/tmp/ferryd.log"
+  logfile: "/tmp/nautilus-cron.log"
 
 registry:
   release: "10.12.28.4:80/release"

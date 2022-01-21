@@ -8,7 +8,7 @@ package objects
 import (
 	"fmt"
 
-	"ferry/internal/model"
+	"nautilus/internal/model"
 )
 
 const (

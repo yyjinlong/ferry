@@ -8,8 +8,8 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/bll/publish"
-	"ferry/pkg/base"
+	"nautilus/internal/bll/publish"
+	"nautilus/pkg/base"
 )
 
 func BuildTag(c *gin.Context) {

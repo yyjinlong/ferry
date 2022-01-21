@@ -8,9 +8,9 @@ package image
 import (
 	"encoding/json"
 
-	"ferry/pkg/g"
-	"ferry/pkg/log"
-	"ferry/pkg/mq"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
+	"nautilus/pkg/mq"
 )
 
 var (

@@ -7,11 +7,12 @@ package ws
 
 import (
 	"bytes"
-	"ferry/pkg/log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+
+	"nautilus/pkg/log"
 )
 
 var (

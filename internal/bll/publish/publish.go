@@ -10,11 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ferry/internal/k8s"
-	"ferry/internal/model"
-	"ferry/internal/objects"
-	"ferry/pkg/base"
-	"ferry/pkg/log"
+	"nautilus/internal/k8s"
+	"nautilus/internal/model"
+	"nautilus/internal/objects"
+	"nautilus/pkg/base"
+	"nautilus/pkg/log"
 )
 
 type Deploy struct {

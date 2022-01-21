@@ -8,9 +8,9 @@ package objects
 import (
 	"fmt"
 
-	"ferry/internal/model"
-	"ferry/pkg/g"
-	"ferry/pkg/log"
+	"nautilus/internal/model"
+	"nautilus/pkg/g"
+	"nautilus/pkg/log"
 )
 
 func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, moduleInfoList []map[string]string) error {

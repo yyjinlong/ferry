@@ -1,14 +1,14 @@
-ferry
+nautilus
 -------------
 Jinlong Yang
 
-# ferry
+# nautilus
 
 ## 1 why blue-green？
 
     1 采用滚动更新, maxSurge设置为25%.
 
-        如果pod比较多, 就会进行多次的滚动更新, 便会产生新老pod共存, 共同接流量情况. 然而这是业务不期望的情况.
+        如果pod比较多, 就会进行多次的滚动更新, 发布缓慢同时也会产生新老pod共存, 共同接流量情况, 页面访问出现404, 这是业务不期望的情况.
 
     2 蓝绿部署的优势
 
@@ -24,8 +24,7 @@ Jinlong Yang
     1) base层    : centos6.7 centos7.5
     2) run层     : python(conda环境)、go(go mod环境)
     3) service层 : 具体的服务环境
-
-    4) release层 : 由ferryd进程基于代码自动构建
+    4) release层 : 由crond进程基于代码自动构建
 
 
 ## 3 节点标签
@@ -41,6 +40,10 @@ Jinlong Yang
     ├── pipeline     -- 构建相关流程
     ├── publish      -- 发布
     └── rollback     -- 回滚
+
+    * 新服务上线默认为blue
+    * 蓝绿两组分别创建对应的deployment
+    * 不再监听endpoint事件, 等待deployment发布完成, 自动将另一组缩成0, 读取endpoint信息并记录
 
 
 ## 5 创建服务
