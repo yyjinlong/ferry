@@ -43,6 +43,7 @@ type Service struct {
 	Port          int       `xorm:"int"`
 	ContainerPort int       `xorm:"int"`
 	OnlineGroup   string    `xorm:"varchar(20) notnull"`
+	DeployGroup   string    `xorm:"varchar(20) notnull"`
 	MultiPhase    bool      `xorm:"bool"`
 	Lock          string    `xorm:"varchar(100) notnull"`
 	RD            string    `xorm:"varchar(50) notnull"`

@@ -16,15 +16,6 @@ const (
 	GREEN = "green"
 )
 
-// GetDeployGroup 获取当前部署组
-func GetDeployGroup(onlineGroup string) string {
-	group := BLUE
-	if onlineGroup == BLUE {
-		group = GREEN
-	}
-	return group
-}
-
 // GetDeployment 根据服务ID、服务名等创建deployment name
 func GetDeployment(serviceName string, serviceID int64, phase, group string) string {
 	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)

@@ -38,12 +38,20 @@ func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 		return nil, err
 	}
 
-	group := objects.GetDeployGroup(pipeline.Service.OnlineGroup)
-	log.Infof("get current online group: %s", group)
+	onlineGroup := pipeline.Service.DeployGroup
+	deployGroup := f.getDeployGroup(onlineGroup)
+	log.Infof("get current online group: %s deploy group: %s", onlineGroup, deployGroup)
 
-	if err := objects.UpdateGroup(pid, pipeline.Service.Name, group); err != nil {
+	if err := objects.UpdateGroup(pid, pipeline.Service.Name, onlineGroup, deployGroup); err != nil {
 		log.Errorf("set current group: %s online error: %s", group, err)
 	}
 	log.Infof("set current group: %s online success.", group)
 	return "", nil
+}
+
+func (f *Finish) getDeployGroup(group string) string {
+	if group == objects.BLUE {
+		return objects.GREEN
+	}
+	return objects.BLUE
 }

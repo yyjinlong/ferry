@@ -124,21 +124,15 @@ func (c *deploymentCapturer) operate() bool {
 		return false
 	}
 
-	// 判断该上线流程是否完成
 	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished so stop")
 		return false
 	}
 
 	var (
-		pipelineID   = pipeline.Pipeline.ID
-		namespace    = pipeline.Namespace.Name
-		offlineGroup = pipeline.Service.OnlineGroup // NOTE: 当前在线的组为待下线组
+		pipelineID = pipeline.Pipeline.ID
+		namespace  = pipeline.Namespace.Name
 	)
-
-	if offlineGroup == "" {
-		return true
-	}
 
 	kind := model.PHASE_DEPLOY
 	if g.Ini(pipeline.Pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
@@ -165,13 +159,9 @@ func (c *deploymentCapturer) operate() bool {
 		return true
 	}
 
-	var (
-		publishGroup  = objects.GetDeployGroup(offlineGroup)
-		oldDeployment = objects.GetDeployment(c.serviceName, c.serviceID, c.phase, offlineGroup)
-	)
-
 	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
-	if c.mode == Update && c.group == publishGroup && objects.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
+	if c.mode == Update && c.group == pipeline.Service.DeployGroup && objects.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
+		oldDeployment := objects.GetDeployment(c.serviceName, c.serviceID, c.phase, pipeline.Service.OnlineGroup)
 		dep := k8s.NewDeployments(namespace, oldDeployment)
 		if err := dep.Scale(0); err != nil {
 			return false

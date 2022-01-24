@@ -29,6 +29,7 @@ create table if not exists service (
     port int,                                        -- 服务端口
     container_port int,                              -- 容器端口
     online_group varchar(20) default '',             -- 当前在线组(blue、green), 默认是空
+    deploy_group varchar(20) default 'blue',         -- 当前发布组(blue、green), 默认为blue
     multi_phase bool default true,                   -- 服务是否是多阶段部署(分级发布)
     lock varchar(100) not null default '',           -- 服务锁
     rd varchar(50) not null,                         -- 该服务对应的rd

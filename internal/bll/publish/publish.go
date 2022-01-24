@@ -50,31 +50,30 @@ func (d *Deploy) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	var (
 		serviceName = pipeline.Service.Name
 		serviceID   = pipeline.Service.ID
-		group       = objects.GetDeployGroup(pipeline.Service.OnlineGroup)
 	)
 	d.namespace = pipeline.Namespace.Name
-	d.deployment = objects.GetDeployment(serviceName, serviceID, d.phase, group)
+	d.deployment = objects.GetDeployment(serviceName, serviceID, d.phase, pipeline.Service.DeployGroup)
 	d.appid = objects.GetAppID(serviceName, serviceID, d.phase)
-	log.Infof("[deploy] get current group: %s deployment name: %s", group, d.deployment)
+	log.Infof("current deploy group: %s deployment name: %s", pipeline.Service.DeployGroup, d.deployment)
 
 	tpl, err := d.createYaml(pipeline)
 	if err != nil {
-		log.Errorf("[deploy] generate deployment yaml(%s) error: %+v", d.deployment, err)
+		log.Errorf("generate deployment yaml(%s) error: %+v", d.deployment, err)
 		return nil, err
 	}
-	log.Infof("[deploy] generate deployment yaml(%s) success", d.deployment)
+	log.Infof("generate deployment yaml(%s) success", d.deployment)
 	fmt.Println(tpl)
 
 	if err := d.execute(tpl); err != nil {
 		return nil, err
 	}
-	log.Infof("[deploy] pubish deployment: %s to k8s success", d.deployment)
+	log.Infof("pubish deployment: %s to k8s success", d.deployment)
 
 	if err := objects.CreatePhase(d.pid, model.PHASE_DEPLOY, d.phase, model.PHProcess, tpl); err != nil {
-		log.Errorf("[deploy] record deployment: %s to db error: %+v", d.deployment, err)
+		log.Errorf("record deployment: %s to db error: %+v", d.deployment, err)
 		return nil, err
 	}
-	log.Infof("[deploy] record deployment: %s to db success", d.deployment)
+	log.Infof("record deployment: %s to db success", d.deployment)
 	return nil, nil
 }
 
@@ -91,7 +90,7 @@ func (d *Deploy) createYaml(pipeline *model.PipelineQuery) (string, error) {
 	if len(imageInfo) == 0 {
 		return "", fmt.Errorf("get image info is empty")
 	}
-	log.Infof("[deploy] create yaml get image info: %s", imageInfo)
+	log.Infof("create yaml get image info: %s", imageInfo)
 
 	replicas := pipeline.Service.Replicas
 	if d.phase == model.PHASE_SANDBOX {

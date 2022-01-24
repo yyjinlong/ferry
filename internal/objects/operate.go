@@ -125,7 +125,7 @@ func UpdatePhaseV2(pipelineID int64, kind, name string, status int, version stri
 	return nil
 }
 
-func UpdateGroup(pipelineID int64, serviceName, group string) error {
+func UpdateGroup(pipelineID int64, serviceName, onlineGroup, deployGroup string) error {
 	session := model.MEngine().NewSession()
 	defer session.Close()
 
@@ -142,7 +142,8 @@ func UpdateGroup(pipelineID int64, serviceName, group string) error {
 	}
 
 	service := new(model.Service)
-	service.OnlineGroup = group
+	service.OnlineGroup = onlineGroup
+	service.DeployGroup = deployGroup
 	service.Lock = ""
 	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "lock").Update(service); err != nil {
 		return err
