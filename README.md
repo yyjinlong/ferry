@@ -59,7 +59,7 @@ Jinlong Yang
 
     2) 打tag
 
-        curl -d 'pipeline_id=4&module=ivr&tag=release_ivr_20210827_155942' http://127.0.0.1:8888/v1/tag
+        curl -d 'pipeline_id=4&service=ivr&module=ivr&tag=release_ivr_20210827_155942' http://127.0.0.1:8888/v1/tag
 
     3) 构建镜像
 

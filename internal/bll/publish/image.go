@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"nautilus/internal/model"
 	"nautilus/internal/objects"
 	"nautilus/pkg/base"
 	"nautilus/pkg/g"
@@ -38,12 +39,21 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	)
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
 
+	pipeline, err := objects.GetPipeline(pid)
+	if err != nil {
+		return nil, fmt.Errorf(IMG_QUERY_PIPELINE_ERROR, err)
+	}
+
+	if g.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess, model.PLTerminate}) {
+		return nil, fmt.Errorf(IMG_BUILD_FINISHED)
+	}
+
 	updateList, err := objects.FindUpdateInfo(pid)
 	if errors.Is(err, objects.NotFound) {
-		return nil, fmt.Errorf("pipeline_id: %d 不存在!", pid)
+		return nil, fmt.Errorf(DB_PIPELINE_NOT_FOUND, pid)
 	} else if err != nil {
 		log.Errorf("find pipeline update info error: %s", err)
-		return nil, err
+		return nil, fmt.Errorf(IMG_QUERY_UPDATE_ERROR, err)
 	}
 
 	builds := make([]map[string]string, 0)
@@ -67,7 +77,7 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	}
 	body, err := json.Marshal(image)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(IMG_BUILD_PARAM_ENCODE_ERROR, err)
 	}
 	log.Infof("publish build image body: %s", string(body))
 

@@ -33,9 +33,9 @@ func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 
 	pipeline, err := objects.GetPipelineInfo(pid)
 	if errors.Is(err, objects.NotFound) {
-		return nil, fmt.Errorf("pipeline_id: %d 不存在!", pid)
+		return nil, fmt.Errorf(DB_PIPELINE_NOT_FOUND, pid)
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
 	onlineGroup := pipeline.Service.DeployGroup
@@ -43,9 +43,10 @@ func (f *Finish) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	log.Infof("get current online group: %s deploy group: %s", onlineGroup, deployGroup)
 
 	if err := objects.UpdateGroup(pid, pipeline.Service.Name, onlineGroup, deployGroup); err != nil {
-		log.Errorf("set current group: %s online error: %s", group, err)
+		log.Errorf("update finish info error: %s", err)
+		return nil, fmt.Errorf(FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
-	log.Infof("set current group: %s online success.", group)
+	log.Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)
 	return "", nil
 }
 

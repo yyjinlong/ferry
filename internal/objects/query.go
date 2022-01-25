@@ -16,7 +16,7 @@ const (
 	GREEN = "green"
 )
 
-// GetDeployment 根据服务ID、服务名等创建deployment name
+// GetDeployment 根据服务ID、服务名、部署阶段、部署组 来命名deployment name
 func GetDeployment(serviceName string, serviceID int64, phase, group string) string {
 	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
 }
@@ -41,6 +41,16 @@ func GetCodeModules(serviceID int64) ([]model.CodeModule, error) {
 		return nil, err
 	}
 	return moduleList, nil
+}
+
+func GetCodeModuleInfo(module string) (*model.CodeModule, error) {
+	codeModule := new(model.CodeModule)
+	if has, err := model.SEngine().Where("name=?", module).Get(codeModule); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return codeModule, nil
 }
 
 func GetPipeline(pipelineID int64) (*model.Pipeline, error) {

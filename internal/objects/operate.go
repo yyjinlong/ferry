@@ -28,12 +28,6 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		return fmt.Errorf("service query by name: %s is not exists", serviceName)
 	}
 
-	service.Lock = creator
-	if _, err := session.ID(service.ID).Update(service); err != nil {
-		return err
-	}
-	log.Infof("update service: %s lock: %s success", serviceName, creator)
-
 	pipeline := new(model.Pipeline)
 	pipeline.Name = name
 	pipeline.Summary = summary
@@ -68,6 +62,15 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		log.Infof("create update info success. by code_module: %s branch: %s", moduleName, deployBranch)
 	}
 	return session.Commit()
+}
+
+func SetLock(serviceID int64, lock string) error {
+	service := new(model.Service)
+	service.Lock = lock
+	if _, err := model.MEngine().ID(serviceID).Update(service); err != nil {
+		return err
+	}
+	return nil
 }
 
 func CreateImage(pipelineID int64, imageURL, imageTag string) error {
@@ -145,7 +148,7 @@ func UpdateGroup(pipelineID int64, serviceName, onlineGroup, deployGroup string)
 	service.OnlineGroup = onlineGroup
 	service.DeployGroup = deployGroup
 	service.Lock = ""
-	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "lock").Update(service); err != nil {
+	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "deploy_group", "lock").Update(service); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound
