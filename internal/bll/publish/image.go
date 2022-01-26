@@ -44,7 +44,7 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 		return nil, fmt.Errorf(IMG_QUERY_PIPELINE_ERROR, err)
 	}
 
-	if g.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess, model.PLTerminate}) {
+	if g.Ini(pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
 		return nil, fmt.Errorf(IMG_BUILD_FINISHED)
 	}
 

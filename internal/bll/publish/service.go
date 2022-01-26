@@ -6,9 +6,10 @@
 package publish
 
 import (
-	"sync"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/errgroup"
 
 	"nautilus/internal/k8s"
 	"nautilus/internal/model"
@@ -39,29 +40,29 @@ func (s *Service) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error)
 
 	serviceObj, err := objects.GetServiceInfo(s.serviceName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf(DB_SERVICE_QUERY_ERROR, err)
 	}
 	s.namespace = serviceObj.Namespace.Name
 	s.serviceID = serviceObj.Service.ID
 	s.exposePort = serviceObj.Service.Port
 	s.containerPort = serviceObj.Service.ContainerPort
 
-	var wg sync.WaitGroup
-	wg.Add(len(model.PHASE_NAME_LIST))
-
+	var eg errgroup.Group
 	for _, phase := range model.PHASE_NAME_LIST {
-		go func(phase string) {
-			defer wg.Done()
-			s.worker(phase)
-		}(phase)
+		phase := phase
+		eg.Go(func() error {
+			return s.worker(phase)
+		})
 	}
-	wg.Wait()
+	if err := eg.Wait(); err != nil {
+		return nil, fmt.Errorf(SVC_WAIT_ALL_SERVICE_ERROR, err)
+	}
 	return nil, nil
 }
 
 func (s *Service) worker(phase string) error {
 	appid := objects.GetAppID(s.serviceName, s.serviceID, phase)
-	log.Infof("[service] fetch service appid: %s", appid)
+	log.Infof("fetch service appid: %s", appid)
 
 	yaml := &k8s.ServiceYaml{
 		ServiceName:   s.serviceName,
@@ -75,12 +76,12 @@ func (s *Service) worker(phase string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("[service] fetch service tpl: %s", tpl)
+	log.Infof("fetch service tpl: %s", tpl)
 
 	if err := s.execute(tpl); err != nil {
 		return err
 	}
-	log.Infof("[service] build service success")
+	log.Infof("build service success")
 	return nil
 }
 

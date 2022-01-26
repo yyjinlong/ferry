@@ -9,6 +9,11 @@ const (
 	DB_QUERY_SERVICE_ERROR  = "查询服务: %s 错误: %s"
 	DB_PIPELINE_NOT_FOUND   = "pipeline: %d 查询不存在"
 	DB_PIPELINE_QUERY_ERROR = "查询pipeline: %d 失败: %s"
+	DB_SERVICE_QUERY_ERROR  = "查询service信息失败: %s"
+)
+
+const (
+	SVC_WAIT_ALL_SERVICE_ERROR = "等待所有service创建完成失败: %s"
 )
 
 const (
