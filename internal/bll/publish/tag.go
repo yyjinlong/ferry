@@ -7,6 +7,9 @@ package publish
 
 import (
 	"fmt"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -16,19 +19,12 @@ import (
 	"nautilus/pkg/log"
 )
 
-type BuildTag struct {
-	pid         int64
-	serviceName string
-	module      string
-	tag         string
-}
+type BuildTag struct{}
 
 func (bt *BuildTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {
 		ID      int64  `form:"pipeline_id" binding:"required"`
 		Service string `form:"service" binding:"required"`
-		Module  string `form:"module" binding:"required"`
-		Tag     string `form:"tag" binding:"required"`
 	}
 
 	var data params
@@ -36,16 +32,16 @@ func (bt *BuildTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, erro
 		return "", err
 	}
 
-	bt.pid = data.ID
-	bt.serviceName = data.Service
-	bt.module = data.Module
-	bt.tag = data.Tag
-	pidStr := strconv.FormatInt(bt.pid, 10)
-	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": bt.pid})
+	var (
+		pid         = data.ID
+		pidStr      = strconv.FormatInt(pid, 10)
+		serviceName = data.Service
+	)
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
 
-	serviceObj, err := objects.GetServiceInfo(bt.serviceName)
+	serviceObj, err := objects.GetServiceInfo(serviceName)
 	if err != nil {
-		return "", fmt.Errorf(DB_QUERY_SERVICE_ERROR, bt.serviceName, err)
+		return "", fmt.Errorf(DB_QUERY_SERVICE_ERROR, serviceName, err)
 	}
 
 	if serviceObj.Lock != "" && serviceObj.Lock != pidStr {
@@ -56,18 +52,91 @@ func (bt *BuildTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, erro
 		return "", fmt.Errorf(TAG_WRITE_LOCK_ERROR, pidStr, err)
 	}
 
-	if err := bt.maketag(); err != nil {
-		return "", fmt.Errorf(TAG_EXECUTE_SCRIPT_ERROR, err)
+	updateList, err := objects.FindUpdateInfo(pid)
+	if err != nil {
+		log.Errorf("find pipeline update info error: %s", err)
+		return nil, fmt.Errorf(TAG_QUERY_UPDATE_ERROR, err)
 	}
 
-	if err := objects.UpdateTag(bt.pid, bt.module, bt.tag); err != nil {
-		return "", fmt.Errorf(TAG_UPDATE_DB_ERROR, err)
+	_, curPath, _, _ := runtime.Caller(1)
+	var (
+		mainPath   = filepath.Dir(filepath.Dir(filepath.Dir(curPath)))
+		scriptPath = filepath.Join(mainPath, "script")
+	)
+
+	for _, item := range updateList {
+		addr := item.CodeModule.ReposAddr
+		module := item.CodeModule.Name
+		branch := item.PipelineUpdate.DeployBranch
+		param := fmt.Sprintf("%s/maketag -a %s -m %s -b %s -i %d", scriptPath, addr, module, branch, pid)
+		log.Infof("maketag command: %s", param)
+		if !bt.do(param) {
+			return "", fmt.Errorf(TAG_BUILD_FAILED)
+		}
 	}
-	log.Infof("module: %s update tag: %s success", bt.module, bt.tag)
 	return "", nil
 }
 
-func (bt *BuildTag) maketag() error {
+func (bt *BuildTag) do(param string) bool {
+	cmd := exec.Command("/bin/bash", "-c", param)
 
-	return nil
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println(TAG_CREATE_PIPE_ERROR, err)
+		return false
+	}
+	defer stdout.Close()
+
+	if err := cmd.Start(); err != nil {
+		fmt.Println(TAG_START_EXEC_ERROR, err)
+		return false
+	}
+
+	for {
+		buf := make([]byte, 1024)
+		_, err := stdout.Read(buf)
+		fmt.Println(string(buf))
+		if err != nil {
+			break
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		fmt.Println(TAG_WAIT_FINISH_ERROR, err)
+		return false
+	}
+
+	if cmd.ProcessState.Success() {
+		return true
+	}
+	return false
+}
+
+type ReceiveTag struct{}
+
+func (rt *ReceiveTag) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
+	type params struct {
+		ID     int64  `form:"taskid" binding:"required"`
+		Module string `form:"module" binding:"required"`
+		Tag    string `form:"tag" binding:"required"`
+	}
+
+	var data params
+	if err := c.ShouldBind(&data); err != nil {
+		return "", err
+	}
+
+	var (
+		pid    = data.ID
+		module = data.Module
+		tag    = data.Tag
+	)
+	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
+	log.Infof("receive module: %s build tag value: %s", module, tag)
+
+	if err := objects.UpdateTag(pid, module, tag); err != nil {
+		return "", fmt.Errorf(TAG_UPDATE_DB_ERROR, err)
+	}
+	log.Infof("module: %s update tag: %s success", module, tag)
+	return "", nil
 }

@@ -16,6 +16,10 @@ func BuildTag(c *gin.Context) {
 	base.Construct(&publish.BuildTag{}, c)
 }
 
+func ReceiveTag(c *gin.Context) {
+	base.Construct(&publish.ReceiveTag{}, c)
+}
+
 func BuildImage(c *gin.Context) {
 	base.Construct(&publish.BuildImage{}, c)
 }

@@ -27,6 +27,7 @@ func URLs(r *gin.Engine) {
 
 		// 发布流程
 		g1.POST("/tag", api.BuildTag)
+		g1.GET("/tag", api.ReceiveTag)
 		g1.POST("/image", api.BuildImage)
 		g1.POST("/service", api.Service)
 		g1.POST("/deploy", api.Deploy)

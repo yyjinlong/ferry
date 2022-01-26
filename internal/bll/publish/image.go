@@ -7,7 +7,6 @@ package publish
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -49,9 +48,7 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	}
 
 	updateList, err := objects.FindUpdateInfo(pid)
-	if errors.Is(err, objects.NotFound) {
-		return nil, fmt.Errorf(DB_PIPELINE_NOT_FOUND, pid)
-	} else if err != nil {
+	if err != nil {
 		log.Errorf("find pipeline update info error: %s", err)
 		return nil, fmt.Errorf(IMG_QUERY_UPDATE_ERROR, err)
 	}

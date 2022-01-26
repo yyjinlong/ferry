@@ -55,15 +55,15 @@ Jinlong Yang
 
     1) 创建job
 
-        curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "master"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
+        curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "yy"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
 
     2) 打tag
 
-        curl -d 'pipeline_id=4&service=ivr&module=ivr&tag=release_ivr_20210827_155942' http://127.0.0.1:8888/v1/tag
+        curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/tag
 
     3) 构建镜像
 
-        curl -d 'pipeline_id=4'  http://127.0.0.1:8888/v1/image
+        curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/image
 
     4) 发布沙盒
 

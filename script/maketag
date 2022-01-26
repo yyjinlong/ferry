@@ -1,0 +1,106 @@
+#!/bin/bash
+
+base=$(dirname $0)
+source $base/config.sh
+source $base/common.sh
+
+addr=""
+module=""
+branch=""
+taskid=""
+
+while getopts a:b:m:i: opt; do
+    case $opt in
+        a) addr=$OPTARG;;
+        m) module=$OPTARG;;
+        b) branch=$OPTARG;;
+        i) taskid=$OPTARG;;
+        h) help;;
+    esac
+done
+
+function help() {
+    cat <<EOF
+功能说明: 代码打tag, 并做代码合并检查
+使用方法: $0 -a https://gitlab.xxx.com/xxx -m ivr -b master -i 100
+参数说明:
+    -a 仓库地址
+    -m 模块名称
+    -b 分支名称
+    -i 任务ID
+EOF
+    exit $err
+}
+
+function branch_merge_check() {
+    echoinfo "开始进行分支合并检查"
+    echoinfo "当前模块: $module"
+    echoinfo "当前分支: $branch"
+
+}
+
+function build_tag() {
+    cd $module
+    tag="released_${module}_$(date +%Y_%m_%d_%H%M%S)_${taskid}"
+    echoinfo "开始打tag: $tag"
+
+    git checkout $branch
+    if [ $? -ne 0 ]; then
+        echoerror "切换到分支: $branch 失败!"
+        exit $err
+    fi
+    git tag $tag -am "make tag $tag"
+    git push origin $branch --tags
+    if [ $? -ne 0 ]; then
+        echoerror "推送tag: $tag 到仓库失败!"
+        exit $err
+    fi
+
+    report_tag $taskid $module $tag
+    echoinfo "上报tag: $tag 成功!"
+
+    echoinfo "最新的5个tag列表如下:"
+    git tag | grep $module | tail -n 5
+}
+
+function main() {
+    if [ -z $addr ]; then
+        help
+    fi
+
+    if [ -z $module ]; then
+        help
+    fi
+
+    if [ -z $branch ]; then
+        help
+    fi
+
+    if [ -z $taskid ]; then
+        help
+    fi
+
+    if [ ! -d $MAIN_PATH ]; then
+        mkdir $MAIN_PATH
+    fi
+    cd $MAIN_PATH
+
+    git clone $addr $module
+    if [ $? -ne 0 ]; then
+        echoerror "git clone $addr 失败!"
+        exit $rr
+    fi
+    echoinfo "代码下载完成!"
+
+    branch_merge_check
+    build_tag
+
+    cd $MAIN_PATH
+    code_path="$MAIN_PATH/$module"
+    if [ -d $code_path ]; then
+        rm -rf $code_path
+        echoinfo "删除代码目录完成!"
+    fi
+}
+
+main
