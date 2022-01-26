@@ -74,12 +74,12 @@ func (s *Service) worker(phase string) error {
 	}
 	tpl, err := yaml.Instance()
 	if err != nil {
-		return err
+		return fmt.Errorf(SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
 	log.Infof("fetch service tpl: %s", tpl)
 
 	if err := s.execute(tpl); err != nil {
-		return err
+		return fmt.Errorf(SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
 	log.Infof("build service success")
 	return nil

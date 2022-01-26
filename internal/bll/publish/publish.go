@@ -14,6 +14,7 @@ import (
 	"nautilus/internal/model"
 	"nautilus/internal/objects"
 	"nautilus/pkg/base"
+	"nautilus/pkg/g"
 	"nautilus/pkg/log"
 )
 
@@ -44,7 +45,11 @@ func (d *Deploy) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 
 	pipeline, err := objects.GetPipelineInfo(d.pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(DB_PIPELINE_QUERY_ERROR, d.pid, err)
+	}
+
+	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
+		return nil, fmt.Errorf(PUB_DEPLOY_FINISHED)
 	}
 
 	var (
@@ -59,26 +64,22 @@ func (d *Deploy) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) 
 	tpl, err := d.createYaml(pipeline)
 	if err != nil {
 		log.Errorf("generate deployment yaml(%s) error: %+v", d.deployment, err)
-		return nil, err
+		return nil, fmt.Errorf(PUB_BUILD_DEPLOYMENT_YAML_ERROR, err)
 	}
 	log.Infof("generate deployment yaml(%s) success", d.deployment)
 	fmt.Println(tpl)
 
 	if err := d.execute(tpl); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(PUB_K8S_DEPLOYMENT_EXEC_FAILED, err)
 	}
 	log.Infof("pubish deployment: %s to k8s success", d.deployment)
 
 	if err := objects.CreatePhase(d.pid, model.PHASE_DEPLOY, d.phase, model.PHProcess, tpl); err != nil {
 		log.Errorf("record deployment: %s to db error: %+v", d.deployment, err)
-		return nil, err
+		return nil, fmt.Errorf(PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
 	}
 	log.Infof("record deployment: %s to db success", d.deployment)
 	return nil, nil
-}
-
-func (d *Deploy) valid() error {
-	return nil
 }
 
 func (d *Deploy) createYaml(pipeline *model.PipelineQuery) (string, error) {

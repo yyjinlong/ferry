@@ -13,7 +13,9 @@ const (
 )
 
 const (
-	SVC_WAIT_ALL_SERVICE_ERROR = "等待所有service创建完成失败: %s"
+	SVC_BUILD_SERVICE_YAML_ERROR = "创建service yaml失败: %s"
+	SVC_K8S_SERVICE_EXEC_FAILED  = "K8S创建service失败: %s"
+	SVC_WAIT_ALL_SERVICE_ERROR   = "等待所有service创建完成失败: %s"
 )
 
 const (
@@ -28,6 +30,13 @@ const (
 	IMG_BUILD_FINISHED           = "镜像已操作完, 不能重复操作!"
 	IMG_QUERY_UPDATE_ERROR       = "查询镜像变更信息错误: %s"
 	IMG_BUILD_PARAM_ENCODE_ERROR = "镜像构建参数json encode失败: %s"
+)
+
+const (
+	PUB_DEPLOY_FINISHED               = "服务已部署完成, 不能重复操作!"
+	PUB_BUILD_DEPLOYMENT_YAML_ERROR   = "创建deployment yaml失败: %s"
+	PUB_K8S_DEPLOYMENT_EXEC_FAILED    = "K8S创建deployment失败: %s"
+	PUB_RECORD_DEPLOYMENT_TO_DB_ERROR = "写deployment信息到数据库失败: %s"
 )
 
 const (
