@@ -91,6 +91,7 @@ type PipelineImage struct {
 	PipelineID int64     `xorm:"bigint notnull"`
 	ImageURL   string    `xorm:"varchar(200)"`
 	ImageTag   string    `xorm:"varchar(50)"`
+	Status     int       `xorm:"int notnull"`
 	CreateAt   time.Time `xorm:"timestamp notnull created"`
 }
 
@@ -118,6 +119,13 @@ const (
 	PLRollbackSuccess            // 回滚成功
 	PLRollbackFailed             // 回滚失败
 	PLTerminate                  // 流程终止
+)
+
+const (
+	PIWait    int = iota // 待构建
+	PIProcess            // 构建中
+	PISuccess            // 构建成功
+	PIFailed             // 构建失败
 )
 
 const (

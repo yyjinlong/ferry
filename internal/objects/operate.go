@@ -73,12 +73,22 @@ func SetLock(serviceID int64, lock string) error {
 	return nil
 }
 
-func CreateImage(pipelineID int64, imageURL, imageTag string) error {
+func CreateImage(pipelineID int64) error {
+	image := new(model.PipelineImage)
+	image.PipelineID = pipelineID
+	image.Status = model.PIProcess
+	if _, err := model.MEngine().Insert(image); err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateImage(pipelineID int64, imageURL, imageTag string) error {
 	image := new(model.PipelineImage)
 	image.PipelineID = pipelineID
 	image.ImageURL = imageURL
 	image.ImageTag = imageTag
-	if _, err := model.MEngine().Insert(image); err != nil {
+	if _, err := model.MEngine().Where("pipeline_id=?", pipelineID).Update(image); err != nil {
 		return err
 	}
 	return nil

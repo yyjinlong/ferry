@@ -7,6 +7,7 @@ package publish
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,14 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 		return nil, fmt.Errorf(IMG_BUILD_FINISHED)
 	}
 
+	pipelineImage, err := objects.GetImagInfo(pid)
+	if err != nil && !errors.Is(err, objects.NotFound) {
+		return nil, fmt.Errorf(IMG_QUERY_IS_BUILD_ERROR, err)
+	}
+	if pipelineImage != nil && g.Ini(pipelineImage.Status, []int{model.PIProcess, model.PISuccess, model.PIFailed}) {
+		return nil, fmt.Errorf(IMG_QUERY_IMAGE_IS_BUILED)
+	}
+
 	updateList, err := objects.FindUpdateInfo(pid)
 	if err != nil {
 		log.Errorf("find pipeline update info error: %s", err)
@@ -78,8 +87,18 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 	}
 	log.Infof("publish build image body: %s", string(body))
 
-	mqConf := g.Config().RabbitMQ
-	rmq := mq.NewRabbitMQ(mqConf.Address, mqConf.Exchange, mqConf.Queue, mqConf.RoutingKey)
+	if err := objects.CreateImage(pid); err != nil {
+		return nil, fmt.Errorf(IMG_CREATE_IMAGE_INFO_ERROR, err)
+	}
+
+	rmq, err := mq.NewRabbitMQ(
+		g.Config().RabbitMQ.Address,
+		g.Config().RabbitMQ.Exchange,
+		g.Config().RabbitMQ.Queue,
+		g.Config().RabbitMQ.RoutingKey)
+	if err != nil {
+		return nil, fmt.Errorf(IMG_SEND_BUILD_TO_MQ_FAILED, err)
+	}
 	rmq.Publish(string(body))
 	log.Infof("publish build image info to rmq success.")
 	return "", nil

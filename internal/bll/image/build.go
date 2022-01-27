@@ -83,7 +83,7 @@ func (p *pipeline) run(data Image) {
 	if !p.dockerPush() {
 		return
 	}
-	if !p.writeImageToDB() {
+	if !p.UpdateImage() {
 		return
 	}
 	log.Infof("push image: %s to registry success.", p.targetURL)
@@ -150,8 +150,8 @@ func (p *pipeline) dockerPush() bool {
 	return true
 }
 
-func (p *pipeline) writeImageToDB() bool {
-	if err := objects.CreateImage(p.pid, p.imageURL, p.imageTag); err != nil {
+func (p *pipeline) UpdateImage() bool {
+	if err := objects.UpdateImage(p.pid, p.imageURL, p.imageTag); err != nil {
 		log.Errorf("write image info to db error: %s", err)
 		return false
 	}

@@ -107,6 +107,16 @@ func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 	return true
 }
 
+func GetImagInfo(pipelineID int64) (*model.PipelineImage, error) {
+	pi := new(model.PipelineImage)
+	if has, err := model.SEngine().Where("pipeline_id=?", pipelineID).Get(pi); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return pi, nil
+}
+
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
 func FindImageInfo(pipelineID int64) (map[string]string, error) {
 	pi := new(model.ImageQuery)

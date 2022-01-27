@@ -34,6 +34,10 @@ const (
 	IMG_BUILD_FINISHED           = "镜像已操作完, 不能重复操作!"
 	IMG_QUERY_UPDATE_ERROR       = "查询镜像变更信息错误: %s"
 	IMG_BUILD_PARAM_ENCODE_ERROR = "镜像构建参数json encode失败: %s"
+	IMG_SEND_BUILD_TO_MQ_FAILED  = "发送镜像构建信息到MQ失败: %s"
+	IMG_QUERY_IS_BUILD_ERROR     = "查询镜像是否构建失败: %s"
+	IMG_QUERY_IMAGE_IS_BUILED    = "查询镜像信息已构建!"
+	IMG_CREATE_IMAGE_INFO_ERROR  = "写镜像信息到数据库失败: %s"
 )
 
 const (

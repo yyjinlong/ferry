@@ -32,8 +32,14 @@ func (r *receiver) Consumer(body []byte) error {
 }
 
 func ListenMQ() {
-	mqConf := g.Config().RabbitMQ
-	rmq := mq.NewRabbitMQ(mqConf.Address, mqConf.Exchange, mqConf.Queue, mqConf.RoutingKey)
+	rmq, err := mq.NewRabbitMQ(
+		g.Config().RabbitMQ.Address,
+		g.Config().RabbitMQ.Exchange,
+		g.Config().RabbitMQ.Queue,
+		g.Config().RabbitMQ.RoutingKey)
+	if err != nil {
+		log.Panicf("boot connect amqp failed: %s", err)
+	}
 	rmq.Consume(&receiver{})
 }
 

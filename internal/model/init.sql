@@ -92,6 +92,7 @@ create table if not exists pipeline_image (
     pipeline_id int not null,                                                  -- 对应的流水线
     image_url varchar(200),                                                    -- 基于所有代码模块构建的服务镜像地址
     image_tag varchar(50),                                                     -- 基于所有代码模块构建的服务镜像tag
+    status int not null check(status in (0, 1, 2,3)) default 0,                -- 0 待构建 1 构建中 2 构建成功 3 构建失败
     create_at timestamp not null default now()
 );
 

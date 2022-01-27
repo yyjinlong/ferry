@@ -7,6 +7,7 @@ package mq
 
 import (
 	"sync"
+	"time"
 
 	"github.com/streadway/amqp"
 
@@ -21,40 +22,57 @@ type Receiver interface {
 	Consumer([]byte) error
 }
 
-func NewRabbitMQ(addr, exchange, queue, routingKey string) *RabbitMQ {
+func NewRabbitMQ(addr, exchange, queue, routingKey string) (*RabbitMQ, error) {
 	rmq := &RabbitMQ{
 		addr:       addr,
 		exchange:   exchange,
 		queue:      queue,
 		routingKey: routingKey,
 	}
-	rmq.Connect()
+	if err := rmq.Connect(); err != nil {
+		return nil, err
+	}
+	go rmq.Reconnect()
+
 	once.Do(func() {
 		rmq.ExchangeDeclare()
 		rmq.QueueDeclare()
 		rmq.QueueBind()
 	})
-	return rmq
+	return rmq, nil
 }
 
 type RabbitMQ struct {
-	addr       string
-	exchange   string
-	queue      string
-	routingKey string
-	conn       *amqp.Connection
-	channel    *amqp.Channel
+	addr          string
+	exchange      string
+	queue         string
+	routingKey    string
+	conn          *amqp.Connection
+	channel       *amqp.Channel
+	connNotify    chan *amqp.Error
+	channelNotify chan *amqp.Error
+	isConnected   bool
 }
 
-func (r *RabbitMQ) Connect() {
+func (r *RabbitMQ) Connect() error {
 	var err error
 	if r.conn, err = amqp.Dial(r.addr); err != nil {
-		log.Panicf("connect mq: %s failed: %s", r.addr, err)
+		log.Errorf("connect mq: %s failed: %s", r.addr, err)
+		return err
 	}
 
 	if r.channel, err = r.conn.Channel(); err != nil {
-		log.Panicf("open a channel failed: %s", err)
+		log.Errorf("open a channel failed: %s", err)
+		return err
 	}
+	r.isConnected = true
+
+	connErrCh := make(chan *amqp.Error, 1)
+	r.connNotify = r.conn.NotifyClose(connErrCh)
+
+	chanErrCh := make(chan *amqp.Error, 1)
+	r.channelNotify = r.channel.NotifyClose(chanErrCh)
+	return nil
 }
 
 func (r *RabbitMQ) Close() {
@@ -64,6 +82,32 @@ func (r *RabbitMQ) Close() {
 
 	if err := r.conn.Close(); err != nil {
 		log.Errorf("colse connect failed: %s", err)
+	}
+}
+
+func (r *RabbitMQ) Reconnect() {
+	for {
+		if !r.isConnected {
+			connected := false
+			for i := 0; !connected; i++ {
+				if err := r.Connect(); err != nil {
+					log.Errorf("retry connect failed! count: %d", i)
+					time.Sleep(2 * time.Second)
+					continue
+				}
+				connected = true
+			}
+		}
+
+		select {
+		case err := <-r.channelNotify:
+			log.Errorf("channel close notify: %+v", err)
+			r.isConnected = false
+		case err := <-r.connNotify:
+			log.Errorf("connect close notify: %+v", err)
+			r.isConnected = false
+		}
+		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -128,16 +172,14 @@ func (r *RabbitMQ) Consume(receiver Receiver) {
 		for msg := range msgs {
 			if err := receiver.Consumer(msg.Body); err != nil {
 				msg.Ack(true)
-				return
+				continue
 			}
 			msg.Ack(false)
 		}
 	}()
 
-	select {
-	case <-forever:
-		log.Infof("stop receive message.")
-	}
+	<-forever
+	log.Infof("rabbitmq consumer exit.....")
 }
 
 func (r *RabbitMQ) Publish(body string) {
