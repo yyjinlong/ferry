@@ -23,7 +23,8 @@ type BuildImage struct{}
 
 func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, error) {
 	type params struct {
-		ID int64 `form:"pipeline_id" binding:"required"`
+		ID      int64  `form:"pipeline_id" binding:"required"`
+		Service string `form:"service" binding:"required"`
 	}
 
 	var data params
@@ -33,7 +34,7 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 
 	var (
 		pid      = data.ID
-		service  string
+		service  = data.Service
 		language string
 	)
 	log.InitFields(log.Fields{"logid": r.RequestID, "pipeline_id": pid})
@@ -55,7 +56,6 @@ func (bi *BuildImage) Handle(c *gin.Context, r *base.MyRequest) (interface{}, er
 
 	builds := make([]map[string]string, 0)
 	for _, item := range updateList {
-		service = item.Service.Name
 		language = item.CodeModule.Language
 
 		tagInfo := map[string]string{
