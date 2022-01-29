@@ -8,7 +8,7 @@ package main
 import (
 	"flag"
 
-	"nautilus/internal/bll/listen"
+	"nautilus/internal/bll/image"
 	"nautilus/pkg/db"
 	"nautilus/pkg/g"
 	"nautilus/pkg/log"
@@ -27,12 +27,12 @@ func main() {
 	}
 	g.ParseConfig(*cfgFile)
 
-	log.InitLogger(g.Config().Build.CronFile)
+	log.InitLogger(g.Config().Build.ImgFile)
 
 	db.Connect()
 
-	go listen.DeploymentFinishEvent()
-	go listen.PublishLogEvent()
+	go image.ListenMQ()
+	go image.HandleMsg()
 
 	done := make(chan int)
 	<-done

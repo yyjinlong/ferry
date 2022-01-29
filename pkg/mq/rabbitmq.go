@@ -24,16 +24,15 @@ type Receiver interface {
 
 func NewRabbitMQ(addr, exchange, queue, routingKey string) (*RabbitMQ, error) {
 	rmq := &RabbitMQ{
-		addr:       addr,
-		exchange:   exchange,
-		queue:      queue,
-		routingKey: routingKey,
+		addr:         addr,
+		exchange:     exchange,
+		queue:        queue,
+		routingKey:   routingKey,
+		connChangeCh: make(chan struct{}, 1),
 	}
 	if err := rmq.Connect(); err != nil {
 		return nil, err
 	}
-	go rmq.Reconnect()
-
 	once.Do(func() {
 		rmq.ExchangeDeclare()
 		rmq.QueueDeclare()
@@ -52,6 +51,7 @@ type RabbitMQ struct {
 	connNotify    chan *amqp.Error
 	channelNotify chan *amqp.Error
 	isConnected   bool
+	connChangeCh  chan struct{} // 连接改变
 }
 
 func (r *RabbitMQ) Connect() error {
@@ -72,6 +72,8 @@ func (r *RabbitMQ) Connect() error {
 
 	chanErrCh := make(chan *amqp.Error, 1)
 	r.channelNotify = r.channel.NotifyClose(chanErrCh)
+
+	r.connChangeCh <- struct{}{}
 	return nil
 }
 
@@ -96,6 +98,7 @@ func (r *RabbitMQ) Reconnect() {
 					continue
 				}
 				connected = true
+				log.Infof("reconnect rabbitmq success! count: %d", i)
 			}
 		}
 
@@ -107,6 +110,7 @@ func (r *RabbitMQ) Reconnect() {
 			log.Errorf("connect close notify: %+v", err)
 			r.isConnected = false
 		}
+		log.Infof("reconnect fetch isConnected: %t", r.isConnected)
 		time.Sleep(2 * time.Second)
 	}
 }
@@ -152,34 +156,46 @@ func (r *RabbitMQ) QueueBind() {
 
 func (r *RabbitMQ) Consume(receiver Receiver) {
 	defer r.Close()
-	msgs, err := r.channel.Consume(
-		r.queue,
-		"",    // consumer
-		false, // auto ack
-		false, // exclusive
-		false, // no local
-		false, // no wait
-		nil,   // args
+	var (
+		msgs <-chan amqp.Delivery
+		err  error
 	)
-	if err != nil {
-		log.Errorf("register a consumer failed: %s", err)
-		return
-	}
 
-	forever := make(chan bool)
+	go r.Reconnect()
 
-	go func() {
-		for msg := range msgs {
-			if err := receiver.Consumer(msg.Body); err != nil {
-				msg.Ack(true)
-				continue
+	for {
+		select {
+		case <-r.connChangeCh:
+			log.Infof("event 'Connect Change' triggered.")
+			msgs, err = r.channel.Consume(
+				r.queue,
+				"",    // consumer
+				false, // auto ack
+				false, // exclusive
+				false, // no local
+				false, // no wait
+				nil,   // args
+			)
+			if err != nil {
+				log.Errorf("register a consumer failed: %s", err)
+				break
 			}
-			msg.Ack(false)
-		}
-	}()
 
-	<-forever
-	log.Infof("rabbitmq consumer exit.....")
+		default:
+			if !r.isConnected || msgs == nil {
+				// 没有连接, 必须等待连接事件, 以便其连接上后才进行消息消费
+				time.Sleep(1 * time.Second)
+				break
+			}
+			for msg := range msgs {
+				if err := receiver.Consumer(msg.Body); err != nil {
+					msg.Ack(true)
+					continue
+				}
+				msg.Ack(false)
+			}
+		}
+	}
 }
 
 func (r *RabbitMQ) Publish(body string) {

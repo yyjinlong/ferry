@@ -18,7 +18,8 @@ rabbitmq:
 
 build:
   dir: "/tmp/release"
-  logfile: "/tmp/nautilus-cron.log"
+  imgfile: "/tmp/nautilus-img.log"
+  cronfile: "/tmp/nautilus-cron.log"
 
 registry:
   release: "10.12.28.4:80/release"

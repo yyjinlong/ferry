@@ -24,7 +24,7 @@ Jinlong Yang
     1) base层    : centos6.7 centos7.5
     2) run层     : python(conda环境)、go(go mod环境)
     3) service层 : 具体的服务环境
-    4) release层 : 由crond进程基于代码自动构建
+    4) release层 : 由imaged进程基于代码自动构建
 
 
 ## 3 节点标签

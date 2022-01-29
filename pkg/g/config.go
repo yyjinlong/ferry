@@ -40,8 +40,9 @@ type RabbtimqInfo struct {
 }
 
 type BuildInfo struct {
-	Dir     string `yaml:"dir"`
-	LogFile string `yaml:"logfile"`
+	Dir      string `yaml:"dir"`
+	ImgFile  string `yaml:"imgfile"`
+	CronFile string `yaml:"cronfile"`
 }
 
 type RegistryInfo struct {
