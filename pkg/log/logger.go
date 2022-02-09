@@ -25,14 +25,11 @@ func InitLogger(logFile string) {
 		logrus.Fatalf("Open log file failed: %s", err)
 	}
 
-	logging.SetFormatter(&logrus.JSONFormatter{})
-
-	writers := []io.Writer{
-		f,
-		os.Stdout,
-	}
 	// 同时写文件和屏幕
+	writers := []io.Writer{f, os.Stdout}
 	allWriters := io.MultiWriter(writers...)
+
+	logging.SetFormatter(&logrus.JSONFormatter{})
 	logging.SetOutput(allWriters)
 	logging.SetLevel(logrus.InfoLevel)
 
