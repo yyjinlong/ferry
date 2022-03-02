@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package k8s
+package yaml
 
 import (
 	"encoding/json"

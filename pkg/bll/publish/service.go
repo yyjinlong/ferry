@@ -8,84 +8,80 @@ package publish
 import (
 	"fmt"
 
+	"github.com/yyjinlong/golib/log"
 	"golang.org/x/sync/errgroup"
 
-	"nautilus/internal/k8s"
-	"nautilus/internal/model"
-	"nautilus/internal/objects"
-	"nautilus/pkg/base"
-	"nautilus/pkg/log"
+	"nautilus/pkg/cfg"
+	"nautilus/pkg/cm"
+	"nautilus/pkg/k8s/exec"
+	"nautilus/pkg/k8s/yaml"
+	"nautilus/pkg/model"
 )
 
-type Service struct {
-	namespace     string
-	serviceName   string
-	serviceID     int64
-	exposePort    int
-	containerPort int
+func NewService() *Service {
+	return &Service{}
 }
 
-func (s *Service) Handle(r *base.Request) (interface{}, error) {
-	type params struct {
-		Service string `form:"service" binding:"required"`
-	}
+type Service struct{}
 
-	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		return "", err
-	}
-	s.serviceName = data.Service
-	log.InitFields(log.Fields{"logid": r.TraceID, "service": s.serviceName})
-
-	serviceObj, err := objects.GetServiceInfo(s.serviceName)
+func (s *Service) Handle(serviceName string) error {
+	serviceObj, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		return "", fmt.Errorf(DB_SERVICE_QUERY_ERROR, err)
+		return fmt.Errorf(cfg.DB_SERVICE_QUERY_ERROR, err)
 	}
-	s.namespace = serviceObj.Namespace.Name
-	s.serviceID = serviceObj.Service.ID
-	s.exposePort = serviceObj.Service.Port
-	s.containerPort = serviceObj.Service.ContainerPort
+
+	nsObj, err := model.GetNamespace(serviceObj.NamespaceID)
+	if err != nil {
+		return fmt.Errorf(cfg.DB_QUERY_NAMESPACE_ERROR, err)
+	}
+
+	var (
+		namespace     = nsObj.Name
+		serviceID     = serviceObj.ID
+		port          = serviceObj.Port
+		containerPort = serviceObj.ContainerPort
+	)
 
 	var eg errgroup.Group
 	for _, phase := range model.PHASE_NAME_LIST {
 		phase := phase
 		eg.Go(func() error {
-			return s.worker(phase)
+			return s.worker(namespace, serviceName, serviceID, phase, port, containerPort)
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, fmt.Errorf(SVC_WAIT_ALL_SERVICE_ERROR, err)
+		return fmt.Errorf(cfg.SVC_WAIT_ALL_SERVICE_ERROR, err)
 	}
-	return nil, nil
+	return nil
 }
 
-func (s *Service) worker(phase string) error {
-	appid := objects.GetAppID(s.serviceName, s.serviceID, phase)
+func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
+	appid := cm.GetAppID(serviceName, serviceID, phase)
 	log.Infof("fetch service appid: %s", appid)
 
-	yaml := &k8s.ServiceYaml{
-		ServiceName:   s.serviceName,
-		ServiceID:     s.serviceID,
+	svcYaml := &yaml.ServiceYaml{
+		ServiceName:   serviceName,
+		ServiceID:     serviceID,
 		Phase:         phase,
 		AppID:         appid,
-		ExposePort:    s.exposePort,
-		ContainerPort: s.containerPort,
+		ExposePort:    port,
+		ContainerPort: containerPort,
 	}
-	tpl, err := yaml.Instance()
+	tpl, err := svcYaml.Instance()
 	if err != nil {
-		return fmt.Errorf(SVC_BUILD_SERVICE_YAML_ERROR, err)
+		return fmt.Errorf(cfg.SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
 	log.Infof("fetch service tpl: %s", tpl)
 
-	if err := s.execute(tpl); err != nil {
-		return fmt.Errorf(SVC_K8S_SERVICE_EXEC_FAILED, err)
+	if err := s.execute(namespace, serviceName, tpl); err != nil {
+		return fmt.Errorf(cfg.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
 	log.Infof("build service success")
 	return nil
 }
 
-func (s *Service) execute(tpl string) error {
-	ss := k8s.NewServices(s.namespace, s.serviceName)
+func (s *Service) execute(namespace, serviceName, tpl string) error {
+	ss := exec.NewServices(namespace, serviceName)
 	if !ss.Exist() {
 		return ss.Create(tpl)
 	}

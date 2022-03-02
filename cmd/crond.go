@@ -8,14 +8,15 @@ package main
 import (
 	"flag"
 
-	"nautilus/internal/bll/listen"
-	"nautilus/pkg/db"
-	"nautilus/pkg/g"
-	"nautilus/pkg/log"
+	"github.com/yyjinlong/golib/db"
+	"github.com/yyjinlong/golib/log"
+
+	"nautilus/pkg/bll/listen"
+	"nautilus/pkg/cfg"
 )
 
 var (
-	cfgFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
+	cfgFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
 	help    = flag.Bool("h", false, "show help info.")
 )
 
@@ -25,11 +26,14 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	g.ParseConfig(*cfgFile)
+	cfg.ParseConfig(*cfgFile)
 
-	log.InitLogger(g.Config().Build.CronFile)
+	log.InitLogger(cfg.Config().Build.CronFile)
 
-	db.Connect()
+	db.Connect("postgres",
+		cfg.Config().Postgres.Master,
+		cfg.Config().Postgres.Slave1,
+		cfg.Config().Postgres.Slave2)
 
 	go listen.DeploymentFinishEvent()
 	go listen.PublishLogEvent()

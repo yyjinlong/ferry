@@ -12,10 +12,12 @@ import (
 	"strconv"
 	"time"
 
-	"nautilus/internal/objects"
-	"nautilus/pkg/g"
-	"nautilus/pkg/git"
-	"nautilus/pkg/log"
+	"github.com/yyjinlong/golib/cmd"
+	"github.com/yyjinlong/golib/log"
+
+	"nautilus/pkg/cfg"
+	"nautilus/pkg/cm"
+	"nautilus/pkg/model"
 )
 
 func getCurPath() string {
@@ -27,10 +29,10 @@ func worker(data Image) {
 	var (
 		pid       = data.PID
 		service   = data.Service
-		buildPath = filepath.Join(g.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
+		buildPath = filepath.Join(cfg.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
 		appPath   = filepath.Dir(filepath.Dir(getCurPath()))
 		codePath  = filepath.Join(buildPath, "code")
-		imageURL  = fmt.Sprintf("%s/%s", g.Config().Registry.Release, service)
+		imageURL  = fmt.Sprintf("%s/%s", cfg.Config().Registry.Release, service)
 		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
 		targetURL = fmt.Sprintf("%s:%s", imageURL, imageTag)
 	)
@@ -60,12 +62,15 @@ type pipeline struct {
 }
 
 func (p *pipeline) run(data Image) {
-	g.Mkdir(p.buildPath) // 构建路径: 主路径/服务/上线单ID
-	g.Mkdir(p.codePath)  // 代码路径: 主路径/服务/上线单ID/code
+	cm.Mkdir(p.buildPath) // 构建路径: 主路径/服务/上线单ID
+	cm.Mkdir(p.codePath)  // 代码路径: 主路径/服务/上线单ID/code
 	log.Infof("current code path: %s", p.codePath)
 
 	for _, item := range data.Build {
-		git.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath)
+		if err := cm.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath); err != nil {
+			log.Errorf("download code failed: %+v", err)
+			return
+		}
 	}
 
 	if !p.compile(data.Type) {
@@ -102,7 +107,7 @@ func (p *pipeline) copyDockerfile() bool {
 		srcFile = filepath.Join(p.appPath, "image", "Dockerfile")
 		dstFile = filepath.Join(p.buildPath, "Dockerfile")
 	)
-	if err := g.Copy(srcFile, dstFile); err != nil {
+	if err := cm.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
 		return false
 	}
@@ -111,19 +116,19 @@ func (p *pipeline) copyDockerfile() bool {
 }
 
 func (p *pipeline) dockerBuild() bool {
-	si, err := objects.GetServiceInfo(p.service)
+	si, err := model.GetServiceInfo(p.service)
 	if err != nil {
 		log.Errorf("query service: %s failed: %s", p.service, err)
 		return false
 	}
 
 	var (
-		repo = fmt.Sprintf("repo=%s", si.Service.ImageAddr)
-		cmd  = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
+		repo  = fmt.Sprintf("repo=%s", si.ImageAddr)
+		param = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
 	)
 
-	log.Info(cmd)
-	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
+	log.Info(param)
+	if err := cmd.Execute(param); err != nil {
 		log.Errorf("docker build error: %s", err)
 		return false
 	}
@@ -131,9 +136,9 @@ func (p *pipeline) dockerBuild() bool {
 }
 
 func (p *pipeline) dockerTag() bool {
-	cmd := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
-	log.Info(cmd)
-	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
+	param := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
+	log.Info(param)
+	if err := cmd.Execute(param); err != nil {
 		log.Errorf("docker tag error: %s", err)
 		return false
 	}
@@ -141,9 +146,9 @@ func (p *pipeline) dockerTag() bool {
 }
 
 func (p *pipeline) dockerPush() bool {
-	cmd := fmt.Sprintf("docker push %s", p.targetURL)
-	log.Info(cmd)
-	if err := g.Execute("/bin/bash", "-c", cmd); err != nil {
+	param := fmt.Sprintf("docker push %s", p.targetURL)
+	log.Info(param)
+	if err := cmd.Execute(param); err != nil {
 		log.Errorf("docker push error: %s", err)
 		return false
 	}
@@ -151,7 +156,7 @@ func (p *pipeline) dockerPush() bool {
 }
 
 func (p *pipeline) UpdateImage() bool {
-	if err := objects.UpdateImage(p.pid, p.imageURL, p.imageTag); err != nil {
+	if err := model.UpdateImage(p.pid, p.imageURL, p.imageTag); err != nil {
 		log.Errorf("write image info to db error: %s", err)
 		return false
 	}

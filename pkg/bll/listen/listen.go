@@ -8,20 +8,18 @@ package listen
 import (
 	"io/ioutil"
 
+	"github.com/yyjinlong/golib/log"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"nautilus/internal/bll/listen/event"
-	"nautilus/pkg/g"
-	"nautilus/pkg/log"
+	"nautilus/pkg/bll/listen/event"
+	"nautilus/pkg/cfg"
 )
 
 func getClientset() *kubernetes.Clientset {
-	log.InitFields(log.Fields{"logid": g.UniqueID(), "type": "listen"})
-
-	config, err := ioutil.ReadFile(g.Config().K8S.Kubeconfig)
+	config, err := ioutil.ReadFile(cfg.Config().K8S.Kubeconfig)
 	if err != nil {
 		log.Panicf("read kubeconfig file error: %s", err)
 	}

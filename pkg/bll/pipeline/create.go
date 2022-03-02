@@ -29,7 +29,7 @@ func (cp *CreatePipeline) Handle(name, summary, creator, rd, qa, pm, service str
 	}
 
 	if err := model.CreatePipeline(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
-		return fmt.Errorf(cfg.DB_CREATE_PIPELINE_ERROR, err)
+		return fmt.Errorf(cfg.PL_CREATE_PIPELINE_ERROR, err)
 	}
 	log.Infof("create pipeline success")
 	return nil

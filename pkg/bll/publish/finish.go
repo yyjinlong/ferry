@@ -6,51 +6,40 @@
 package publish
 
 import (
-	"errors"
 	"fmt"
 
-	"nautilus/internal/objects"
-	"nautilus/pkg/base"
-	"nautilus/pkg/log"
+	"github.com/yyjinlong/golib/log"
+
+	"nautilus/pkg/cfg"
+	"nautilus/pkg/cm"
+	"nautilus/pkg/model"
 )
+
+func NewFinish() *Finish {
+	return &Finish{}
+}
 
 type Finish struct{}
 
-func (f *Finish) Handle(r *base.Request) (interface{}, error) {
-	type params struct {
-		ID int64 `form:"pipeline_id" binding:"required"`
+func (f *Finish) Handle(pid int64) error {
+	pipeline, err := model.GetPipeline(pid)
+	if err != nil {
+		return fmt.Errorf(cfg.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		return nil, err
+	serviceObj, err := model.GetServiceByID(pipeline.ServiceID)
+	if err != nil {
+		return fmt.Errorf(cfg.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	pid := data.ID
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
-
-	pipeline, err := objects.GetPipelineInfo(pid)
-	if errors.Is(err, objects.NotFound) {
-		return nil, fmt.Errorf(DB_PIPELINE_NOT_FOUND, pid)
-	} else if err != nil {
-		return nil, fmt.Errorf(DB_PIPELINE_QUERY_ERROR, pid, err)
-	}
-
-	onlineGroup := pipeline.Service.DeployGroup
-	deployGroup := f.getDeployGroup(onlineGroup)
+	serviceName := serviceObj.Name
+	onlineGroup := serviceObj.DeployGroup
+	deployGroup := cm.GetDeployGroup(onlineGroup)
 	log.Infof("get current online group: %s deploy group: %s", onlineGroup, deployGroup)
 
-	if err := objects.UpdateGroup(pid, pipeline.Service.Name, onlineGroup, deployGroup); err != nil {
-		log.Errorf("update finish info error: %s", err)
-		return nil, fmt.Errorf(FSH_UPDATE_ONLINE_GROUP_ERROR, err)
+	if err := model.UpdateGroup(pid, serviceName, onlineGroup, deployGroup); err != nil {
+		return fmt.Errorf(cfg.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
 	log.Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)
-	return "", nil
-}
-
-func (f *Finish) getDeployGroup(group string) string {
-	if group == objects.BLUE {
-		return objects.GREEN
-	}
-	return objects.BLUE
+	return nil
 }

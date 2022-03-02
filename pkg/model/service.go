@@ -48,6 +48,17 @@ type CodeModule struct {
 func GetServiceInfo(name string) (*Service, error) {
 	service := new(Service)
 	if has, err := SEngine().Where("name = ?", name).Get(service); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return service, nil
+}
+
+func GetServiceByID(serviceID int64) (*Service, error) {
+	service := new(Service)
+	if has, err := SEngine().ID(serviceID).Get(service); err != nil {
+		return nil, err
 	} else if !has {
 		return nil, NotFound
 	}
@@ -57,6 +68,16 @@ func GetServiceInfo(name string) (*Service, error) {
 func GetCodeModuleInfo(module string) (*CodeModule, error) {
 	codeModule := new(CodeModule)
 	if has, err := SEngine().Where("name=?", module).Get(codeModule); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return codeModule, nil
+}
+
+func GetCodeModuleInfoByID(moduleID int64) (*CodeModule, error) {
+	codeModule := new(CodeModule)
+	if has, err := SEngine().ID(moduleID).Get(codeModule); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound

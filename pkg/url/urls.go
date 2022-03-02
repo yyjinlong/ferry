@@ -37,6 +37,5 @@ func URLs(r *gin.Engine) {
 		du.POST("/service", api.ExtendContext(view.Service))
 		du.POST("/deploy", api.ExtendContext(view.Deploy))
 		du.POST("/finish", api.ExtendContext(view.Finish))
-
 	}
 }

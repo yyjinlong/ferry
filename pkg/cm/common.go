@@ -3,15 +3,35 @@
 // author: jinlong yang
 //
 
-package g
+package cm
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
-
-	"github.com/satori/go.uuid"
 )
+
+const (
+	BLUE  = "blue"
+	GREEN = "green"
+)
+
+// GetDeployment 根据服务名、服务ID、部署阶段、部署组 来命名deployment name
+func GetDeployment(serviceName string, serviceID int64, phase, group string) string {
+	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
+}
+
+func GetAppID(serviceName string, serviceID int64, phase string) string {
+	return fmt.Sprintf("%s-%d-%s", serviceName, serviceID, phase)
+}
+
+func GetDeployGroup(onlineGroup string) string {
+	if onlineGroup == BLUE {
+		return GREEN
+	}
+	return BLUE
+}
 
 func In(data string, dataList []string) bool {
 	for _, item := range dataList {
@@ -33,10 +53,6 @@ func Ini(num int, numList []int) bool {
 
 func TimeString(curTime time.Time) string {
 	return curTime.Format("2006-01-02 15:04:05")
-}
-
-func UniqueID() string {
-	return uuid.NewV4().String()
 }
 
 func Mkdir(path string) {

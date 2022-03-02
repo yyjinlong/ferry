@@ -3,16 +3,16 @@
 // author: jinlong yang
 //
 
-package k8s
+package yaml
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"nautilus/pkg/log"
+	"github.com/yyjinlong/golib/log"
 )
 
-type Yaml struct {
+type DeploymentYaml struct {
 	Phase       string // 部署阶段
 	Deployment  string // deployment名字
 	AppID       string // 应用标识, 用于过滤
@@ -29,7 +29,7 @@ type Yaml struct {
 	ReserveTime int    // 终止后的预留时间
 }
 
-func (y *Yaml) Instance() (string, error) {
+func (dy *DeploymentYaml) Instance() (string, error) {
 	/*
 		apiVersion
 		kind
@@ -39,14 +39,14 @@ func (y *Yaml) Instance() (string, error) {
 		  ...
 	*/
 
-	spec, err := y.spec()
+	spec, err := dy.spec()
 	if err != nil {
 		return "", err
 	}
 	controller := map[string]interface{}{
 		"apiVersion": "apps/v1",
 		"kind":       "Deployment",
-		"metadata":   y.metadata(),
+		"metadata":   dy.metadata(),
 		"spec":       spec,
 	}
 	config, err := json.Marshal(controller)
@@ -56,14 +56,14 @@ func (y *Yaml) Instance() (string, error) {
 	return string(config), nil
 }
 
-func (y *Yaml) metadata() map[string]string {
+func (dy *DeploymentYaml) metadata() map[string]string {
 	return map[string]string{
-		"name":      y.Deployment,
-		"namespace": y.Namespace,
+		"name":      dy.Deployment,
+		"namespace": dy.Namespace,
 	}
 }
 
-func (y *Yaml) spec() (map[string]interface{}, error) {
+func (dy *DeploymentYaml) spec() (map[string]interface{}, error) {
 	/*
 		spec:
 		  replicas:
@@ -75,11 +75,11 @@ func (y *Yaml) spec() (map[string]interface{}, error) {
 		    ...
 	*/
 	spec := make(map[string]interface{})
-	spec["replicas"] = y.Replicas
-	spec["selector"] = y.selector()
-	spec["strategy"] = y.strategy()
+	spec["replicas"] = dy.Replicas
+	spec["selector"] = dy.selector()
+	spec["strategy"] = dy.strategy()
 
-	template, err := y.template()
+	template, err := dy.template()
 	if err != nil {
 		return nil, err
 	}
@@ -87,22 +87,22 @@ func (y *Yaml) spec() (map[string]interface{}, error) {
 	return spec, nil
 }
 
-func (y *Yaml) selector() map[string]interface{} {
+func (dy *DeploymentYaml) selector() map[string]interface{} {
 	selector := map[string]interface{}{
-		"matchLabels": y.labels(),
+		"matchLabels": dy.labels(),
 	}
 	return selector
 }
 
-func (y *Yaml) labels() map[string]string {
+func (dy *DeploymentYaml) labels() map[string]string {
 	return map[string]string{
-		"service": y.Deployment,
-		"phase":   y.Phase,
-		"appid":   y.AppID,
+		"service": dy.Deployment,
+		"phase":   dy.Phase,
+		"appid":   dy.AppID,
 	}
 }
 
-func (y *Yaml) strategy() map[string]interface{} {
+func (dy *DeploymentYaml) strategy() map[string]interface{} {
 	rollingUpdate := map[string]interface{}{
 		"maxSurge":       0,
 		"maxUnavailable": "100%",
@@ -113,7 +113,7 @@ func (y *Yaml) strategy() map[string]interface{} {
 	}
 }
 
-func (y *Yaml) template() (map[string]interface{}, error) {
+func (dy *DeploymentYaml) template() (map[string]interface{}, error) {
 	/*
 		template:
 		  metadata:
@@ -122,9 +122,9 @@ func (y *Yaml) template() (map[string]interface{}, error) {
 		    ...
 	*/
 	tpl := make(map[string]interface{})
-	tpl["metadata"] = y.templateMetadata()
+	tpl["metadata"] = dy.templateMetadata()
 
-	spec, err := y.templateSpec()
+	spec, err := dy.templateSpec()
 	if err != nil {
 		return nil, err
 	}
@@ -132,13 +132,13 @@ func (y *Yaml) template() (map[string]interface{}, error) {
 	return tpl, nil
 }
 
-func (y *Yaml) templateMetadata() interface{} {
+func (dy *DeploymentYaml) templateMetadata() interface{} {
 	labels := make(map[string]interface{})
-	labels["labels"] = y.labels()
+	labels["labels"] = dy.labels()
 	return labels
 }
 
-func (y *Yaml) templateSpec() (interface{}, error) {
+func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
 	/*
 		spec:
 		  hostAliases:
@@ -160,28 +160,28 @@ func (y *Yaml) templateSpec() (interface{}, error) {
 			...
 	*/
 	spec := make(map[string]interface{})
-	spec["hostAliases"] = y.hostAliases()
-	spec["dnsConfig"] = y.dnsConfig()
+	spec["hostAliases"] = dy.hostAliases()
+	spec["dnsConfig"] = dy.dnsConfig()
 	spec["dnsPolicy"] = "None"
-	spec["terminationGracePeriodSeconds"] = y.ReserveTime
-	spec["nodeSelector"] = y.nodeSelector()
+	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
+	spec["nodeSelector"] = dy.nodeSelector()
 
-	volumes, err := y.volumes()
+	volumes, err := dy.volumes()
 	if err != nil {
 		return nil, err
 	}
 	spec["volumes"] = volumes
 
-	containers, err := y.containers()
+	containers, err := dy.containers()
 	if err != nil {
 		return nil, err
 	}
 	spec["containers"] = containers
-	spec["affinity"] = y.affinity()
+	spec["affinity"] = dy.affinity()
 	return spec, nil
 }
 
-func (y *Yaml) hostAliases() interface{} {
+func (dy *DeploymentYaml) hostAliases() interface{} {
 	/*
 	   hostAliases:
 	     - hostnames:
@@ -213,7 +213,7 @@ func (y *Yaml) hostAliases() interface{} {
 	return hostAliaseList
 }
 
-func (y *Yaml) dnsConfig() interface{} {
+func (dy *DeploymentYaml) dnsConfig() interface{} {
 	/*
 		dnsConfig:
 			nameservers:
@@ -225,7 +225,7 @@ func (y *Yaml) dnsConfig() interface{} {
 	}
 }
 
-func (y *Yaml) nodeSelector() interface{} {
+func (dy *DeploymentYaml) nodeSelector() interface{} {
 	/*
 	   nodeSelector:
 	     ...
@@ -235,10 +235,10 @@ func (y *Yaml) nodeSelector() interface{} {
 	}
 }
 
-func (y *Yaml) volumes() (interface{}, error) {
+func (dy *DeploymentYaml) volumes() (interface{}, error) {
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath类型.
 	volumes := make([]interface{}, 0)
-	defineVolume, err := y.createDefineVolume()
+	defineVolume, err := dy.createDefineVolume()
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func (y *Yaml) volumes() (interface{}, error) {
 	return volumes, nil
 }
 
-func (y *Yaml) createDefineVolume() (interface{}, error) {
+func (dy *DeploymentYaml) createDefineVolume() (interface{}, error) {
 	/*
 	   创建自定义的数据卷(服务需要的数据卷)
 	   volumes:
@@ -268,7 +268,7 @@ func (y *Yaml) createDefineVolume() (interface{}, error) {
 	}
 
 	var volumes []volume
-	if err := json.Unmarshal([]byte(y.VolumeConf), &volumes); err != nil {
+	if err := json.Unmarshal([]byte(dy.VolumeConf), &volumes); err != nil {
 		return nil, err
 	}
 
@@ -287,7 +287,7 @@ func (y *Yaml) createDefineVolume() (interface{}, error) {
 	return defineVolume, nil
 }
 
-func (y *Yaml) affinity() interface{} {
+func (dy *DeploymentYaml) affinity() interface{} {
 	/*
 		同一deployment下的pod散列在不同node上.
 		podAntiAffinity:
@@ -306,7 +306,7 @@ func (y *Yaml) affinity() interface{} {
 	compare := make(map[string]interface{})
 	compare["key"] = "service"
 	compare["operator"] = "In"
-	compare["values"] = []string{y.Deployment}
+	compare["values"] = []string{dy.Deployment}
 	matchExpression := []interface{}{compare}
 	labelSelector := map[string]interface{}{"matchExpressions": matchExpression}
 
@@ -322,7 +322,7 @@ func (y *Yaml) affinity() interface{} {
 	return map[string]interface{}{"podAntiAffinity": softLimit}
 }
 
-func (y *Yaml) containers() (interface{}, error) {
+func (dy *DeploymentYaml) containers() (interface{}, error) {
 	/*
 	   - name:
 	     image:
@@ -346,39 +346,39 @@ func (y *Yaml) containers() (interface{}, error) {
 
 	containerList := make([]interface{}, 0)
 	container := make(map[string]interface{})
-	container["name"] = y.Service
-	container["image"] = fmt.Sprintf("%s:%s", y.ImageURL, y.ImageTag)
+	container["name"] = dy.Service
+	container["image"] = fmt.Sprintf("%s:%s", dy.ImageURL, dy.ImageTag)
 	container["imagePullPolicy"] = "IfNotPresent"
-	container["env"] = y.setEnv()
-	container["resources"] = y.setResource(y.QuotaCpu, y.QuotaMaxCpu, y.QuotaMem, y.QuotaMaxMem)
-	container["securityContext"] = y.security()
-	container["lifecycle"] = y.lifecycle()
-	volumeMounts, err := y.mountContainerVolume()
+	container["env"] = dy.setEnv()
+	container["resources"] = dy.setResource(dy.QuotaCpu, dy.QuotaMaxCpu, dy.QuotaMem, dy.QuotaMaxMem)
+	container["securityContext"] = dy.security()
+	container["lifecycle"] = dy.lifecycle()
+	volumeMounts, err := dy.mountContainerVolume()
 	if err != nil {
 		return nil, err
 	}
 	container["volumeMounts"] = volumeMounts
-	container["livenessProbe"] = y.liveness()
-	container["readinessProbe"] = y.readiness()
+	container["livenessProbe"] = dy.liveness()
+	container["readinessProbe"] = dy.readiness()
 	container["terminationMessagePath"] = "/dev/termination-log"
 	container["terminationMessagePolicy"] = "File"
 	containerList = append(containerList, container)
 	return containerList, nil
 }
 
-func (y *Yaml) setEnv() interface{} {
+func (dy *DeploymentYaml) setEnv() interface{} {
 	/*
 	   - env:
 	       - name:
 	         value:
 	*/
 	env := []map[string]string{
-		{"name": "SERVICE", "value": y.Service},
+		{"name": "SERVICE", "value": dy.Service},
 	}
 	return env
 }
 
-func (y *Yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
+func (dy *DeploymentYaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	/*
 		resources:
 		    requests:
@@ -400,7 +400,7 @@ func (y *Yaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	}
 }
 
-func (y *Yaml) security() interface{} {
+func (dy *DeploymentYaml) security() interface{} {
 	/*
 	   securityContext:
 	     capabilities:
@@ -414,10 +414,10 @@ func (y *Yaml) security() interface{} {
 	return context
 }
 
-func (y *Yaml) lifecycle() interface{} {
+func (dy *DeploymentYaml) lifecycle() interface{} {
 	/*
 	   在容器被终结之前, Kubernetes 将发送一个 preStop 事件.
-	   优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 30秒等待未处理完的请求,
+	   优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 10秒等待未处理完的请求,
 	             如果没处理完, 则会被强制终止(kill -9)
 	   lifecycle:
 	     preStop:
@@ -427,7 +427,7 @@ func (y *Yaml) lifecycle() interface{} {
 	stopCmd := []string{
 		"/bin/sh",
 		"-c",
-		"sleep 30",
+		"sleep 10",
 	}
 	stopExec := map[string]interface{}{"command": stopCmd}
 	preStop := map[string]interface{}{"exec": stopExec}
@@ -435,7 +435,7 @@ func (y *Yaml) lifecycle() interface{} {
 	return life
 }
 
-func (y *Yaml) mountContainerVolume() (interface{}, error) {
+func (dy *DeploymentYaml) mountContainerVolume() (interface{}, error) {
 	/*
 	   volumeMounts:
 	     - name:
@@ -454,7 +454,7 @@ func (y *Yaml) mountContainerVolume() (interface{}, error) {
 	}
 
 	var volumes []volume
-	if err := json.Unmarshal([]byte(y.VolumeConf), &volumes); err != nil {
+	if err := json.Unmarshal([]byte(dy.VolumeConf), &volumes); err != nil {
 		return nil, err
 	}
 
@@ -470,7 +470,7 @@ func (y *Yaml) mountContainerVolume() (interface{}, error) {
 	return containerVolumeMounts, nil
 }
 
-func (y *Yaml) liveness() interface{} {
+func (dy *DeploymentYaml) liveness() interface{} {
 	/*
 		exec:
 		  command:
@@ -498,7 +498,7 @@ func (y *Yaml) liveness() interface{} {
 	}
 }
 
-func (y *Yaml) readiness() interface{} {
+func (dy *DeploymentYaml) readiness() interface{} {
 	/*
 		exec:
 		  command:

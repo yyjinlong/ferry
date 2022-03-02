@@ -12,13 +12,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/yyjinlong/golib/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"nautilus/internal/model"
-	"nautilus/internal/objects"
-	"nautilus/pkg/g"
-	"nautilus/pkg/log"
+	"nautilus/pkg/cm"
+	"nautilus/pkg/model"
 )
 
 func HandleLogCapturer(obj interface{}, mode string) {
@@ -29,11 +28,7 @@ func HandleLogCapturer(obj interface{}, mode string) {
 		fields  = data.ObjectMeta.ManagedFields
 	)
 
-	log.InitFields(log.Fields{
-		"logid": g.UniqueID(),
-		"mode":  mode,
-		"event": name,
-	})
+	log.InitFields(log.Fields{"mode": mode, "event": name})
 
 	handleEvent(&logCapturer{
 		name:    name,
@@ -92,21 +87,21 @@ func (c *logCapturer) parse() bool {
 }
 
 func (c *logCapturer) operate() bool {
-	pipeline, err := objects.GetServicePipeline(c.serviceID)
-	if !errors.Is(err, objects.NotFound) && err != nil {
+	pipeline, err := model.GetServicePipeline(c.serviceID)
+	if !errors.Is(err, model.NotFound) && err != nil {
 		log.Errorf("query pipeline by service error: %s", err)
 		return false
 	}
-	pipelineID := pipeline.Pipeline.ID
+	pipelineID := pipeline.ID
 
 	// 判断该上线流程是否完成
-	if g.Ini(pipeline.Pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished, stop update event log")
 		return false
 	}
 
 	kind := model.PHASE_DEPLOY
-	if g.Ini(pipeline.Pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
+	if cm.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
 		kind = model.PHASE_ROLLBACK
 	}
 
@@ -123,8 +118,8 @@ func (c *logCapturer) operate() bool {
 	operName := result[0][0]
 
 	msg := fmt.Sprintf("[%s] %v\n%s", operTime, operName, c.message)
-	err = objects.RealtimeLog(pipelineID, kind, c.phase, msg)
-	if !errors.Is(err, objects.NotFound) && err != nil {
+	err = model.RealtimeLog(pipelineID, kind, c.phase, msg)
+	if !errors.Is(err, model.NotFound) && err != nil {
 		log.Errorf("write event log to db error: %s", err)
 		return false
 	}

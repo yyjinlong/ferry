@@ -8,9 +8,10 @@ package image
 import (
 	"encoding/json"
 
-	"nautilus/pkg/g"
-	"nautilus/pkg/log"
-	"nautilus/pkg/mq"
+	"github.com/yyjinlong/golib/log"
+	"github.com/yyjinlong/golib/rmq"
+
+	"nautilus/pkg/cfg"
 )
 
 var (
@@ -25,22 +26,21 @@ func (r *receiver) Consumer(body []byte) error {
 		log.Errorf("consume rabbitmq json decode failed: %s", err)
 		return err
 	}
-	log.InitFields(log.Fields{
-		"logid": g.UniqueID(), "pid": data.PID, "service": data.Service, "type": "image"})
+	log.InitFields(log.Fields{"pid": data.PID, "service": data.Service})
 	msgChan <- data
 	return nil
 }
 
 func ListenMQ() {
-	rmq, err := mq.NewRabbitMQ(
-		g.Config().RabbitMQ.Address,
-		g.Config().RabbitMQ.Exchange,
-		g.Config().RabbitMQ.Queue,
-		g.Config().RabbitMQ.RoutingKey)
+	mq, err := rmq.NewRabbitMQ(
+		cfg.Config().RabbitMQ.Address,
+		cfg.Config().RabbitMQ.Exchange,
+		cfg.Config().RabbitMQ.Queue,
+		cfg.Config().RabbitMQ.RoutingKey)
 	if err != nil {
 		log.Panicf("boot connect amqp failed: %s", err)
 	}
-	rmq.Consume(&receiver{})
+	mq.Consume(&receiver{})
 }
 
 func HandleMsg() {
