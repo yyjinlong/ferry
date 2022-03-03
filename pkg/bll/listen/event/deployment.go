@@ -147,8 +147,8 @@ func (c *deploymentCapturer) operate() bool {
 	if cm.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
 		kind = model.PHASE_ROLLBACK
 	}
-
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
+
 	phaseObj, err := model.GetPhaseInfo(pipelineID, kind, c.phase)
 	if errors.Is(err, model.NotFound) {
 		return false

@@ -24,9 +24,12 @@ func Deploy(r *api.Request) {
 		r.Response(api.Failed, err.Error(), nil)
 		return
 	}
-	pid := data.ID
-	phase := data.Phase
-	username := data.Username
+
+	var (
+		pid      = data.ID
+		phase    = data.Phase
+		username = data.Username
+	)
 	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid, "phase": phase})
 
 	dep := publish.NewDeploy()

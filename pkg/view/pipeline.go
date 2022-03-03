@@ -41,6 +41,7 @@ func CreatePipeline(r *api.Request) {
 		moduleList = data.ModuleList
 	)
 	log.InitFields(log.Fields{"logid": r.TraceID, "creator": creator, "service": service})
+
 	cp := pipeline.NewCreatePipeline()
 	if err := cp.Handle(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
 		log.Errorf("create pipeline failed: %+v", err)

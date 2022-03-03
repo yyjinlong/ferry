@@ -22,6 +22,7 @@ func Service(r *api.Request) {
 		r.Response(api.Failed, err.Error(), nil)
 		return
 	}
+
 	serviceName := data.Service
 	log.InitFields(log.Fields{"logid": r.TraceID, "service": serviceName})
 
