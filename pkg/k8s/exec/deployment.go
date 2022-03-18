@@ -12,7 +12,7 @@ import (
 	"github.com/yyjinlong/golib/curl"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 )
 
 func NewDeployments(namespace, deployment string) *Deployments {
@@ -29,7 +29,7 @@ type Deployments struct {
 
 func (d *Deployments) Exist() bool {
 	var (
-		url    = fmt.Sprintf(cfg.Config().K8S.Deployment, d.namespace) + "/" + d.deployment
+		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.namespace) + "/" + d.deployment
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Get(url, header, 5)
@@ -46,7 +46,7 @@ func (d *Deployments) Exist() bool {
 
 func (d *Deployments) Create(tpl string) error {
 	var (
-		url    = fmt.Sprintf(cfg.Config().K8S.Deployment, d.namespace)
+		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.namespace)
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
@@ -59,7 +59,7 @@ func (d *Deployments) Create(tpl string) error {
 
 func (d *Deployments) Update(tpl string) error {
 	var (
-		url    = fmt.Sprintf(cfg.Config().K8S.Deployment, d.namespace) + "/" + d.deployment
+		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.namespace) + "/" + d.deployment
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
@@ -72,7 +72,7 @@ func (d *Deployments) Update(tpl string) error {
 
 func (d *Deployments) Scale(replicas int) error {
 	var (
-		url     = fmt.Sprintf(cfg.Config().K8S.Deployment, d.namespace) + "/" + d.deployment + "/scale"
+		url     = fmt.Sprintf(config.Config().K8S.Deployment, d.namespace) + "/" + d.deployment + "/scale"
 		header  = map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
 		payload = fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
 	)

@@ -11,11 +11,11 @@ import (
 	"github.com/yyjinlong/golib/log"
 	"golang.org/x/sync/errgroup"
 
-	"nautilus/pkg/cfg"
-	"nautilus/pkg/cm"
+	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func NewService() *Service {
@@ -27,12 +27,12 @@ type Service struct{}
 func (s *Service) Handle(serviceName string) error {
 	serviceObj, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_SERVICE_QUERY_ERROR, err)
+		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
 	nsObj, err := model.GetNamespace(serviceObj.NamespaceID)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_QUERY_NAMESPACE_ERROR, err)
+		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}
 
 	var (
@@ -50,13 +50,13 @@ func (s *Service) Handle(serviceName string) error {
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return fmt.Errorf(cfg.SVC_WAIT_ALL_SERVICE_ERROR, err)
+		return fmt.Errorf(config.SVC_WAIT_ALL_SERVICE_ERROR, err)
 	}
 	return nil
 }
 
 func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
-	appid := cm.GetAppID(serviceName, serviceID, phase)
+	appid := util.GetAppID(serviceName, serviceID, phase)
 	log.Infof("fetch service appid: %s", appid)
 
 	svcYaml := &yaml.ServiceYaml{
@@ -69,12 +69,12 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase s
 	}
 	tpl, err := svcYaml.Instance()
 	if err != nil {
-		return fmt.Errorf(cfg.SVC_BUILD_SERVICE_YAML_ERROR, err)
+		return fmt.Errorf(config.SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
 	log.Infof("fetch service tpl: %s", tpl)
 
 	if err := s.execute(namespace, serviceName, tpl); err != nil {
-		return fmt.Errorf(cfg.SVC_K8S_SERVICE_EXEC_FAILED, err)
+		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
 	log.Infof("build service success")
 	return nil

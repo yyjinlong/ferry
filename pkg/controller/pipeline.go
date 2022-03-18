@@ -3,13 +3,13 @@
 // author: jinlong yang
 //
 
-package view
+package controller
 
 import (
 	"github.com/yyjinlong/golib/api"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/bll/pipeline"
+	"nautilus/pkg/service/pipeline"
 )
 
 func CreatePipeline(r *api.Request) {

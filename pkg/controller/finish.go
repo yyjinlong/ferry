@@ -3,18 +3,18 @@
 // author: jinlong yang
 //
 
-package view
+package controller
 
 import (
 	"github.com/yyjinlong/golib/api"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/bll/publish"
+	"nautilus/pkg/service/publish"
 )
 
-func Service(r *api.Request) {
+func Finish(r *api.Request) {
 	type params struct {
-		Service string `form:"service" binding:"required"`
+		ID int64 `form:"pipeline_id" binding:"required"`
 	}
 
 	var data params
@@ -23,12 +23,12 @@ func Service(r *api.Request) {
 		return
 	}
 
-	serviceName := data.Service
-	log.InitFields(log.Fields{"logid": r.TraceID, "service": serviceName})
+	pid := data.ID
+	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
-	sObj := publish.NewService()
-	if err := sObj.Handle(serviceName); err != nil {
-		log.Errorf("build service failed: %+v", err)
+	finish := publish.NewFinish()
+	if err := finish.Handle(pid); err != nil {
+		log.Errorf("finish handle failed: %+v", err)
 		r.Response(api.Failed, err.Error(), nil)
 		return
 	}

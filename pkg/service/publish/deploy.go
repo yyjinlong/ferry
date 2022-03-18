@@ -10,11 +10,11 @@ import (
 
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
-	"nautilus/pkg/cm"
+	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func NewDeploy() *Deploy {
@@ -28,36 +28,36 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_PIPELINE_QUERY_ERROR, pid, err)
+		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
-		return fmt.Errorf(cfg.PUB_DEPLOY_FINISHED)
+	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
+		return fmt.Errorf(config.PUB_DEPLOY_FINISHED)
 	}
 
 	serviceID := pipeline.ServiceID
 	svcObj, err := model.GetServiceByID(serviceID)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_SERVICE_QUERY_ERROR, err)
+		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 	serviceName := svcObj.Name
 	deployGroup := svcObj.DeployGroup
 
 	nsObj, err := model.GetNamespace(svcObj.NamespaceID)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_QUERY_NAMESPACE_ERROR, err)
+		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}
 	namespace := nsObj.Name
 
 	var (
-		deployment = cm.GetDeployment(serviceName, serviceID, phase, deployGroup)
-		appid      = cm.GetAppID(serviceName, serviceID, phase)
+		deployment = util.GetDeployment(serviceName, serviceID, phase, deployGroup)
+		appid      = util.GetAppID(serviceName, serviceID, phase)
 	)
 	log.Infof("current deploy group: %s deployment name: %s appid: %s", deployGroup, deployment, appid)
 
 	imageInfo, err := model.FindImageInfo(pid)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_PIPELINE_UPDATE_ERROR, err)
+		return fmt.Errorf(config.DB_PIPELINE_UPDATE_ERROR, err)
 	}
 
 	if len(imageInfo) == 0 {
@@ -90,18 +90,18 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	}
 	tpl, err := depYaml.Instance()
 	if err != nil {
-		return fmt.Errorf(cfg.PUB_BUILD_DEPLOYMENT_YAML_ERROR, err)
+		return fmt.Errorf(config.PUB_BUILD_DEPLOYMENT_YAML_ERROR, err)
 	}
 	log.Infof("generate deployment yaml(%s) success", deployment)
 	fmt.Println(tpl)
 
 	if err := d.execute(namespace, deployment, tpl); err != nil {
-		return fmt.Errorf(cfg.PUB_K8S_DEPLOYMENT_EXEC_FAILED, err)
+		return fmt.Errorf(config.PUB_K8S_DEPLOYMENT_EXEC_FAILED, err)
 	}
 	log.Infof("pubish deployment: %s to k8s success", deployment)
 
 	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, phase, model.PHProcess, tpl); err != nil {
-		return fmt.Errorf(cfg.PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
+		return fmt.Errorf(config.PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
 	}
 	log.Infof("record deployment: %s to db success", deployment)
 	return nil

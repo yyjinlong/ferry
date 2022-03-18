@@ -11,13 +11,13 @@ import (
 	"github.com/yyjinlong/golib/db"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/bll/image"
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
+	"nautilus/pkg/service/image"
 )
 
 var (
-	cfgFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
-	help    = flag.Bool("h", false, "show help info.")
+	configFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
+	help       = flag.Bool("h", false, "show help info.")
 )
 
 func main() {
@@ -26,14 +26,14 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	cfg.ParseConfig(*cfgFile)
+	config.ParseConfig(*configFile)
 
-	log.InitLogger(cfg.Config().Build.ImgFile)
+	log.InitLogger(config.Config().Build.ImgFile)
 
 	db.Connect("postgres",
-		cfg.Config().Postgres.Master,
-		cfg.Config().Postgres.Slave1,
-		cfg.Config().Postgres.Slave2)
+		config.Config().Postgres.Master,
+		config.Config().Postgres.Slave1,
+		config.Config().Postgres.Slave2)
 
 	go image.ListenMQ()
 	go image.HandleMsg()

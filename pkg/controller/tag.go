@@ -3,13 +3,13 @@
 // author: jinlong yang
 //
 
-package view
+package controller
 
 import (
 	"github.com/yyjinlong/golib/api"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/bll/publish"
+	"nautilus/pkg/service/publish"
 )
 
 func BuildTag(r *api.Request) {

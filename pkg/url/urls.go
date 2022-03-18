@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yyjinlong/golib/api"
 
-	"nautilus/pkg/view"
+	"nautilus/pkg/controller"
 )
 
 func URLs(r *gin.Engine) {
@@ -22,20 +22,20 @@ func URLs(r *gin.Engine) {
 	})
 
 	// 上线单
-	pu := r.Group("v1", UserAuth)
+	p := r.Group("v1", UserAuth)
 	{
-		pu.POST("/pipeline", api.ExtendContext(view.CreatePipeline))
+		p.POST("/pipeline", api.ExtendContext(controller.CreatePipeline))
 	}
 
 	// 上线流程
-	du := r.Group("v1", UserAuth)
+	d := r.Group("v1", UserAuth)
 	{
 		// 发布流程
-		du.POST("/tag", api.ExtendContext(view.BuildTag))
-		du.GET("/tag", api.ExtendContext(view.ReceiveTag))
-		du.POST("/image", api.ExtendContext(view.BuildImage))
-		du.POST("/service", api.ExtendContext(view.Service))
-		du.POST("/deploy", api.ExtendContext(view.Deploy))
-		du.POST("/finish", api.ExtendContext(view.Finish))
+		d.POST("/tag", api.ExtendContext(controller.BuildTag))
+		d.GET("/tag", api.ExtendContext(controller.ReceiveTag))
+		d.POST("/image", api.ExtendContext(controller.BuildImage))
+		d.POST("/service", api.ExtendContext(controller.Service))
+		d.POST("/deploy", api.ExtendContext(controller.Deploy))
+		d.POST("/finish", api.ExtendContext(controller.Finish))
 	}
 }

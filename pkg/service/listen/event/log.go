@@ -16,13 +16,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"nautilus/pkg/cm"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func HandleLogCapturer(obj interface{}, mode string) {
+	data := obj.(*corev1.Event)
 	var (
-		data    = obj.(*corev1.Event)
 		message = data.Message
 		name    = data.Name
 		fields  = data.ObjectMeta.ManagedFields
@@ -95,13 +95,13 @@ func (c *logCapturer) operate() bool {
 	pipelineID := pipeline.ID
 
 	// 判断该上线流程是否完成
-	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished, stop update event log")
 		return false
 	}
 
 	kind := model.PHASE_DEPLOY
-	if cm.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
+	if util.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
 		kind = model.PHASE_ROLLBACK
 	}
 

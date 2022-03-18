@@ -19,7 +19,7 @@ import (
 	"github.com/yyjinlong/golib/db"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 	"nautilus/pkg/url"
 )
 
@@ -34,14 +34,14 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	cfg.ParseConfig(*configFile)
+	config.ParseConfig(*configFile)
 
-	log.InitLogger(cfg.Config().LogFile)
+	log.InitLogger(config.Config().LogFile)
 
 	db.Connect("postgres",
-		cfg.Config().Postgres.Master,
-		cfg.Config().Postgres.Slave1,
-		cfg.Config().Postgres.Slave2)
+		config.Config().Postgres.Master,
+		config.Config().Postgres.Slave1,
+		config.Config().Postgres.Slave2)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -53,11 +53,11 @@ func main() {
 	url.URLs(r)
 
 	server := http.Server{
-		Addr:           cfg.Config().Address,
+		Addr:           config.Config().Address,
 		Handler:        r,
-		ReadTimeout:    time.Duration(cfg.Config().ReadTimeout),
-		WriteTimeout:   time.Duration(cfg.Config().WriteTimeout),
-		MaxHeaderBytes: cfg.Config().MaxHeaderBytes,
+		ReadTimeout:    time.Duration(config.Config().ReadTimeout),
+		WriteTimeout:   time.Duration(config.Config().WriteTimeout),
+		MaxHeaderBytes: config.Config().MaxHeaderBytes,
 	}
 
 	go func() {
@@ -78,5 +78,5 @@ func main() {
 		}
 	}
 
-	time.Sleep(time.Duration(cfg.Config().ExitWaitSecond) * time.Second)
+	time.Sleep(time.Duration(config.Config().ExitWaitSecond) * time.Second)
 }

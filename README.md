@@ -34,7 +34,7 @@ Jinlong Yang
 
 ## 4 业务逻辑
 
-    bll
+    service
     ├── image        -- 构建镜像
     ├── listen       -- 监听事件
     ├── pipeline     -- 构建相关流程

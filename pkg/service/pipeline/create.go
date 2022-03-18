@@ -13,7 +13,7 @@ import (
 	"github.com/yyjinlong/golib/cmd"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 )
 
@@ -29,7 +29,7 @@ func (cp *CreatePipeline) Handle(name, summary, creator, rd, qa, pm, service str
 	}
 
 	if err := model.CreatePipeline(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
-		return fmt.Errorf(cfg.PL_CREATE_PIPELINE_ERROR, err)
+		return fmt.Errorf(config.PL_CREATE_PIPELINE_ERROR, err)
 	}
 	log.Infof("create pipeline success")
 	return nil
@@ -37,20 +37,20 @@ func (cp *CreatePipeline) Handle(name, summary, creator, rd, qa, pm, service str
 
 func (cp *CreatePipeline) checkParam(name, summary string, moduleList []map[string]string) error {
 	if strings.TrimSpace(name) == "" {
-		return fmt.Errorf(cfg.PL_SEGMENT_IS_EMPTY, cfg.ONLINE_NAME)
+		return fmt.Errorf(config.PL_SEGMENT_IS_EMPTY, config.ONLINE_NAME)
 	}
 	if strings.TrimSpace(summary) == "" {
-		return fmt.Errorf(cfg.PL_SEGMENT_IS_EMPTY, cfg.ONLINE_DESC)
+		return fmt.Errorf(config.PL_SEGMENT_IS_EMPTY, config.ONLINE_DESC)
 	}
 
 	for _, item := range moduleList {
 		module := item["name"]
 		branch := item["branch"]
 		if strings.TrimSpace(module) == "" {
-			return fmt.Errorf(cfg.PL_SEGMENT_IS_EMPTY, cfg.MODULE_NAME)
+			return fmt.Errorf(config.PL_SEGMENT_IS_EMPTY, config.MODULE_NAME)
 		}
 		if strings.TrimSpace(branch) == "" {
-			return fmt.Errorf(cfg.PL_SEGMENT_IS_EMPTY, cfg.BRANCH_NAME)
+			return fmt.Errorf(config.PL_SEGMENT_IS_EMPTY, config.BRANCH_NAME)
 		}
 		if err := cp.checkGit(module, branch); err != nil {
 			return err
@@ -62,24 +62,24 @@ func (cp *CreatePipeline) checkParam(name, summary string, moduleList []map[stri
 func (cp *CreatePipeline) checkGit(module, branch string) error {
 	codeModule, err := model.GetCodeModuleInfo(module)
 	if err != nil {
-		return fmt.Errorf(cfg.PL_QUERY_MODULE_ERROR, module)
+		return fmt.Errorf(config.PL_QUERY_MODULE_ERROR, module)
 	}
 	param := fmt.Sprintf("git ls-remote --heads %s %s | wc -l", codeModule.ReposAddr, branch)
 	log.Infof("git check param: %s", param)
 	output, err := cmd.Call(param)
 	if err != nil {
 		log.Errorf("exec git check command: %s error: %s", param, err)
-		return fmt.Errorf(cfg.PL_EXEC_GIT_CHECK_ERROR, err)
+		return fmt.Errorf(config.PL_EXEC_GIT_CHECK_ERROR, err)
 	}
 	tmpR := strings.Trim(string(output), "\n")
 	newR := strings.TrimSpace(tmpR)
 	result, err := strconv.Atoi(newR)
 	if err != nil {
 		log.Errorf("handle check result covert to int error: %s", err)
-		return fmt.Errorf(cfg.PL_RESULT_HANDLER_ERROR, err)
+		return fmt.Errorf(config.PL_RESULT_HANDLER_ERROR, err)
 	}
 	if result == 0 {
-		return fmt.Errorf(cfg.PL_GIT_CHECK_FAILED)
+		return fmt.Errorf(config.PL_GIT_CHECK_FAILED)
 	}
 	return nil
 }

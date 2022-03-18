@@ -1,4 +1,4 @@
-package cfg
+package config
 
 // 上线单
 const (

@@ -10,9 +10,9 @@ import (
 
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
-	"nautilus/pkg/cm"
+	"nautilus/pkg/config"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func NewFinish() *Finish {
@@ -24,21 +24,21 @@ type Finish struct{}
 func (f *Finish) Handle(pid int64) error {
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_PIPELINE_QUERY_ERROR, pid, err)
+		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
 	serviceObj, err := model.GetServiceByID(pipeline.ServiceID)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_SERVICE_QUERY_ERROR, err)
+		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
 	serviceName := serviceObj.Name
 	onlineGroup := serviceObj.DeployGroup
-	deployGroup := cm.GetDeployGroup(onlineGroup)
+	deployGroup := util.GetDeployGroup(onlineGroup)
 	log.Infof("get current online group: %s deploy group: %s", onlineGroup, deployGroup)
 
 	if err := model.UpdateGroup(pid, serviceName, onlineGroup, deployGroup); err != nil {
-		return fmt.Errorf(cfg.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
+		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
 	log.Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)
 	return nil

@@ -12,7 +12,7 @@ import (
 	"github.com/yyjinlong/golib/curl"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 )
 
 func NewServices(namespace, name string) *Services {
@@ -29,7 +29,7 @@ type Services struct {
 
 func (s *Services) Exist() bool {
 	var (
-		url = fmt.Sprintf(cfg.Config().K8S.Service, s.namespace) + "/" + s.name
+		url = fmt.Sprintf(config.Config().K8S.Service, s.namespace) + "/" + s.name
 	)
 	body, err := curl.Get(url, nil, 5)
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *Services) Exist() bool {
 
 func (s *Services) Create(tpl string) error {
 	var (
-		url    = fmt.Sprintf(cfg.Config().K8S.Service, s.namespace)
+		url    = fmt.Sprintf(config.Config().K8S.Service, s.namespace)
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
@@ -58,7 +58,7 @@ func (s *Services) Create(tpl string) error {
 
 func (s *Services) Update(tpl string) error {
 	var (
-		url    = fmt.Sprintf(cfg.Config().K8S.Service, s.namespace) + "/" + s.name
+		url    = fmt.Sprintf(config.Config().K8S.Service, s.namespace) + "/" + s.name
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)

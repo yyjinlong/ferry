@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package cm
+package util
 
 import (
 	"path/filepath"

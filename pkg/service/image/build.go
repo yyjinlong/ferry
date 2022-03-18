@@ -15,9 +15,9 @@ import (
 	"github.com/yyjinlong/golib/cmd"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
-	"nautilus/pkg/cm"
+	"nautilus/pkg/config"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func getCurPath() string {
@@ -29,10 +29,10 @@ func worker(data Image) {
 	var (
 		pid       = data.PID
 		service   = data.Service
-		buildPath = filepath.Join(cfg.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
+		buildPath = filepath.Join(config.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
 		appPath   = filepath.Dir(filepath.Dir(getCurPath()))
 		codePath  = filepath.Join(buildPath, "code")
-		imageURL  = fmt.Sprintf("%s/%s", cfg.Config().Registry.Release, service)
+		imageURL  = fmt.Sprintf("%s/%s", config.Config().Registry.Release, service)
 		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
 		targetURL = fmt.Sprintf("%s:%s", imageURL, imageTag)
 	)
@@ -62,12 +62,12 @@ type pipeline struct {
 }
 
 func (p *pipeline) run(data Image) {
-	cm.Mkdir(p.buildPath) // 构建路径: 主路径/服务/上线单ID
-	cm.Mkdir(p.codePath)  // 代码路径: 主路径/服务/上线单ID/code
+	util.Mkdir(p.buildPath) // 构建路径: 主路径/服务/上线单ID
+	util.Mkdir(p.codePath)  // 代码路径: 主路径/服务/上线单ID/code
 	log.Infof("current code path: %s", p.codePath)
 
 	for _, item := range data.Build {
-		if err := cm.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath); err != nil {
+		if err := util.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath); err != nil {
 			log.Errorf("download code failed: %+v", err)
 			return
 		}
@@ -107,7 +107,7 @@ func (p *pipeline) copyDockerfile() bool {
 		srcFile = filepath.Join(p.appPath, "image", "Dockerfile")
 		dstFile = filepath.Join(p.buildPath, "Dockerfile")
 	)
-	if err := cm.Copy(srcFile, dstFile); err != nil {
+	if err := util.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
 		return false
 	}

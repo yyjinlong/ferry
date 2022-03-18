@@ -14,12 +14,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"nautilus/pkg/bll/listen/event"
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
+	"nautilus/pkg/service/listen/event"
 )
 
 func getClientset() *kubernetes.Clientset {
-	config, err := ioutil.ReadFile(cfg.Config().K8S.Kubeconfig)
+	config, err := ioutil.ReadFile(config.Config().K8S.Kubeconfig)
 	if err != nil {
 		log.Panicf("read kubeconfig file error: %s", err)
 	}

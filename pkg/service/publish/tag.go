@@ -14,7 +14,7 @@ import (
 
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 )
 
@@ -28,20 +28,20 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 	pidStr := strconv.FormatInt(pid, 10)
 	serviceObj, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		return fmt.Errorf(cfg.DB_QUERY_SERVICE_ERROR, serviceName, err)
+		return fmt.Errorf(config.DB_QUERY_SERVICE_ERROR, serviceName, err)
 	}
 
 	if serviceObj.Lock != "" && serviceObj.Lock != pidStr {
-		return fmt.Errorf(cfg.TAG_OPERATE_FORBIDDEN, pidStr)
+		return fmt.Errorf(config.TAG_OPERATE_FORBIDDEN, pidStr)
 	}
 
 	if err := model.SetLock(serviceObj.ID, pidStr); err != nil {
-		return fmt.Errorf(cfg.TAG_WRITE_LOCK_ERROR, pidStr, err)
+		return fmt.Errorf(config.TAG_WRITE_LOCK_ERROR, pidStr, err)
 	}
 
 	updateList, err := model.FindUpdateInfo(pid)
 	if err != nil {
-		return fmt.Errorf(cfg.TAG_QUERY_UPDATE_ERROR, err)
+		return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 	}
 
 	_, curPath, _, _ := runtime.Caller(1)
@@ -54,7 +54,7 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 		branch := item.DeployBranch
 		codeModule, err := model.GetCodeModuleInfoByID(item.CodeModuleID)
 		if err != nil {
-			return fmt.Errorf(cfg.TAG_QUERY_UPDATE_ERROR, err)
+			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
 		addr := codeModule.ReposAddr
 		module := codeModule.Name
@@ -62,7 +62,7 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 		param := fmt.Sprintf("%s/maketag -a %s -m %s -b %s -i %d", scriptPath, addr, module, branch, pid)
 		log.Infof("maketag command: %s", param)
 		if !bt.do(param) {
-			return fmt.Errorf(cfg.TAG_BUILD_FAILED)
+			return fmt.Errorf(config.TAG_BUILD_FAILED)
 		}
 	}
 	return nil
@@ -73,13 +73,13 @@ func (bt *BuildTag) do(param string) bool {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println(cfg.TAG_CREATE_PIPE_ERROR, err)
+		fmt.Println(config.TAG_CREATE_PIPE_ERROR, err)
 		return false
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		fmt.Println(cfg.TAG_START_EXEC_ERROR, err)
+		fmt.Println(config.TAG_START_EXEC_ERROR, err)
 		return false
 	}
 
@@ -93,7 +93,7 @@ func (bt *BuildTag) do(param string) bool {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println(cfg.TAG_WAIT_FINISH_ERROR, err)
+		fmt.Println(config.TAG_WAIT_FINISH_ERROR, err)
 		return false
 	}
 
@@ -112,7 +112,7 @@ type ReceiveTag struct{}
 func (rt *ReceiveTag) Handle(pid int64, module, tag string) error {
 	log.Infof("receive module: %s build tag value: %s", module, tag)
 	if err := model.UpdateTag(pid, module, tag); err != nil {
-		return fmt.Errorf(cfg.TAG_UPDATE_DB_ERROR, err)
+		return fmt.Errorf(config.TAG_UPDATE_DB_ERROR, err)
 	}
 	log.Infof("module: %s update tag: %s success", module, tag)
 	return nil

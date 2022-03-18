@@ -11,7 +11,7 @@ import (
 	"github.com/yyjinlong/golib/log"
 	"github.com/yyjinlong/golib/rmq"
 
-	"nautilus/pkg/cfg"
+	"nautilus/pkg/config"
 )
 
 var (
@@ -33,10 +33,10 @@ func (r *receiver) Consumer(body []byte) error {
 
 func ListenMQ() {
 	mq, err := rmq.NewRabbitMQ(
-		cfg.Config().RabbitMQ.Address,
-		cfg.Config().RabbitMQ.Exchange,
-		cfg.Config().RabbitMQ.Queue,
-		cfg.Config().RabbitMQ.RoutingKey)
+		config.Config().RabbitMQ.Address,
+		config.Config().RabbitMQ.Exchange,
+		config.Config().RabbitMQ.Queue,
+		config.Config().RabbitMQ.RoutingKey)
 	if err != nil {
 		log.Panicf("boot connect amqp failed: %s", err)
 	}

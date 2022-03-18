@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package cfg
+package config
 
 import (
 	"io/ioutil"

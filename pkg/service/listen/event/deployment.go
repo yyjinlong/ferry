@@ -14,9 +14,9 @@ import (
 	"github.com/yyjinlong/golib/log"
 	appsv1 "k8s.io/api/apps/v1"
 
-	"nautilus/pkg/cm"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func HandleDeploymentCapturer(obj interface{}, mode string) {
@@ -122,7 +122,7 @@ func (c *deploymentCapturer) operate() bool {
 		return false
 	}
 
-	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished so stop")
 		return false
 	}
@@ -144,7 +144,7 @@ func (c *deploymentCapturer) operate() bool {
 	namespace := nsObj.Name
 
 	kind := model.PHASE_DEPLOY
-	if cm.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
+	if util.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
 		kind = model.PHASE_ROLLBACK
 	}
 	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
@@ -164,13 +164,13 @@ func (c *deploymentCapturer) operate() bool {
 	}
 
 	// 判断该阶段是否完成
-	if cm.Ini(phaseObj.Status, []int{model.PHSuccess, model.PHFailed}) {
+	if util.Ini(phaseObj.Status, []int{model.PHSuccess, model.PHFailed}) {
 		return true
 	}
 
 	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
 	if c.mode == Update && c.group == svcObj.DeployGroup && model.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
-		oldDeployment := cm.GetDeployment(c.serviceName, c.serviceID, c.phase, svcObj.OnlineGroup)
+		oldDeployment := util.GetDeployment(c.serviceName, c.serviceID, c.phase, svcObj.OnlineGroup)
 		dep := exec.NewDeployments(namespace, oldDeployment)
 		if err := dep.Scale(0); err != nil {
 			return false

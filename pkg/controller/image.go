@@ -3,18 +3,19 @@
 // author: jinlong yang
 //
 
-package view
+package controller
 
 import (
 	"github.com/yyjinlong/golib/api"
 	"github.com/yyjinlong/golib/log"
 
-	"nautilus/pkg/bll/publish"
+	"nautilus/pkg/service/publish"
 )
 
-func Finish(r *api.Request) {
+func BuildImage(r *api.Request) {
 	type params struct {
-		ID int64 `form:"pipeline_id" binding:"required"`
+		ID      int64  `form:"pipeline_id" binding:"required"`
+		Service string `form:"service" binding:"required"`
 	}
 
 	var data params
@@ -23,12 +24,15 @@ func Finish(r *api.Request) {
 		return
 	}
 
-	pid := data.ID
+	var (
+		pid     = data.ID
+		service = data.Service
+	)
 	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
-	finish := publish.NewFinish()
-	if err := finish.Handle(pid); err != nil {
-		log.Errorf("finish handle failed: %+v", err)
+	image := publish.NewBuildImage()
+	if err := image.Handle(pid, service); err != nil {
+		log.Errorf("build image pre handle failed: %+v", err)
 		r.Response(api.Failed, err.Error(), nil)
 		return
 	}
