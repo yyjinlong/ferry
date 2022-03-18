@@ -12,7 +12,7 @@ import (
 	"github.com/yyjinlong/golib/log"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/service/listen"
+	"nautilus/pkg/service/informer"
 )
 
 var (
@@ -35,8 +35,8 @@ func main() {
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
-	go listen.DeploymentFinishEvent()
-	go listen.PublishLogEvent()
+	go informer.DeploymentFinishEvent()
+	go informer.PublishLogEvent()
 
 	done := make(chan int)
 	<-done

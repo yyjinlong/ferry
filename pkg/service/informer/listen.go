@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package listen
+package informer
 
 import (
 	"io/ioutil"
@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/service/listen/event"
+	"nautilus/pkg/service/informer/event"
 )
 
 func getClientset() *kubernetes.Clientset {
