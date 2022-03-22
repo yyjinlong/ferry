@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package url
+package router
 
 import (
 	"github.com/gin-gonic/gin"

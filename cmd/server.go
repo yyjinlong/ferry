@@ -19,7 +19,7 @@ import (
 	"github.com/yyjinlong/golib/log"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/url"
+	"nautilus/pkg/router"
 )
 
 var (
@@ -49,7 +49,7 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.Default())
-	url.URLs(r)
+	router.URLs(r)
 
 	server := http.Server{
 		Addr:    config.Config().Address,
