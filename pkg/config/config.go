@@ -13,17 +13,13 @@ import (
 )
 
 type Settings struct {
-	Address        string       `yaml:"address"`
-	ReadTimeout    int          `yaml:"readTimeout"`
-	WriteTimeout   int          `yaml:"writeTimeout"`
-	MaxHeaderBytes int          `yaml:"maxHeaderBytes"`
-	ExitWaitSecond int          `yaml:"exitWaitSecond"`
-	LogFile        string       `yaml:"logfile"`
-	Postgres       PostgresInfo `yaml:"postgres"`
-	RabbitMQ       RabbtimqInfo `yaml:"rabbitmq"`
-	Build          BuildInfo    `yaml:"build"`
-	Registry       RegistryInfo `yaml:"registry"`
-	K8S            K8SInfo      `yaml:"k8s"`
+	Address  string       `yaml:"address"`
+	LogFile  string       `yaml:"logfile"`
+	Postgres PostgresInfo `yaml:"postgres"`
+	RabbitMQ RabbtimqInfo `yaml:"rabbitmq"`
+	Image    ImageInfo    `yaml:"image"`
+	K8S      K8SInfo      `yaml:"k8s"`
+	Informer InformerInfo `yaml:"informer"`
 }
 
 type PostgresInfo struct {
@@ -39,14 +35,14 @@ type RabbtimqInfo struct {
 	RoutingKey string `yaml:"routingKey"`
 }
 
-type BuildInfo struct {
+type ImageInfo struct {
+	LogFile  string `yaml:"logfile"`
+	Registry string `yaml:"registry"`
 	Dir      string `yaml:"dir"`
-	ImgFile  string `yaml:"imgfile"`
-	CronFile string `yaml:"cronfile"`
 }
 
-type RegistryInfo struct {
-	Release string `yaml:"release"`
+type InformerInfo struct {
+	LogFile string `yaml:"logfile"`
 }
 
 type K8SInfo struct {

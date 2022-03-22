@@ -77,3 +77,7 @@ Jinlong Yang
 
         curl -d "pipeline_id=4" http://127.0.0.1:8888/v1/finish | jq .
 
+    7) 回滚
+
+        curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
+

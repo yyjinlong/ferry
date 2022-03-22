@@ -36,7 +36,7 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 	}
 
 	if err := model.SetLock(serviceObj.ID, pidStr); err != nil {
-		return fmt.Errorf(config.TAG_WRITE_LOCK_ERROR, pidStr, err)
+		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pidStr, err)
 	}
 
 	updateList, err := model.FindUpdateInfo(pid)

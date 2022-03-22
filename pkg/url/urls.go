@@ -38,4 +38,11 @@ func URLs(r *gin.Engine) {
 		d.POST("/deploy", api.ExtendContext(controller.Deploy))
 		d.POST("/finish", api.ExtendContext(controller.Finish))
 	}
+
+	// 回滚流程
+	ro := r.Group("v1", UserAuth)
+	{
+		ro.POST("/check/rollback", api.ExtendContext(controller.CheckRollback))
+		ro.POST("/rollback", api.ExtendContext(controller.Rollback))
+	}
 }

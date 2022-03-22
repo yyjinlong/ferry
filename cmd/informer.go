@@ -28,7 +28,7 @@ func main() {
 	}
 	config.ParseConfig(*configFile)
 
-	log.InitLogger(config.Config().Build.CronFile)
+	log.InitLogger(config.Config().Informer.LogFile)
 
 	db.Connect("postgres",
 		config.Config().Postgres.Master,

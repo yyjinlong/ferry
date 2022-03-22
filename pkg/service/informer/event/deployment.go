@@ -122,7 +122,7 @@ func (c *deploymentCapturer) operate() bool {
 		return false
 	}
 
-	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbacking, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished so stop")
 		return false
 	}

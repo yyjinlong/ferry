@@ -58,6 +58,14 @@ func FindPhases(pipelineID int64) ([]PipelinePhase, error) {
 	return ppList, nil
 }
 
+func FindKindPhases(pipelineID int64, kind string) ([]PipelinePhase, error) {
+	ppList := make([]PipelinePhase, 0)
+	if err := SEngine().Where("pipeline_id=? and kind=?", pipelineID, kind).Desc("id").Find(&ppList); err != nil {
+		return nil, err
+	}
+	return ppList, nil
+}
+
 func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 	ph := new(PipelinePhase)
 	if has, err := SEngine().Where("pipeline_id=? and kind=? and name=?",

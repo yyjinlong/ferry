@@ -145,7 +145,18 @@ func SetLock(serviceID int64, lock string) error {
 	return nil
 }
 
-func UpdateGroup(pipelineID int64, serviceName, onlineGroup, deployGroup string) error {
+func UpdateStatus(pipelineID int64, status int) error {
+	pipeline := new(Pipeline)
+	pipeline.Status = status
+	if affected, err := MEngine().Cols("status", "update_at").ID(pipelineID).Update(pipeline); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+	return nil
+}
+
+func UpdateGroup(pipelineID, serviceID int64, onlineGroup, deployGroup string, status int) error {
 	session := MEngine().NewSession()
 	defer session.Close()
 
@@ -154,8 +165,8 @@ func UpdateGroup(pipelineID int64, serviceName, onlineGroup, deployGroup string)
 	}
 
 	pipeline := new(Pipeline)
-	pipeline.Status = PLSuccess
-	if affected, err := session.ID(pipelineID).Cols("status").Update(pipeline); err != nil {
+	pipeline.Status = status
+	if affected, err := session.ID(pipelineID).Cols("status", "update_at").Update(pipeline); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound
@@ -165,7 +176,7 @@ func UpdateGroup(pipelineID int64, serviceName, onlineGroup, deployGroup string)
 	service.OnlineGroup = onlineGroup
 	service.DeployGroup = deployGroup
 	service.Lock = ""
-	if affected, err := session.Where("name=?", serviceName).Cols("online_group", "deploy_group", "lock").Update(service); err != nil {
+	if affected, err := session.ID(serviceID).Cols("online_group", "deploy_group", "lock").Update(service); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound

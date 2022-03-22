@@ -95,7 +95,7 @@ func (c *logCapturer) operate() bool {
 	pipelineID := pipeline.ID
 
 	// 判断该上线流程是否完成
-	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbacking, model.PLRollbackSuccess}) {
 		log.Info("check deploy is finished, stop update event log")
 		return false
 	}

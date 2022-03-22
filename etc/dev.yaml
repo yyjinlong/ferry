@@ -1,8 +1,4 @@
 address: "0.0.0.0:8888"
-readTimeout: 0       # 0 means no limit
-writeTimeout: 0      # 0 means no limit
-maxHeaderBytes: 8192 # 8K
-exitWaitSecond: 1    # 退出等待时间
 logfile: "/tmp/nautilus.log"
 
 postgres:
@@ -16,15 +12,15 @@ rabbitmq:
   queue: "all-build-image"
   routingKey: "build-image"
 
-build:
+image:
+  logfile: "/tmp/nautilus-image.log"
+  registry: "10.12.28.4:80/release"
   dir: "/tmp/release"
-  imgfile: "/tmp/nautilus-img.log"
-  cronfile: "/tmp/nautilus-cron.log"
-
-registry:
-  release: "10.12.28.4:80/release"
 
 k8s:
   kubeconfig: "/Users/yangyutong/.kube/config"
   deployment: "http://10.12.28.4:8080/apis/apps/v1/namespaces/%s/deployments"
   service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services"
+
+informer:
+  logfile: "/tmp/nautilus-informer.log"

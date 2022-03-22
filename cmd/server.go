@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -53,11 +52,8 @@ func main() {
 	url.URLs(r)
 
 	server := http.Server{
-		Addr:           config.Config().Address,
-		Handler:        r,
-		ReadTimeout:    time.Duration(config.Config().ReadTimeout),
-		WriteTimeout:   time.Duration(config.Config().WriteTimeout),
-		MaxHeaderBytes: config.Config().MaxHeaderBytes,
+		Addr:    config.Config().Address,
+		Handler: r,
 	}
 
 	go func() {
@@ -77,6 +73,4 @@ func main() {
 			cancel()
 		}
 	}
-
-	time.Sleep(time.Duration(config.Config().ExitWaitSecond) * time.Second)
 }

@@ -27,17 +27,16 @@ func (f *Finish) Handle(pid int64) error {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	serviceObj, err := model.GetServiceByID(pipeline.ServiceID)
+	service, err := model.GetServiceByID(pipeline.ServiceID)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	serviceName := serviceObj.Name
-	onlineGroup := serviceObj.DeployGroup
+	onlineGroup := service.DeployGroup
 	deployGroup := util.GetDeployGroup(onlineGroup)
-	log.Infof("get current online group: %s deploy group: %s", onlineGroup, deployGroup)
+	log.Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
 
-	if err := model.UpdateGroup(pid, serviceName, onlineGroup, deployGroup); err != nil {
+	if err := model.UpdateGroup(pid, service.ID, onlineGroup, deployGroup, model.PLSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
 	log.Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)

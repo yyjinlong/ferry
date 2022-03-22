@@ -21,7 +21,6 @@ const (
 // 打tag
 const (
 	TAG_OPERATE_FORBIDDEN  = "服务被上线单(%s)占用, 不能发布!"
-	TAG_WRITE_LOCK_ERROR   = "服务占锁: %s 失败: %s"
 	TAG_QUERY_UPDATE_ERROR = "查询变更模块信息失败: %s"
 	TAG_CREATE_PIPE_ERROR  = "打tag创建输出管道失败: %s"
 	TAG_START_EXEC_ERROR   = "打tag执行命令失败: %s"
@@ -30,7 +29,7 @@ const (
 	TAG_UPDATE_DB_ERROR    = "更新tag信息失败: %s"
 )
 
-// 创建建service
+// 数据库查询
 const (
 	DB_QUERY_SERVICE_ERROR   = "查询服务: %s 错误: %s"
 	DB_PIPELINE_NOT_FOUND    = "pipeline: %d 查询不存在"
@@ -38,6 +37,9 @@ const (
 	DB_PIPELINE_UPDATE_ERROR = "查询pipeline变更信息失败: %s"
 	DB_SERVICE_QUERY_ERROR   = "查询service信息失败: %s"
 	DB_QUERY_NAMESPACE_ERROR = "查询命名空间信息失败: %s"
+	DB_QUERY_PHASES_ERROR    = "查询pipeline对应阶段错误: %s"
+	DB_UPDATE_PIPELINE_ERROR = "更新pipeline状态失败: %s"
+	DB_WRITE_LOCK_ERROR      = "服务占锁: %v 失败: %s"
 )
 
 const (
@@ -65,6 +67,14 @@ const (
 	PUB_RECORD_DEPLOYMENT_TO_DB_ERROR = "写deployment信息到数据库失败: %s"
 )
 
+// 确认完成
 const (
 	FSH_UPDATE_ONLINE_GROUP_ERROR = "设置当前在线组、部署组失败: %s"
+)
+
+// 回滚
+const (
+	ROL_CANNOT_EXECUTE     = "不能执行回滚"
+	ROL_PROCESS_NO_EXECUTE = "发布中的deployment不能回滚!"
+	ROL_RECORD_PHASE_ERROR = "记录回滚阶段: %s 错误: %s"
 )

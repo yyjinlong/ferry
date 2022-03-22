@@ -25,15 +25,19 @@ func getCurPath() string {
 	return curPath
 }
 
+func getTag() string {
+	return fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
+}
+
 func worker(data Image) {
 	var (
 		pid       = data.PID
 		service   = data.Service
-		buildPath = filepath.Join(config.Config().Build.Dir, service, strconv.FormatInt(pid, 10))
+		buildPath = filepath.Join(config.Config().Image.Dir, service, strconv.FormatInt(pid, 10))
 		appPath   = filepath.Dir(filepath.Dir(getCurPath()))
 		codePath  = filepath.Join(buildPath, "code")
-		imageURL  = fmt.Sprintf("%s/%s", config.Config().Registry.Release, service)
-		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
+		imageURL  = fmt.Sprintf("%s/%s", config.Config().Image.Registry, service)
+		imageTag  = getTag()
 		targetURL = fmt.Sprintf("%s:%s", imageURL, imageTag)
 	)
 
