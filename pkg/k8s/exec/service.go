@@ -6,7 +6,6 @@
 package exec
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/yyjinlong/golib/curl"
@@ -17,19 +16,21 @@ import (
 
 func NewServices(namespace, name string) *Services {
 	return &Services{
+		address:   getAddress(namespace),
 		namespace: namespace,
 		name:      name,
 	}
 }
 
 type Services struct {
+	address   string
 	namespace string
 	name      string
 }
 
 func (s *Services) Exist() bool {
 	var (
-		url = fmt.Sprintf(config.Config().K8S.Service, s.namespace) + "/" + s.name
+		url = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
 	)
 	body, err := curl.Get(url, nil, 5)
 	if err != nil {
@@ -45,7 +46,7 @@ func (s *Services) Exist() bool {
 
 func (s *Services) Create(tpl string) error {
 	var (
-		url    = fmt.Sprintf(config.Config().K8S.Service, s.namespace)
+		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace)
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
@@ -58,7 +59,7 @@ func (s *Services) Create(tpl string) error {
 
 func (s *Services) Update(tpl string) error {
 	var (
-		url    = fmt.Sprintf(config.Config().K8S.Service, s.namespace) + "/" + s.name
+		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
@@ -67,20 +68,4 @@ func (s *Services) Update(tpl string) error {
 		return err
 	}
 	return response(body)
-}
-
-func response(body string) error {
-	resp := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		log.Errorf("k8s response body json decode error: %s", err)
-		return err
-	}
-
-	status, ok := resp["status"].(string)
-	if ok && status == "Failure" {
-		err := fmt.Errorf("%s", resp["message"].(string))
-		log.Errorf("request k8s api failed: %s", err)
-		return err
-	}
-	return nil
 }

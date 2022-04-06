@@ -12,15 +12,19 @@ rabbitmq:
   queue: "all-build-image"
   routingKey: "build-image"
 
+k8s:
+  kubeconfig: "/Users/yangyutong/.kube/config"
+  deployment: "http://%s:8080/apis/apps/v1/namespaces/%s/deployments"
+  service: "http://%s:8080/api/v1/namespaces/%s/services"
+
+cluster:
+  hp: '10.12.28.4'
+  xq: '10.12.28.4'
+
 image:
   logfile: "/tmp/nautilus-image.log"
   registry: "10.12.28.4:80/release"
   dir: "/tmp/release"
-
-k8s:
-  kubeconfig: "/Users/yangyutong/.kube/config"
-  deployment: "http://10.12.28.4:8080/apis/apps/v1/namespaces/%s/deployments"
-  service: "http://10.12.28.4:8080/api/v1/namespaces/%s/services"
 
 informer:
   logfile: "/tmp/nautilus-informer.log"

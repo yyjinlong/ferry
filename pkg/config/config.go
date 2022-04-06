@@ -18,8 +18,9 @@ type Settings struct {
 	Postgres PostgresInfo `yaml:"postgres"`
 	RabbitMQ RabbtimqInfo `yaml:"rabbitmq"`
 	Image    ImageInfo    `yaml:"image"`
-	K8S      K8SInfo      `yaml:"k8s"`
 	Informer InformerInfo `yaml:"informer"`
+	K8S      K8SInfo      `yaml:"k8s"`
+	Cluster  ClusterInfo  `yaml:"cluster"`
 }
 
 type PostgresInfo struct {
@@ -51,6 +52,11 @@ type K8SInfo struct {
 	Service    string `yaml:"service"`
 }
 
+type ClusterInfo struct {
+	HP string `yaml:"hp"`
+	XQ string `yaml:"xq"`
+}
+
 var (
 	setting Settings
 	lock    = new(sync.RWMutex)
@@ -74,4 +80,18 @@ func Config() Settings {
 	lock.RLock()
 	defer lock.RUnlock()
 	return setting
+}
+
+// -----------多集群映射-----------
+const (
+	HP = "hp"
+	XQ = "xq"
+)
+
+func GetAddress(idc string) string {
+	mapping := map[string]string{
+		HP: Config().Cluster.HP,
+		XQ: Config().Cluster.XQ,
+	}
+	return mapping[idc]
 }

@@ -5,7 +5,8 @@ start transaction;
 --
 create table if not exists namespace (
     id serial primary key,
-    name varchar(32) not null unique,                -- 命名空间的名字
+    name varchar(32) not null unique,                -- 命名空间名称
+    cluster varchar(50) not null,                    -- 命名空间所属集群
     creator varchar(50) not null,                    -- 命名空间的创建人
     create_at timestamp not null default now()
 );
@@ -114,7 +115,8 @@ create table if not exists pipeline_phase (
 
 
 -- 插入命名空间
-insert into namespace (name, creator) values('default', 'yangjinlong');
+insert into namespace (name, cluster, creator) values('default', 'hp', 'yangjinlong'); -- default命名空间, 所属和平(hp)机房
+insert into namespace (name, cluster, creator) values('credit', 'xq', 'yangjinlong'); -- credit命名空间, 所属西青(xq)机房
 
 -- 插入测试服务
 insert into service(namespace_id, name, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, volume, rd, op) values(1, 'ivr', '10.12.28.4:80/service/ivr', '1000', '1024', '1024', '2000', 2, '[{"newvolume_type": "hostPath", "hostpath_type": "DirectoryOrCreate", "newvolume_name": "logs", "hostpath": "/home/logs/ivr"}]', 'yangjinlong', 'yangjinlong');
