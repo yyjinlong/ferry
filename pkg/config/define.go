@@ -48,6 +48,14 @@ const (
 	SVC_WAIT_ALL_SERVICE_ERROR   = "等待所有service创建完成失败: %s"
 )
 
+const (
+	CM_DECODE_DATA_ERROR = "json decode数据错误: %s"
+	CM_BUILD_YAML_ERROR  = "创建configmap yaml失败: %s"
+	CM_K8S_EXEC_FAILED   = "K8S创建configmap失败: %s"
+	CM_PUBLISH_FAILED    = "K8S发布configmap失败: %s"
+	CM_UPDATE_DB_ERROR   = "更新configmap记录失败: %s"
+)
+
 // 构建镜像
 const (
 	IMG_QUERY_PIPELINE_ERROR     = "镜像查询pipelien信息失败: %s"

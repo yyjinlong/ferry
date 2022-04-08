@@ -16,6 +16,7 @@ k8s:
   kubeconfig: "/Users/yangyutong/.kube/config"
   deployment: "http://%s:8080/apis/apps/v1/namespaces/%s/deployments"
   service: "http://%s:8080/api/v1/namespaces/%s/services"
+  configmap: "http://%s:8080/api/v1/namespaces/%s/configmaps"
 
 cluster:
   hp: '10.12.28.4'

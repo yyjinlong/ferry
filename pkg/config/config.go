@@ -50,6 +50,7 @@ type K8SInfo struct {
 	Kubeconfig string `yaml:"kubeconfig"`
 	Deployment string `yaml:"deployment"`
 	Service    string `yaml:"service"`
+	ConfigMap  string `yaml:"configmap"`
 }
 
 type ClusterInfo struct {

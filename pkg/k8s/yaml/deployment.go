@@ -26,6 +26,7 @@ type DeploymentYaml struct {
 	QuotaMem    int    // 内存配额
 	QuotaMaxMem int    // 内存最大配额
 	VolumeConf  string // 数据卷配置
+	ConfigMap   string // configmap名字
 	ReserveTime int    // 终止后的预留时间
 }
 
@@ -324,24 +325,25 @@ func (dy *DeploymentYaml) affinity() interface{} {
 
 func (dy *DeploymentYaml) containers() (interface{}, error) {
 	/*
-	   - name:
-	     image:
-	     imagePullPolicy:
-	     env:
-	     lifecycle:
-	       ...
-	     resources:
-	       ...
-	     securityContext:
-	       ...
-	     volumeMounts:
-	       ...
-	     livenessProbe:
-	       ...
-	     readinessProbe:
-	       ...
-	     terminationMessagePath:
-	     terminationMessagePolicy:
+		- name:
+		  image:
+		  imagePullPolicy:
+		  env:
+		  envFrom:
+		  lifecycle:
+		    ...
+		  resources:
+		    ...
+		  securityContext:
+		    ...
+		  volumeMounts:
+		    ...
+		  livenessProbe:
+		    ...
+		  readinessProbe:
+		    ...
+		  terminationMessagePath:
+		  terminationMessagePolicy:
 	*/
 
 	containerList := make([]interface{}, 0)
@@ -350,6 +352,7 @@ func (dy *DeploymentYaml) containers() (interface{}, error) {
 	container["image"] = fmt.Sprintf("%s:%s", dy.ImageURL, dy.ImageTag)
 	container["imagePullPolicy"] = "IfNotPresent"
 	container["env"] = dy.setEnv()
+	container["envFrom"] = dy.envFrom()
 	container["resources"] = dy.setResource(dy.QuotaCpu, dy.QuotaMaxCpu, dy.QuotaMem, dy.QuotaMaxMem)
 	container["securityContext"] = dy.security()
 	container["lifecycle"] = dy.lifecycle()
@@ -524,4 +527,22 @@ func (dy *DeploymentYaml) readiness() interface{} {
 		"successThreshold":    1,
 		"failureThreshold":    10,
 	}
+}
+
+func (dy *DeploymentYaml) envFrom() interface{} {
+	/*
+		- configMapRef:
+		   name: xxx
+	*/
+	froms := make([]map[string]interface{}, 0)
+
+	pair := map[string]string{
+		"name": dy.ConfigMap,
+	}
+
+	ref := map[string]interface{}{
+		"configMapRef": pair,
+	}
+	froms = append(froms, ref)
+	return froms
 }

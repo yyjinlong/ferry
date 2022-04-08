@@ -86,6 +86,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 		QuotaMem:    svcObj.QuotaMem,
 		QuotaMaxMem: svcObj.QuotaMaxMem,
 		VolumeConf:  svcObj.Volume,
+		ConfigMap:   util.GetConfigName(serviceName),
 		ReserveTime: svcObj.ReserveTime,
 	}
 	tpl, err := depYaml.Instance()

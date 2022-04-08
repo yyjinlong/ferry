@@ -51,7 +51,12 @@ Jinlong Yang
     curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
 
 
-## 6 发布流程
+## 6 操作configmap
+
+    curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/tmp/ivr.log"}' http://127.0.0.1:8888/v1/configmap
+
+
+## 7 发布流程
 
     1) 创建job
 

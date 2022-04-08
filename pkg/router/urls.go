@@ -34,6 +34,7 @@ func URLs(r *gin.Engine) {
 		d.POST("/tag", api.ExtendContext(controller.BuildTag))
 		d.GET("/tag", api.ExtendContext(controller.ReceiveTag))
 		d.POST("/image", api.ExtendContext(controller.BuildImage))
+		d.POST("/configmap", api.ExtendContext(controller.ConfigMap))
 		d.POST("/service", api.ExtendContext(controller.Service))
 		d.POST("/deploy", api.ExtendContext(controller.Deploy))
 		d.POST("/finish", api.ExtendContext(controller.Finish))

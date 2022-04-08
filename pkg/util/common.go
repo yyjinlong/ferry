@@ -33,6 +33,10 @@ func GetDeployGroup(onlineGroup string) string {
 	return BLUE
 }
 
+func GetConfigName(serviceName string) string {
+	return fmt.Sprintf("%s-config", serviceName)
+}
+
 func In(data string, dataList []string) bool {
 	for _, item := range dataList {
 		if data == item {

@@ -14,57 +14,57 @@ import (
 	"nautilus/pkg/config"
 )
 
-func NewServices(namespace, name string) *Services {
-	return &Services{
+func NewConfigMap(namespace, name string) *ConfigMap {
+	return &ConfigMap{
 		address:   getAddress(namespace),
 		namespace: namespace,
 		name:      name,
 	}
 }
 
-type Services struct {
+type ConfigMap struct {
 	address   string
 	namespace string
 	name      string
 }
 
-func (s *Services) Exist() bool {
+func (cm *ConfigMap) Exist() bool {
 	var (
-		url = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
+		url = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
 	)
 	body, err := curl.Get(url, nil, 5)
 	if err != nil {
-		log.Infof("check service: %s is not exist", s.name)
+		log.Infof("check configmap: %s is not exist", cm.name)
 		return false
 	}
 	if err := response(body); err != nil {
 		return false
 	}
-	log.Infof("check service: %s is exist", s.name)
+	log.Infof("check configmap: %s is exist", cm.name)
 	return true
 }
 
-func (s *Services) Create(tpl string) error {
+func (cm *ConfigMap) Create(tpl string) error {
 	var (
-		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace)
+		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace)
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
 	if err != nil {
-		log.Errorf("request create service api error: %s", err)
+		log.Infof("request create configmap api error: %s", err)
 		return err
 	}
 	return response(body)
 }
 
-func (s *Services) Update(tpl string) error {
+func (cm *ConfigMap) Update(tpl string) error {
 	var (
-		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
+		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
 		header = map[string]string{"Content-Type": "application/json"}
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
 	if err != nil {
-		log.Errorf("request update service api error: %s", err)
+		log.Errorf("request update configmap api error: %s", err)
 		return err
 	}
 	return response(body)

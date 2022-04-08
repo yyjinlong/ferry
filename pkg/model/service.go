@@ -21,6 +21,7 @@ type Service struct {
 	QuotaMaxMem   int       `xorm:"int"`
 	Replicas      int       `xorm:"int"`
 	Volume        string    `xorm:"text"`
+	Configmap     string    `xorm:"text"`
 	ReserveTime   int       `xorm:"int"`
 	Port          int       `xorm:"int"`
 	ContainerPort int       `xorm:"int"`
@@ -125,4 +126,15 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 	}
 
 	return session.Commit()
+}
+
+func UpdateConfigMap(name string, pair string) error {
+	service := new(Service)
+	service.Configmap = pair
+	if affected, err := MEngine().Where("name = ?", name).Cols("configmap").Update(service); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+	return nil
 }
