@@ -18,4 +18,3 @@ require (
 	k8s.io/client-go v0.17.0
 	xorm.io/xorm v1.2.5
 )
-
