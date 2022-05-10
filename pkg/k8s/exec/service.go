@@ -8,9 +8,8 @@ package exec
 import (
 	"fmt"
 
-	"github.com/yyjinlong/golib/curl"
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/golib/curl"
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 )
 

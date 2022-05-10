@@ -83,3 +83,25 @@ func Copy(source, dest string) error {
 	}
 	return nil
 }
+
+func Call(param string) ([]byte, error) {
+	c := exec.Command("/bin/bash", "-c", param)
+	return c.CombinedOutput()
+}
+
+func CallDir(dir string, name string, arg ...string) ([]byte, error) {
+	c := exec.Command(name, arg...)
+	c.Dir = dir
+	return c.CombinedOutput()
+}
+
+func Execute(param string) error {
+	c := exec.Command("/bin/bash", "-c", param)
+	return c.Run()
+}
+
+func ExecuteDir(dir string, name string, arg ...string) error {
+	c := exec.Command(name, arg...)
+	c.Dir = dir
+	return c.Run()
+}

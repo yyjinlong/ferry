@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yyjinlong/golib/api"
 
+	"nautilus/golib/api"
 	"nautilus/pkg/controller"
 )
 

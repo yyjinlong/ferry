@@ -8,8 +8,9 @@ package model
 import (
 	"fmt"
 
-	"github.com/yyjinlong/golib/db"
 	"xorm.io/xorm"
+
+	"nautilus/golib/db"
 )
 
 var (

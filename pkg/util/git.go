@@ -8,8 +8,7 @@ package util
 import (
 	"path/filepath"
 
-	"github.com/yyjinlong/golib/cmd"
-	"github.com/yyjinlong/golib/log"
+	"nautilus/golib/log"
 )
 
 func DownloadCode(module, repo, tag, codePath string) error {
@@ -26,10 +25,10 @@ func DownloadCode(module, repo, tag, codePath string) error {
 }
 
 func Clone(codePath, module, repo string) error {
-	return cmd.ExecuteDir(codePath, "git", "clone", repo)
+	return ExecuteDir(codePath, "git", "clone", repo)
 }
 
 func CheckoutTag(codePath, module, tag string) error {
 	directory := filepath.Join(codePath, module)
-	return cmd.ExecuteDir(directory, "git", "checkout", tag)
+	return ExecuteDir(directory, "git", "checkout", tag)
 }

@@ -8,12 +8,12 @@ package informer
 import (
 	"io/ioutil"
 
-	"github.com/yyjinlong/golib/log"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/service/informer/event"
 )

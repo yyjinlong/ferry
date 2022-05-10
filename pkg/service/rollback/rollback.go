@@ -8,8 +8,7 @@ package rollback
 import (
 	"fmt"
 
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"

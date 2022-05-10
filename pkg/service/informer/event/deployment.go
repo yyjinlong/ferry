@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yyjinlong/golib/log"
 	appsv1 "k8s.io/api/apps/v1"
 
+	"nautilus/golib/log"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"

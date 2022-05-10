@@ -10,9 +10,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/yyjinlong/golib/log"
-	"github.com/yyjinlong/golib/rmq"
-
+	"nautilus/golib/log"
+	"nautilus/golib/rmq"
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"

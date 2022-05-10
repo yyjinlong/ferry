@@ -12,9 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/yyjinlong/golib/cmd"
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
@@ -132,7 +130,7 @@ func (p *pipeline) dockerBuild() bool {
 	)
 
 	log.Info(param)
-	if err := cmd.Execute(param); err != nil {
+	if err := util.Execute(param); err != nil {
 		log.Errorf("docker build error: %s", err)
 		return false
 	}
@@ -142,7 +140,7 @@ func (p *pipeline) dockerBuild() bool {
 func (p *pipeline) dockerTag() bool {
 	param := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
 	log.Info(param)
-	if err := cmd.Execute(param); err != nil {
+	if err := util.Execute(param); err != nil {
 		log.Errorf("docker tag error: %s", err)
 		return false
 	}
@@ -152,7 +150,7 @@ func (p *pipeline) dockerTag() bool {
 func (p *pipeline) dockerPush() bool {
 	param := fmt.Sprintf("docker push %s", p.targetURL)
 	log.Info(param)
-	if err := cmd.Execute(param); err != nil {
+	if err := util.Execute(param); err != nil {
 		log.Errorf("docker push error: %s", err)
 		return false
 	}

@@ -9,8 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 )

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yyjinlong/golib/log"
+	"nautilus/golib/log"
 )
 
 type Pipeline struct {

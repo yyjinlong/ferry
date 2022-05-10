@@ -8,9 +8,8 @@ package image
 import (
 	"encoding/json"
 
-	"github.com/yyjinlong/golib/log"
-	"github.com/yyjinlong/golib/rmq"
-
+	"nautilus/golib/log"
+	"nautilus/golib/rmq"
 	"nautilus/pkg/config"
 )
 

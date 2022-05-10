@@ -8,9 +8,9 @@ package publish
 import (
 	"fmt"
 
-	"github.com/yyjinlong/golib/log"
 	"golang.org/x/sync/errgroup"
 
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
