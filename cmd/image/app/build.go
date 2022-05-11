@@ -139,8 +139,8 @@ func (p *pipeline) dockerBuild() bool {
 	}
 
 	var (
-		pull  = fmt.Sprintf("docker pull %s:%s", si.ImageAddr, si.ImageVersion)
-		repo  = fmt.Sprintf("repo=%s:%s", si.ImageAddr, si.ImageVersion)
+		pull  = fmt.Sprintf("docker pull %s", si.ImageAddr)
+		repo  = fmt.Sprintf("repo=%s", si.ImageAddr)
 		param = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
 	)
 
