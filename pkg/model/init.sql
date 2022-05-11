@@ -1,6 +1,18 @@
 start transaction;
 
 --
+-- 集群
+--
+create table if not exists cluster (
+    id serial primary key,
+    name varchar(50) not null,                       -- 集群名
+    token text not null,                             -- 集群token
+    creator varchar(50) not null,                    -- 集群创建人
+    create_at timestamp not null default now()
+);
+
+
+--
 -- 命名空间
 --
 create table if not exists namespace (
@@ -115,6 +127,9 @@ create table if not exists pipeline_phase (
     update_at timestamp not null default now()
 );
 
+
+-- 插入集群
+insert into cluster(name, token, creator) values('hp', '', 'yangjinlong'), ('xq', '', 'yangjinlong');
 
 -- 插入命名空间
 insert into namespace (name, cluster, creator) values('default', 'hp', 'yangjinlong'); -- default命名空间, 所属和平(hp)机房
