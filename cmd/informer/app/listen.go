@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package informer
+package app
 
 import (
 	"io/ioutil"
@@ -13,9 +13,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"nautilus/cmd/informer/app/event"
 	"nautilus/golib/log"
 	"nautilus/pkg/config"
-	"nautilus/pkg/service/informer/event"
 )
 
 func getClientset() *kubernetes.Clientset {

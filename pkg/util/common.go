@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -62,6 +63,16 @@ func TimeString(curTime time.Time) string {
 func Mkdir(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		os.MkdirAll(path, os.ModePerm)
+	}
+}
+
+func Rmdir(path string) {
+	d, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	if d.IsDir() {
+		os.RemoveAll(path)
 	}
 }
 

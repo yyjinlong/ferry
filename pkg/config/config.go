@@ -51,6 +51,7 @@ type K8SInfo struct {
 	Deployment string `yaml:"deployment"`
 	Service    string `yaml:"service"`
 	ConfigMap  string `yaml:"configmap"`
+	Token      string `yaml:"token"`
 }
 
 type ClusterInfo struct {

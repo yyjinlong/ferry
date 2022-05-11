@@ -8,15 +8,14 @@ package main
 import (
 	"flag"
 
-	"github.com/yyjinlong/golib/db"
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/cmd/image/app"
+	"nautilus/golib/db"
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
-	"nautilus/pkg/service/image"
 )
 
 var (
-	configFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
+	configFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
 	help       = flag.Bool("h", false, "show help info.")
 )
 
@@ -35,8 +34,8 @@ func main() {
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
-	go image.ListenMQ()
-	go image.HandleMsg()
+	go app.ListenMQ()
+	go app.HandleMsg()
 
 	done := make(chan int)
 	<-done

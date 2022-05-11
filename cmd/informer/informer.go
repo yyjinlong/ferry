@@ -8,15 +8,14 @@ package main
 import (
 	"flag"
 
-	"github.com/yyjinlong/golib/db"
-	"github.com/yyjinlong/golib/log"
-
+	"nautilus/cmd/informer/app"
+	"nautilus/golib/db"
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
-	"nautilus/pkg/service/informer"
 )
 
 var (
-	configFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
+	configFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
 	help       = flag.Bool("h", false, "show help info.")
 )
 
@@ -35,8 +34,8 @@ func main() {
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
-	go informer.DeploymentFinishEvent()
-	go informer.PublishLogEvent()
+	go app.DeploymentFinishEvent()
+	go app.PublishLogEvent()
 
 	done := make(chan int)
 	<-done

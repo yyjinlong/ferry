@@ -9,9 +9,10 @@ import (
 	"sync"
 
 	_ "github.com/lib/pq"
-	"github.com/yyjinlong/golib/log"
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
+
+	"nautilus/golib/log"
 )
 
 var (

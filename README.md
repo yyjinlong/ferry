@@ -29,15 +29,13 @@ Jinlong Yang
 
 ## 3 节点标签
 
-    kubectl label node x.x.x.x aggregate=default
+    kubectl label node xxxx aggregate=default
 
 
 ## 4 业务逻辑
 
     service
-    ├── image        -- 构建镜像
-    ├── informer     -- 监听事件
-    ├── pipeline     -- 构建相关流程
+    ├── pipeline     -- 构建
     ├── publish      -- 发布
     └── rollback     -- 回滚
 

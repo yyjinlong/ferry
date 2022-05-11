@@ -8,6 +8,7 @@ package curl
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -66,7 +67,12 @@ func Curl(mode, url string, cookie map[string]string, header map[string]string, 
 	resultChan := make(chan *result, 1)
 
 	go func() {
-		client := http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+		client := http.Client{Transport: &http.Transport{
+			DisableKeepAlives: true,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}}
 		response, err := client.Do(request)
 		resultChan <- &result{response, err}
 	}()

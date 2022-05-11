@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
-	"github.com/yyjinlong/golib/log"
+
+	"nautilus/golib/log"
 )
 
 var (

@@ -29,9 +29,10 @@ type ConfigMap struct {
 
 func (cm *ConfigMap) Exist() bool {
 	var (
-		url = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
+		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
+		header = getHeader()
 	)
-	body, err := curl.Get(url, nil, 5)
+	body, err := curl.Get(url, header, 5)
 	if err != nil {
 		log.Infof("check configmap: %s is not exist", cm.name)
 		return false
@@ -46,7 +47,7 @@ func (cm *ConfigMap) Exist() bool {
 func (cm *ConfigMap) Create(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace)
-		header = map[string]string{"Content-Type": "application/json"}
+		header = getHeader()
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
 	if err != nil {
@@ -59,7 +60,7 @@ func (cm *ConfigMap) Create(tpl string) error {
 func (cm *ConfigMap) Update(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
-		header = map[string]string{"Content-Type": "application/json"}
+		header = getHeader()
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
 	if err != nil {

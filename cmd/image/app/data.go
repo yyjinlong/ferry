@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package image
+package app
 
 const (
 	PYTHON = "python"

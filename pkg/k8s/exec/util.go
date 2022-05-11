@@ -14,6 +14,17 @@ import (
 	"nautilus/pkg/model"
 )
 
+func getToken() string {
+	return fmt.Sprintf("Bearer %s", config.Config().K8S.Token)
+}
+
+func getHeader() map[string]string {
+	return map[string]string{
+		"Authorization": getToken(),
+		"Content-Type":  "application/json",
+	}
+}
+
 func getAddress(namespace string) string {
 	ns, err := model.GetNamespaceByName(namespace)
 	if err != nil {

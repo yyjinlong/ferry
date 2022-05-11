@@ -15,9 +15,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/yyjinlong/golib/db"
-	"github.com/yyjinlong/golib/log"
 
+	"nautilus/golib/db"
+	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/router"
 )
@@ -44,7 +44,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	qs := make(chan os.Signal)
+	qs := make(chan os.Signal, 1)
 	signal.Notify(qs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	r := gin.Default()

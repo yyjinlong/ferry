@@ -16,7 +16,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/yyjinlong/golib/log"
+
+	"nautilus/golib/log"
 )
 
 var (

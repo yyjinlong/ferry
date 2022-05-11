@@ -31,7 +31,7 @@ type Deployments struct {
 func (d *Deployments) Exist() bool {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.address, d.namespace) + "/" + d.deployment
-		header = map[string]string{"Content-Type": "application/json"}
+		header = getHeader()
 	)
 	body, err := curl.Get(url, header, 5)
 	if err != nil {
@@ -48,7 +48,7 @@ func (d *Deployments) Exist() bool {
 func (d *Deployments) Create(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.address, d.namespace)
-		header = map[string]string{"Content-Type": "application/json"}
+		header = getHeader()
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
 	if err != nil {
@@ -61,7 +61,7 @@ func (d *Deployments) Create(tpl string) error {
 func (d *Deployments) Update(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.address, d.namespace) + "/" + d.deployment
-		header = map[string]string{"Content-Type": "application/json"}
+		header = getHeader()
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
 	if err != nil {
@@ -73,8 +73,11 @@ func (d *Deployments) Update(tpl string) error {
 
 func (d *Deployments) Scale(replicas int) error {
 	var (
-		url     = fmt.Sprintf(config.Config().K8S.Deployment, d.address, d.namespace) + "/" + d.deployment + "/scale"
-		header  = map[string]string{"Content-Type": "application/strategic-merge-patch+json"}
+		url    = fmt.Sprintf(config.Config().K8S.Deployment, d.address, d.namespace) + "/" + d.deployment + "/scale"
+		header = map[string]string{
+			"Content-Type":  "application/strategic-merge-patch+json",
+			"Authorization": getToken(),
+		}
 		payload = fmt.Sprintf(`{"spec": {"replicas": %d}}`, replicas)
 	)
 

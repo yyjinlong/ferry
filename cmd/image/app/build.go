@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package image
+package app
 
 import (
 	"fmt"
@@ -69,7 +69,7 @@ func (p *pipeline) run(data Image) {
 	log.Infof("current code path: %s", p.codePath)
 
 	for _, item := range data.Build {
-		if err := util.DownloadCode(item.Module, item.Repo, item.Tag, p.codePath); err != nil {
+		if err := p.downloadCode(item.Module, item.Repo, item.Tag, p.codePath); err != nil {
 			log.Errorf("download code failed: %+v", err)
 			return
 		}
@@ -94,6 +94,20 @@ func (p *pipeline) run(data Image) {
 		return
 	}
 	log.Infof("push image: %s to registry success.", p.targetURL)
+}
+
+func (p *pipeline) downloadCode(module, repo, tag, codePath string) error {
+	directory := filepath.Join(codePath, module)
+	util.Rmdir(directory)
+
+	if err := util.ExecuteDir(codePath, "git", "clone", repo); err != nil {
+		return err
+	}
+
+	if err := util.ExecuteDir(directory, "git", "checkout", tag); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *pipeline) compile(language string) bool {
@@ -125,13 +139,20 @@ func (p *pipeline) dockerBuild() bool {
 	}
 
 	var (
-		repo  = fmt.Sprintf("repo=%s", si.ImageAddr)
+		pull  = fmt.Sprintf("docker pull %s:%s", si.ImageAddr, si.ImageVersion)
+		repo  = fmt.Sprintf("repo=%s:%s", si.ImageAddr, si.ImageVersion)
 		param = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
 	)
 
+	log.Info(pull)
+	if err := util.Execute(pull); err != nil {
+		log.Errorf("docker pull error: %+v", err)
+		return false
+	}
+
 	log.Info(param)
 	if err := util.Execute(param); err != nil {
-		log.Errorf("docker build error: %s", err)
+		log.Errorf("docker build error: %+v", err)
 		return false
 	}
 	return true
@@ -141,7 +162,7 @@ func (p *pipeline) dockerTag() bool {
 	param := fmt.Sprintf("docker tag %s %s", p.targetURL, p.targetURL)
 	log.Info(param)
 	if err := util.Execute(param); err != nil {
-		log.Errorf("docker tag error: %s", err)
+		log.Errorf("docker tag error: %+v", err)
 		return false
 	}
 	return true
@@ -151,7 +172,7 @@ func (p *pipeline) dockerPush() bool {
 	param := fmt.Sprintf("docker push %s", p.targetURL)
 	log.Info(param)
 	if err := util.Execute(param); err != nil {
-		log.Errorf("docker push error: %s", err)
+		log.Errorf("docker push error: %+v", err)
 		return false
 	}
 	return true
