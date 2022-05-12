@@ -14,24 +14,33 @@ import (
 	"nautilus/pkg/model"
 )
 
-func getToken() string {
-	return fmt.Sprintf("Bearer %s", config.Config().K8S.Token)
-}
-
-func getHeader() map[string]string {
-	return map[string]string{
-		"Authorization": getToken(),
-		"Content-Type":  "application/json",
-	}
-}
-
-func getAddress(namespace string) string {
+func getCluster(namespace string) string {
 	ns, err := model.GetNamespaceByName(namespace)
 	if err != nil {
-		log.Errorf("query namespace mapping address error: %s", err)
+		log.Errorf("query address error: %+v by namespace: %s", err, namespace)
 		return ""
 	}
-	return config.GetAddress(ns.Cluster)
+	return ns.Cluster
+}
+
+func getAddress(cluster string) string {
+	return config.GetAddress(cluster)
+}
+
+func getToken(cluster string) string {
+	obj, err := model.GetCluster(cluster)
+	if err != nil {
+		log.Errorf("query token error: %+v by cluster: %s", err, cluster)
+		return ""
+	}
+	return fmt.Sprintf("Bearer %s", obj.Token)
+}
+
+func getHeader(cluster string) map[string]string {
+	return map[string]string{
+		"Authorization": getToken(cluster),
+		"Content-Type":  "application/json",
+	}
 }
 
 func response(body string) error {

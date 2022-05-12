@@ -169,7 +169,7 @@ func (c *deploymentCapturer) operate() bool {
 	}
 
 	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
-	if c.mode == Update && c.group == svcObj.DeployGroup && model.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
+	if c.mode == Update && svcObj.OnlineGroup != "" && c.group == svcObj.DeployGroup && model.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
 		oldDeployment := util.GetDeployment(c.serviceName, c.serviceID, c.phase, svcObj.OnlineGroup)
 		dep := exec.NewDeployments(namespace, oldDeployment)
 		if err := dep.Scale(0); err != nil {

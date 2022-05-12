@@ -14,14 +14,17 @@ import (
 )
 
 func NewServices(namespace, name string) *Services {
+	cluster := getCluster(namespace)
 	return &Services{
-		address:   getAddress(namespace),
+		cluster:   cluster,
+		address:   getAddress(cluster),
 		namespace: namespace,
 		name:      name,
 	}
 }
 
 type Services struct {
+	cluster   string
 	address   string
 	namespace string
 	name      string
@@ -30,7 +33,7 @@ type Services struct {
 func (s *Services) Exist() bool {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
-		header = getHeader()
+		header = getHeader(s.cluster)
 	)
 	body, err := curl.Get(url, header, 5)
 	if err != nil {
@@ -47,7 +50,7 @@ func (s *Services) Exist() bool {
 func (s *Services) Create(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace)
-		header = getHeader()
+		header = getHeader(s.cluster)
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
 	if err != nil {
@@ -60,7 +63,7 @@ func (s *Services) Create(tpl string) error {
 func (s *Services) Update(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.Service, s.address, s.namespace) + "/" + s.name
-		header = getHeader()
+		header = getHeader(s.cluster)
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
 	if err != nil {

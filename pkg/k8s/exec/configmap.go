@@ -14,14 +14,17 @@ import (
 )
 
 func NewConfigMap(namespace, name string) *ConfigMap {
+	cluster := getCluster(namespace)
 	return &ConfigMap{
-		address:   getAddress(namespace),
+		cluster:   cluster,
+		address:   getAddress(cluster),
 		namespace: namespace,
 		name:      name,
 	}
 }
 
 type ConfigMap struct {
+	cluster   string
 	address   string
 	namespace string
 	name      string
@@ -30,7 +33,7 @@ type ConfigMap struct {
 func (cm *ConfigMap) Exist() bool {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
-		header = getHeader()
+		header = getHeader(cm.cluster)
 	)
 	body, err := curl.Get(url, header, 5)
 	if err != nil {
@@ -47,7 +50,7 @@ func (cm *ConfigMap) Exist() bool {
 func (cm *ConfigMap) Create(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace)
-		header = getHeader()
+		header = getHeader(cm.cluster)
 	)
 	body, err := curl.Post(url, header, []byte(tpl), 5)
 	if err != nil {
@@ -60,7 +63,7 @@ func (cm *ConfigMap) Create(tpl string) error {
 func (cm *ConfigMap) Update(tpl string) error {
 	var (
 		url    = fmt.Sprintf(config.Config().K8S.ConfigMap, cm.address, cm.namespace) + "/" + cm.name
-		header = getHeader()
+		header = getHeader(cm.cluster)
 	)
 	body, err := curl.Put(url, header, []byte(tpl), 5)
 	if err != nil {

@@ -49,9 +49,9 @@ Jinlong Yang
     curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
 
 
-## 6 操作configmap
+## 6 创建configmap
 
-    curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/tmp/ivr.log"}' http://127.0.0.1:8888/v1/configmap
+    curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/home/tong/www/log/ivr", "LOG_FILE": "application.log"}' http://127.0.0.1:8888/v1/configmap
 
 
 ## 7 发布流程
@@ -83,4 +83,13 @@ Jinlong Yang
     7) 回滚
 
         curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
+
+
+## 8 连接测试docker registry
+
+    在ExecStart添加: --insecure-registry 10.12.28.4:80
+
+    vim /usr/lib/systemd/system/docker.service
+    。。。。
+    ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --insecure-registry 10.12.28.4:80
 
