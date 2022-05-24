@@ -41,13 +41,13 @@ Jinlong Yang
 
 ## 4 依赖准备
 
-###4.1 节点标签
+### 4.1 节点标签
 
 ```
 kubectl label node xxxx aggregate=default
 ```
 
-###4.2 ServiceAccount Token
+### 4.2 ServiceAccount Token
 
 ```
 kubectl create serviceaccount nautilus-api -n kube-system
@@ -55,7 +55,7 @@ kubectl create serviceaccount nautilus-api -n kube-system
 kubectl create clusterrolebinding nautilus-api --clusterrole=cluster-admin --group=kube-system:nautilus-api
 ```
 
-###4.3 imagePullSecrets
+### 4.3 imagePullSecrets
 
 ```
 # 登录私有仓库
@@ -86,34 +86,45 @@ curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/home/tong/www/log/ivr
 
 ## 7 发布流程
 
-```
 1) 创建job
 
+```
 curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "yy"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
+```
 
 2) 打tag
 
+```
 curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/tag
+```
 
 3) 构建镜像
 
+```
 curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/image
+```
 
 4) 发布沙盒
 
+```
 curl -d "pipeline_id=4&phase=sandbox&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
+```
 
 5) 发布全量
 
+```
 curl -d "pipeline_id=4&phase=online&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
+```
 
 6) 部署完成
 
+```
 curl -d "pipeline_id=4" http://127.0.0.1:8888/v1/finish | jq .
+```
 
 7) 回滚
 
+```
 curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
-
 ```
 
