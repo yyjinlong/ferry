@@ -21,18 +21,13 @@ Jinlong Yang
 
 ## 2 镜像分层
 
-    1) base层    : centos6.7 centos7.5
-    2) run层     : python(conda环境)、go(go mod环境)
-    3) service层 : 具体的服务环境
-    4) release层 : 由imaged进程基于代码自动构建
+    1) base层    : 操作系统层: centos6.7 centos7.5
+    2) run层     : 运行时环境: python(conda环境)、java(tomcat环境)
+    3) service层 : 具体的服务
+    4) release层 : 由image进程基于代码自动构建
 
 
-## 3 节点标签
-
-    kubectl label node xxxx aggregate=default
-
-
-## 4 业务逻辑
+## 3 业务逻辑
 
     service
     ├── pipeline     -- 构建
@@ -44,52 +39,81 @@ Jinlong Yang
     * 不再监听endpoint事件, 等待deployment发布完成, 自动将另一组缩成0, 读取endpoint信息并记录
 
 
+## 4 依赖准备
+
+###4.1 节点标签
+
+```
+kubectl label node xxxx aggregate=default
+```
+
+###4.2 ServiceAccount Token
+
+```
+kubectl create serviceaccount nautilus-api -n kube-system
+
+kubectl create clusterrolebinding nautilus-api --clusterrole=cluster-admin --group=kube-system:nautilus-api
+```
+
+###4.3 imagePullSecrets
+
+```
+# 登录私有仓库
+docker login 10.12.28.4:80
+
+# 支持http方式拉取
+vim /usr/lib/systemd/system/docker.service
+...
+ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --insecure-registry 10.12.28.4:80
+
+# 创建imagePullSecrets
+kubectl create secret generic harborkey --from-file=.dockerconfigjson=/root/.docker/config.json --type=kubernetes.io/dockerconfigjson
+```
+
 ## 5 创建服务
 
-    curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
+```
+curl -d 'service=ivr' http://127.0.0.1:8888/v1/service
+```
 
 
 ## 6 创建configmap
 
-    curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/home/tong/www/log/ivr", "LOG_FILE": "application.log"}' http://127.0.0.1:8888/v1/configmap
+```
+curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/home/tong/www/log/ivr", "LOG_FILE": "application.log"}' http://127.0.0.1:8888/v1/configmap
+```
 
 
 ## 7 发布流程
 
-    1) 创建job
+```
+1) 创建job
 
-        curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "yy"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
+curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "yy"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline
 
-    2) 打tag
+2) 打tag
 
-        curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/tag
+curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/tag
 
-    3) 构建镜像
+3) 构建镜像
 
-        curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/image
+curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/image
 
-    4) 发布沙盒
+4) 发布沙盒
 
-        curl -d "pipeline_id=4&phase=sandbox&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
+curl -d "pipeline_id=4&phase=sandbox&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
 
-    5) 发布全量
+5) 发布全量
 
-        curl -d "pipeline_id=4&phase=online&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
+curl -d "pipeline_id=4&phase=online&username=yangjinlong" http://127.0.0.1:8888/v1/deploy | jq .
 
-    6) 部署完成
+6) 部署完成
 
-        curl -d "pipeline_id=4" http://127.0.0.1:8888/v1/finish | jq .
+curl -d "pipeline_id=4" http://127.0.0.1:8888/v1/finish | jq .
 
-    7) 回滚
+7) 回滚
 
-        curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
+curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
 
-
-## 8 连接测试docker registry
-
-    在ExecStart添加: --insecure-registry 10.12.28.4:80
-
-    vim /usr/lib/systemd/system/docker.service
-    。。。。
-    ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --insecure-registry 10.12.28.4:80
+```
 

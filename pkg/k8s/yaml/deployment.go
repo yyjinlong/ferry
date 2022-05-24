@@ -148,6 +148,7 @@ func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
 			...
 		  dnsPolicy:
 		  imagePullecrets:
+		    ...
 		  nodeSelector:
 			...
 		  terminationGracePeriodSeconds:
@@ -164,6 +165,7 @@ func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
 	spec["hostAliases"] = dy.hostAliases()
 	spec["dnsConfig"] = dy.dnsConfig()
 	spec["dnsPolicy"] = "None"
+	spec["imagePullecrets"] = dy.imagePullecrets()
 	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	spec["nodeSelector"] = dy.nodeSelector()
 
@@ -224,6 +226,19 @@ func (dy *DeploymentYaml) dnsConfig() interface{} {
 	return map[string][]string{
 		"nameservers": dnsList,
 	}
+}
+
+func (dy *DeploymentYaml) imagePullecrets() interface{} {
+	/*
+		imagePullecrets:
+		- name: xxx
+	*/
+	secrets := make([]map[string]string, 0)
+	kv := map[string]string{
+		"name": "harborkey",
+	}
+	secrets = append(secrets, kv)
+	return secrets
 }
 
 func (dy *DeploymentYaml) nodeSelector() interface{} {
