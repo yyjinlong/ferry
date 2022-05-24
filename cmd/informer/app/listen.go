@@ -8,6 +8,7 @@ package app
 import (
 	"io/ioutil"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -47,6 +48,11 @@ func DeploymentFinishEvent() {
 			event.HandleDeploymentCapturer(obj, event.Create)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldDep := oldObj.(*appsv1.Deployment)
+			newDep := newObj.(*appsv1.Deployment)
+			if oldDep.ObjectMeta.ResourceVersion == newDep.ObjectMeta.ResourceVersion {
+				return
+			}
 			event.HandleDeploymentCapturer(newObj, event.Update)
 		},
 		DeleteFunc: func(obj interface{}) {},

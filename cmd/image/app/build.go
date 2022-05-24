@@ -120,7 +120,7 @@ func (p *pipeline) compile(language string) bool {
 
 func (p *pipeline) copyDockerfile() bool {
 	var (
-		srcFile = filepath.Join(p.appPath, "image", "Dockerfile")
+		srcFile = filepath.Join(p.appPath, "app", "Dockerfile")
 		dstFile = filepath.Join(p.buildPath, "Dockerfile")
 	)
 	if err := util.Copy(srcFile, dstFile); err != nil {

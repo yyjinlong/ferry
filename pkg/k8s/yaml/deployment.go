@@ -147,7 +147,7 @@ func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
 		  dnsConfig:
 			...
 		  dnsPolicy:
-		  imagePullecrets:
+		  imagePullSecrets:
 		    ...
 		  nodeSelector:
 			...
@@ -165,7 +165,7 @@ func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
 	spec["hostAliases"] = dy.hostAliases()
 	spec["dnsConfig"] = dy.dnsConfig()
 	spec["dnsPolicy"] = "None"
-	spec["imagePullecrets"] = dy.imagePullecrets()
+	spec["imagePullSecrets"] = dy.imagePullSecrets()
 	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	spec["nodeSelector"] = dy.nodeSelector()
 
@@ -228,9 +228,9 @@ func (dy *DeploymentYaml) dnsConfig() interface{} {
 	}
 }
 
-func (dy *DeploymentYaml) imagePullecrets() interface{} {
+func (dy *DeploymentYaml) imagePullSecrets() interface{} {
 	/*
-		imagePullecrets:
+		imagePullSecrets:
 		- name: xxx
 	*/
 	secrets := make([]map[string]string, 0)
