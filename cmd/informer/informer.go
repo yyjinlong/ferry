@@ -16,6 +16,7 @@ import (
 
 var (
 	configFile = flag.String("c", "../../etc/dev.yaml", "yaml configuration file.")
+	cluster    = flag.String("s", "hp", "cluster param.")
 	help       = flag.Bool("h", false, "show help info.")
 )
 
@@ -34,8 +35,10 @@ func main() {
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
-	go app.DeploymentFinishEvent()
-	go app.PublishLogEvent()
+	clientset := app.GetClientset(*cluster)
+	go app.DeploymentFinishEvent(clientset)
+	go app.PublishLogEvent(clientset)
+	go app.EndpointReadyEvent(clientset)
 
 	done := make(chan int)
 	<-done

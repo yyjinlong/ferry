@@ -7,8 +7,10 @@ package app
 
 import (
 	"io/ioutil"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -19,8 +21,19 @@ import (
 	"nautilus/pkg/config"
 )
 
-func getClientset() *kubernetes.Clientset {
-	config, err := ioutil.ReadFile(config.Config().K8S.Kubeconfig)
+func getClusterConfig(cluster string) string {
+	switch cluster {
+	case config.HP:
+		return config.Config().K8S.HPConfig
+	case config.XQ:
+		return config.Config().K8S.XQConfig
+	}
+	return ""
+}
+
+func GetClientset(cluster string) *kubernetes.Clientset {
+	clusterConfig := getClusterConfig(cluster)
+	config, err := ioutil.ReadFile(clusterConfig)
 	if err != nil {
 		log.Panicf("read kubeconfig file error: %s", err)
 	}
@@ -37,11 +50,11 @@ func getClientset() *kubernetes.Clientset {
 	return clientset
 }
 
-func DeploymentFinishEvent() {
+func DeploymentFinishEvent(clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -60,11 +73,11 @@ func DeploymentFinishEvent() {
 	deploymentInformer.Run(stopCh)
 }
 
-func PublishLogEvent() {
+func PublishLogEvent(clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	sharedInformer := informers.NewSharedInformerFactory(getClientset(), 0)
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
 	eventInformer := sharedInformer.Core().V1().Events().Informer()
 	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -76,4 +89,29 @@ func PublishLogEvent() {
 		DeleteFunc: func(obj interface{}) {},
 	})
 	eventInformer.Run(stopCh)
+}
+
+func EndpointReadyEvent(clientset *kubernetes.Clientset) {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	sharedInformer := informers.NewSharedInformerFactory(clientset, time.Minute)
+	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
+	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			event.HandleEndpointCapturer(obj, event.Create, clientset)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldEnd := oldObj.(*corev1.Endpoints)
+			newEnd := newObj.(*corev1.Endpoints)
+			if oldEnd.ObjectMeta.ResourceVersion == newEnd.ObjectMeta.ResourceVersion {
+				return
+			}
+			event.HandleEndpointCapturer(newObj, event.Update, clientset)
+		},
+		DeleteFunc: func(obj interface{}) {
+			event.HandleEndpointCapturer(obj, event.Delete, clientset)
+		},
+	})
+	endpointInformer.Run(stopCh)
 }

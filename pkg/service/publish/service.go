@@ -71,7 +71,7 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase s
 	if err != nil {
 		return fmt.Errorf(config.SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
-	log.Infof("fetch service tpl: %s", tpl)
+	log.Infof("create service: %s mapping tpl: %s", appid, tpl)
 
 	if err := s.execute(namespace, serviceName, tpl); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)

@@ -6,25 +6,25 @@ Jinlong Yang
 
 ## 1 why blue-green？
 
-    1 采用滚动更新, maxSurge设置为25%.
+### 1.1 采用滚动更新, maxSurge设置为25%.
 
-        如果pod比较多, 就会进行多次的滚动更新, 发布缓慢同时也会产生新老pod共存, 共同接流量情况, 页面访问出现404, 这是业务不期望的情况.
+如果pod比较多, 就会进行多次的滚动更新, 发布缓慢同时也会产生新老pod共存, 共同接流量情况, 页面访问出现404, 这是业务不期望的情况.
 
-    2 蓝绿部署的优势
+### 1.2 蓝绿部署的优势
 
-        另一组部署完成后, 流量一刀切.
+另一组部署完成后, 流量一刀切.
 
-    3 蓝绿部署的缺点
+### 1.3 蓝绿部署的缺点
 
-        瞬间对集群造成一些压力, 但是还好, 发布完成后, 会对旧版本的deployment的pod数量缩成0, 使其不占资源.
+瞬间对集群造成一些压力, 但是还好, 发布完成后, 会对旧版本的deployment的pod数量缩成0, 使其不占资源.
 
 
 ## 2 镜像分层
 
-    1) base层    : 操作系统层: centos6.7 centos7.5
-    2) run层     : 运行时环境: python(conda环境)、java(tomcat环境)
-    3) service层 : 具体的服务
-    4) release层 : 由image进程基于代码自动构建
+    base层    : 操作系统层: centos6.7 centos7.5
+    run层     : 运行时环境: python(conda环境)、java(tomcat环境)
+    service层 : 具体的服务
+    release层 : 由image进程基于代码自动构建
 
 
 ## 3 业务逻辑
@@ -34,9 +34,9 @@ Jinlong Yang
     ├── publish      -- 发布
     └── rollback     -- 回滚
 
-    * 新服务上线默认为blue
-    * 蓝绿两组分别创建对应的deployment
-    * 不再监听endpoint事件, 等待deployment发布完成, 自动将另一组缩成0, 读取endpoint信息并记录
+* 新服务上线默认为blue
+* 蓝绿两组分别创建对应的deployment
+* 不再监听endpoint事件, 等待deployment发布完成, 自动将另一组缩成0, 读取endpoint信息并记录
 
 
 ## 4 依赖准备

@@ -13,7 +13,8 @@ rabbitmq:
   routingKey: "build-image"
 
 k8s:
-  kubeconfig: "/Users/yangjinlong/.kube/config"
+  hpconfig: "/Users/yangjinlong/.kube/config"
+  xqconfig: "/Users/yangjinlong/.kube/config"
   deployment: "https://%s:6443/apis/apps/v1/namespaces/%s/deployments"
   service: "https://%s:6443/api/v1/namespaces/%s/services"
   configmap: "https://%s:6443/api/v1/namespaces/%s/configmaps"
