@@ -1,7 +1,9 @@
 package event
 
 import (
+	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -10,6 +12,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"nautilus/golib/log"
+	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func HandleEndpointCapturer(obj interface{}, mode string, clientset *kubernetes.Clientset) {
@@ -86,6 +90,44 @@ func (e *endpointCapturer) parse() bool {
 func (e *endpointCapturer) operate() bool {
 	ips := e.getIPList()
 	log.Infof("service: %s phase: %s have total ips: %#v", e.serviceName, e.phase, ips)
+
+	serviceObj, err := model.GetServiceByID(e.serviceID)
+	if err != nil {
+		log.Errorf("query service by id error: %+v", err)
+		return false
+	}
+	namespaceObj, err := model.GetNamespace(serviceObj.NamespaceID)
+	if err != nil {
+		log.Errorf("query namespace by id error: %+v", err)
+		return false
+	}
+	namespace := namespaceObj.Name
+
+	switch e.phase {
+	case model.PHASE_SANDBOX:
+		if len(ips) == 1 && e.checkPodReady(namespace, ips) {
+			fmt.Printf("-------service: %s sandbox ready ips: %#v\n", e.serviceName, ips)
+			return true
+		}
+
+	case model.PHASE_ONLINE:
+		if len(ips) == serviceObj.Replicas && e.checkPodReady(namespace, ips) {
+			fmt.Printf("-------service: %s online ready ips: %#v\n", e.serviceName, ips)
+			return true
+		}
+	}
+	return false
+}
+
+func (e *endpointCapturer) checkPodReady(namespace string, ips []string) bool {
+	podIPs := GetServicePods(e.clientset, namespace, e.serviceName, e.phase)
+	for _, ip := range ips {
+		if !util.In(ip, podIPs) {
+			log.Warnf("service: %s phase: %s ip: %s not in pod list", e.serviceName, e.phase, ip)
+			return false
+		}
+	}
+	log.Infof("service: %s phase: %s endpoint listen all pod are ready", e.serviceName, e.phase)
 	return true
 }
 
@@ -96,6 +138,7 @@ func (e *endpointCapturer) getIPList() []string {
 			ips = append(ips, addrInfo.IP)
 		}
 	}
+	sort.Strings(ips)
 	return ips
 }
 
@@ -115,6 +158,7 @@ func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase s
 			ips = append(ips, podIP)
 		}
 	}
+	sort.Strings(ips)
 	return ips
 }
 
