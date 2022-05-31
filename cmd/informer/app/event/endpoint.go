@@ -119,6 +119,17 @@ func (e *endpointCapturer) operate() bool {
 	return false
 }
 
+func (e *endpointCapturer) getIPList() []string {
+	ips := make([]string, 0)
+	for _, item := range e.subsets {
+		for _, addrInfo := range item.Addresses {
+			ips = append(ips, addrInfo.IP)
+		}
+	}
+	sort.Strings(ips)
+	return ips
+}
+
 func (e *endpointCapturer) checkPodReady(namespace string, ips []string) bool {
 	podIPs := GetServicePods(e.clientset, namespace, e.serviceName, e.phase)
 	for _, ip := range ips {
@@ -131,17 +142,6 @@ func (e *endpointCapturer) checkPodReady(namespace string, ips []string) bool {
 	return true
 }
 
-func (e *endpointCapturer) getIPList() []string {
-	ips := make([]string, 0)
-	for _, item := range e.subsets {
-		for _, addrInfo := range item.Addresses {
-			ips = append(ips, addrInfo.IP)
-		}
-	}
-	sort.Strings(ips)
-	return ips
-}
-
 func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase string) []string {
 	var ips []string
 	pod, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
@@ -151,11 +151,9 @@ func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase s
 
 	for _, obj := range pod.Items {
 		name := obj.ObjectMeta.Name
-		podIP := obj.Status.PodIP
 		status := obj.Status.Phase
-
 		if isCurrentService(name, service, phase) && status == corev1.PodRunning {
-			ips = append(ips, podIP)
+			ips = append(ips, obj.Status.PodIP)
 		}
 	}
 	sort.Strings(ips)
