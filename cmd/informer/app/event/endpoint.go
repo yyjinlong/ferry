@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"nautilus/golib/log"
+	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
 )
@@ -144,12 +144,12 @@ func (e *endpointCapturer) checkPodReady(namespace string, ips []string) bool {
 
 func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase string) []string {
 	var ips []string
-	pod, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	pods, err := exec.GetPods(clientset, namespace)
 	if err != nil {
 		return ips
 	}
 
-	for _, obj := range pod.Items {
+	for _, obj := range pods.Items {
 		name := obj.ObjectMeta.Name
 		status := obj.Status.Phase
 		if isCurrentService(name, service, phase) && status == corev1.PodRunning {
