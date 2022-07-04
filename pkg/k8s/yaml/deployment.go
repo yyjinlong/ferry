@@ -80,7 +80,7 @@ func (dy *DeploymentYaml) spec() (map[string]interface{}, error) {
 	spec["selector"] = dy.selector()
 	spec["strategy"] = dy.strategy()
 
-	template, err := dy.template()
+	template, err := dy.podTemplate()
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (dy *DeploymentYaml) strategy() map[string]interface{} {
 	}
 }
 
-func (dy *DeploymentYaml) template() (map[string]interface{}, error) {
+func (dy *DeploymentYaml) podTemplate() (map[string]interface{}, error) {
 	/*
 		template:
 		  metadata:
@@ -123,9 +123,9 @@ func (dy *DeploymentYaml) template() (map[string]interface{}, error) {
 		    ...
 	*/
 	tpl := make(map[string]interface{})
-	tpl["metadata"] = dy.templateMetadata()
+	tpl["metadata"] = dy.podMetadata()
 
-	spec, err := dy.templateSpec()
+	spec, err := dy.podSpec()
 	if err != nil {
 		return nil, err
 	}
@@ -133,13 +133,13 @@ func (dy *DeploymentYaml) template() (map[string]interface{}, error) {
 	return tpl, nil
 }
 
-func (dy *DeploymentYaml) templateMetadata() interface{} {
+func (dy *DeploymentYaml) podMetadata() interface{} {
 	labels := make(map[string]interface{})
 	labels["labels"] = dy.labels()
 	return labels
 }
 
-func (dy *DeploymentYaml) templateSpec() (interface{}, error) {
+func (dy *DeploymentYaml) podSpec() (interface{}, error) {
 	/*
 		spec:
 		  hostAliases:
