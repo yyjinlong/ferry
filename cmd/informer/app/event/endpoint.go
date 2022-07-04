@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"nautilus/golib/log"
-	"nautilus/pkg/k8s/exec"
+	"nautilus/pkg/k8s/client"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
 )
@@ -144,7 +144,7 @@ func (e *endpointCapturer) checkPodReady(namespace string, ips []string) bool {
 
 func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase string) []string {
 	var ips []string
-	pods, err := exec.GetPods(clientset, namespace)
+	pods, err := client.GetPods(clientset, namespace)
 	if err != nil {
 		return ips
 	}
