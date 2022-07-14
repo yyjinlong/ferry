@@ -12,6 +12,11 @@ import (
 	"nautilus/golib/log"
 )
 
+const (
+	DEPLOY_TERMINATE_MESSAGE_PATH = "/dev/termination-log"
+	DEPLOY_TERMINATE_POLICY       = "File"
+)
+
 type DeploymentYaml struct {
 	Phase       string // 部署阶段
 	Deployment  string // deployment名字
@@ -116,57 +121,61 @@ func (dy *DeploymentYaml) strategy() map[string]interface{} {
 
 func (dy *DeploymentYaml) podTemplate() (map[string]interface{}, error) {
 	/*
-		template:
-		  metadata:
-		    ...
-		  spec:
-		    ...
+	  template:
+	    metadata:
+	      ...
+	    spec:
+	      ...
 	*/
-	tpl := make(map[string]interface{})
-	tpl["metadata"] = dy.podMetadata()
-
 	spec, err := dy.podSpec()
 	if err != nil {
 		return nil, err
 	}
-	tpl["spec"] = spec
-	return tpl, nil
+
+	return map[string]interface{}{
+		"metadata": dy.podMetadata(),
+		"spec":     spec,
+	}, nil
 }
 
 func (dy *DeploymentYaml) podMetadata() interface{} {
-	labels := make(map[string]interface{})
-	labels["labels"] = dy.labels()
-	return labels
+	return map[string]interface{}{
+		"labels": dy.labels(),
+	}
 }
 
 func (dy *DeploymentYaml) podSpec() (interface{}, error) {
 	/*
-		spec:
-		  hostAliases:
-			...
-		  dnsConfig:
-			...
-		  dnsPolicy:
-		  imagePullSecrets:
-		    ...
-		  nodeSelector:
-			...
-		  terminationGracePeriodSeconds:
-		  volumes:
-			...
-		  initContainers:
-			...
-		  containers:
-			...
-		  affinity:
-			...
+	  spec:
+	    initContainers:
+	      ...
+	    containers:
+	      ...
+	    imagePullSecrets:
+	      ...
+	    nodeSelector:
+	      ...
+	    volumes:
+	      ...
+	    hostAliases:
+	      ...
+	    dnsPolicy:
+	      ...
+	    dnsConfig:
+	      ...
+	    affinity:
+	      ...
+	    terminationGracePeriodSeconds:
 	*/
+
+	containers, err := dy.containers()
+	if err != nil {
+		return nil, err
+	}
+
 	spec := make(map[string]interface{})
-	spec["hostAliases"] = dy.hostAliases()
-	spec["dnsConfig"] = dy.dnsConfig()
-	spec["dnsPolicy"] = "None"
+	spec["containers"] = containers
 	spec["imagePullSecrets"] = dy.imagePullSecrets()
-	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	spec["nodeSelector"] = dy.nodeSelector()
 
 	volumes, err := dy.volumes()
@@ -175,22 +184,22 @@ func (dy *DeploymentYaml) podSpec() (interface{}, error) {
 	}
 	spec["volumes"] = volumes
 
-	containers, err := dy.containers()
-	if err != nil {
-		return nil, err
-	}
-	spec["containers"] = containers
+	spec["hostAliases"] = dy.hostAliases()
+	spec["dnsPolicy"] = "None"
+	spec["dnsConfig"] = dy.dnsConfig()
+	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	spec["affinity"] = dy.affinity()
 	return spec, nil
 }
 
 func (dy *DeploymentYaml) hostAliases() interface{} {
 	/*
-	   hostAliases:
-	     - hostnames:
-	         - ...
-	       ip:
+	  hostAliases:
+	  - hostnames:
+	    - ...
+	    ip:
 	*/
+
 	// 默认主机配置
 	hosts := []map[string]string{{"127.0.0.1": "localhost.localdomain"}}
 
@@ -208,43 +217,40 @@ func (dy *DeploymentYaml) hostAliases() interface{} {
 
 	hostAliaseList := make([]interface{}, 0)
 	for ip, hostList := range hostMap {
-		hostAliases := make(map[string]interface{})
-		hostAliases["ip"] = ip
-		hostAliases["hostnames"] = hostList
-		hostAliaseList = append(hostAliaseList, hostAliases)
+		hostAliaseList = append(hostAliaseList, map[string]interface{}{
+			"hostnames": hostList,
+			"ip":        ip,
+		})
 	}
 	return hostAliaseList
 }
 
 func (dy *DeploymentYaml) dnsConfig() interface{} {
 	/*
-		dnsConfig:
-			nameservers:
-			- ...
+	  dnsConfig:
+	    nameservers:
+	    - xxx.xxx.xxx.xxx
 	*/
-	dnsList := []string{"114.114.114.114"}
+	dns := []string{
+		"114.114.114.114",
+	}
 	return map[string][]string{
-		"nameservers": dnsList,
+		"nameservers": dns,
 	}
 }
 
 func (dy *DeploymentYaml) imagePullSecrets() interface{} {
 	/*
-		imagePullSecrets:
-		- name: xxx
+	  imagePullSecrets:
+	  - name: xxx
 	*/
-	secrets := make([]map[string]string, 0)
-	kv := map[string]string{
-		"name": "harborkey",
-	}
-	secrets = append(secrets, kv)
-	return secrets
+	return []map[string]string{{"name": "harborkey"}}
 }
 
 func (dy *DeploymentYaml) nodeSelector() interface{} {
 	/*
-	   nodeSelector:
-	     ...
+	  nodeSelector:
+	    ...
 	*/
 	return map[string]string{
 		"aggregate": "default",
@@ -252,26 +258,15 @@ func (dy *DeploymentYaml) nodeSelector() interface{} {
 }
 
 func (dy *DeploymentYaml) volumes() (interface{}, error) {
-	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath类型.
-	volumes := make([]interface{}, 0)
-	defineVolume, err := dy.createDefineVolume()
-	if err != nil {
-		return nil, err
-	}
-	volumes = append(volumes, defineVolume)
-	return volumes, nil
-}
-
-func (dy *DeploymentYaml) createDefineVolume() (interface{}, error) {
 	/*
-	   创建自定义的数据卷(服务需要的数据卷)
-	   volumes:
-	     - name:
-	       hostPath:
-	         path:
-	         type:
+	  volumes:
+	  - name:
+	    hostPath:
+	      path:
+	      type:
 	*/
 
+	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath类型.
 	type physicalInfo struct {
 		HostpathType string `json:"hostpath_type"`
 		PhysicalPath string `json:"physical_path"`
@@ -288,6 +283,7 @@ func (dy *DeploymentYaml) createDefineVolume() (interface{}, error) {
 		return nil, err
 	}
 
+	// NOTE: 创建自定义的数据卷(服务需要的数据卷)
 	defineVolume := make(map[string]interface{})
 	for _, item := range volumes {
 		defineVolume["name"] = item.Name
@@ -300,65 +296,77 @@ func (dy *DeploymentYaml) createDefineVolume() (interface{}, error) {
 		}
 	}
 	log.Infof("create define volume: %v finish", defineVolume)
-	return defineVolume, nil
+
+	return []map[string]interface{}{
+		defineVolume,
+	}, nil
 }
 
 func (dy *DeploymentYaml) affinity() interface{} {
 	/*
-		同一deployment下的pod散列在不同node上.
-		podAntiAffinity:
-		  preferredDuringSchedulingIgnoredDuringExecution:
-		  - podAffinityTerm:
-		      labelSelector:
-		        matchExpressions:
-		        - key: service
-		          operator: In
-		          values:
-		          - deployment名字
-		      topologyKey: kubernetes.io/hostname
-		    weight: 100
+	  podAntiAffinity:
+	    preferredDuringSchedulingIgnoredDuringExecution:
+	    - podAffinityTerm:
+	        labelSelector:
+	          matchExpressions:
+	          - key: service
+	            operator: In
+	            values:
+	            - deployment名字
+	        topologyKey: kubernetes.io/hostname
+	      weight: 100
 	*/
 
-	compare := make(map[string]interface{})
-	compare["key"] = "service"
-	compare["operator"] = "In"
-	compare["values"] = []string{dy.Deployment}
+	// NOTE: 同一deployment下的pod散列在不同node上
+	compare := map[string]interface{}{
+		"key":      "service",
+		"operator": "In",
+		"values":   []string{dy.Deployment},
+	}
+
 	matchExpression := []interface{}{compare}
 	labelSelector := map[string]interface{}{"matchExpressions": matchExpression}
 
-	podAffinityTerm := make(map[string]interface{})
-	podAffinityTerm["labelSelector"] = labelSelector
-	podAffinityTerm["topologyKey"] = "kubernetes.io/hostname"
+	podAffinityTerm := map[string]interface{}{
+		"labelSelector": labelSelector,
+		"topologyKey":   "kubernetes.io/hostname",
+	}
 
-	policy := make(map[string]interface{})
-	policy["podAffinityTerm"] = podAffinityTerm
-	policy["weight"] = 100
+	policy := map[string]interface{}{
+		"podAffinityTerm": podAffinityTerm,
+		"weight":          100,
+	}
 	policies := []interface{}{policy}
-	softLimit := map[string]interface{}{"preferredDuringSchedulingIgnoredDuringExecution": policies}
-	return map[string]interface{}{"podAntiAffinity": softLimit}
+	softLimit := map[string]interface{}{
+		"preferredDuringSchedulingIgnoredDuringExecution": policies,
+	}
+	return map[string]interface{}{
+		"podAntiAffinity": softLimit,
+	}
 }
 
 func (dy *DeploymentYaml) containers() (interface{}, error) {
 	/*
-		- name:
-		  image:
-		  imagePullPolicy:
-		  env:
-		  envFrom:
-		  lifecycle:
-		    ...
-		  resources:
-		    ...
-		  securityContext:
-		    ...
-		  volumeMounts:
-		    ...
-		  livenessProbe:
-		    ...
-		  readinessProbe:
-		    ...
-		  terminationMessagePath:
-		  terminationMessagePolicy:
+	  containers:
+	  - name:
+	    image:
+	    imagePullPolicy:
+	    env:
+	    envFrom:
+	    resources:
+	      ...
+	    securityContext:
+	      ...
+	    lifecycle:
+	      ...
+	    volumeMounts:
+	      ...
+	    livenessProbe:
+	      ...
+	    readinessProbe:
+	      ...
+	    terminationMessagePath:
+	    terminationMessagePolicy:
 	*/
 
 	containerList := make([]interface{}, 0)
@@ -366,11 +374,11 @@ func (dy *DeploymentYaml) containers() (interface{}, error) {
 	container["name"] = dy.Service
 	container["image"] = fmt.Sprintf("%s:%s", dy.ImageURL, dy.ImageTag)
 	container["imagePullPolicy"] = "IfNotPresent"
-	container["env"] = dy.setEnv()
+	container["env"] = dy.envs()
 	container["envFrom"] = dy.envFrom()
 	container["resources"] = dy.setResource(dy.QuotaCpu, dy.QuotaMaxCpu, dy.QuotaMem, dy.QuotaMaxMem)
-	container["securityContext"] = dy.security()
 	container["lifecycle"] = dy.lifecycle()
+	container["securityContext"] = dy.security()
 	volumeMounts, err := dy.mountContainerVolume()
 	if err != nil {
 		return nil, err
@@ -378,32 +386,72 @@ func (dy *DeploymentYaml) containers() (interface{}, error) {
 	container["volumeMounts"] = volumeMounts
 	container["livenessProbe"] = dy.liveness()
 	container["readinessProbe"] = dy.readiness()
-	container["terminationMessagePath"] = "/dev/termination-log"
-	container["terminationMessagePolicy"] = "File"
+	container["terminationMessagePath"] = DEPLOY_TERMINATE_MESSAGE_PATH
+	container["terminationMessagePolicy"] = DEPLOY_TERMINATE_POLICY
 	containerList = append(containerList, container)
 	return containerList, nil
 }
 
-func (dy *DeploymentYaml) setEnv() interface{} {
+func (dy *DeploymentYaml) envs() interface{} {
 	/*
-	   - env:
-	       - name:
-	         value:
+	  env:
+	  - name:
+	    value:
 	*/
-	env := []map[string]string{
+	ipRef := map[string]string{
+		"apiVersion": "v1",
+		"fieldPath":  "status.podIP",
+	}
+	ipVal := map[string]interface{}{
+		"fieldRef": ipRef,
+	}
+
+	nameRef := map[string]string{
+		"apiVersion": "v1",
+		"fieldPath":  "metadata.name",
+	}
+	nameVal := map[string]interface{}{
+		"fieldRef": nameRef,
+	}
+
+	env := []map[string]interface{}{
+		{"name": "NAMESPACE", "value": dy.Namespace},
 		{"name": "SERVICE", "value": dy.Service},
+		{"name": "STAGE", "value": dy.Phase},
+		{"name": "PODIP", "valueFrom": ipVal},
+		{"name": "POD_NAME", "valueFrom": nameVal},
 	}
 	return env
 }
 
+func (dy *DeploymentYaml) envFrom() interface{} {
+	/*
+	  envFrom:
+	  - configMapRef:
+	    name: xxx
+	*/
+	pair := map[string]string{
+		"name": dy.ConfigMap,
+	}
+
+	ref := map[string]interface{}{
+		"configMapRef": pair,
+	}
+
+	froms := make([]map[string]interface{}, 0)
+	froms = append(froms, ref)
+	return froms
+}
+
 func (dy *DeploymentYaml) setResource(cpu, cpuMax, mem, memMax int) interface{} {
 	/*
-		resources:
-		    requests:
-			  ...
-		    limits:
-			  ...
+	  resources:
+	   requests:
+	     ...
+	   limits:
+	     ....
 	*/
+
 	requests := map[string]string{
 		"cpu":    fmt.Sprintf("%dm", cpu),
 		"memory": fmt.Sprintf("%dMi", mem),
@@ -420,16 +468,18 @@ func (dy *DeploymentYaml) setResource(cpu, cpuMax, mem, memMax int) interface{} 
 
 func (dy *DeploymentYaml) security() interface{} {
 	/*
-	   securityContext:
-	     capabilities:
-	       add:
+	  securityContext:
+	    capabilities:
+	      add:
+	      - SYS_ADMIN
+	      - SYS_PTRACE
 	*/
-	sysList := []string{"SYS_ADMIN", "SYS_PTRACE"}
-	capabilities := map[string][]string{"add": sysList}
-	context := map[string]interface{}{
+	capabilities := map[string]interface{}{
+		"add": []string{"SYS_ADMIN", "SYS_PTRACE"},
+	}
+	return map[string]interface{}{
 		"capabilities": capabilities,
 	}
-	return context
 }
 
 func (dy *DeploymentYaml) lifecycle() interface{} {
@@ -456,9 +506,9 @@ func (dy *DeploymentYaml) lifecycle() interface{} {
 func (dy *DeploymentYaml) mountContainerVolume() (interface{}, error) {
 	/*
 	   volumeMounts:
-	     - name:
-	       mountPath:
-	       subPath:
+	   - name:
+	     mountPath:
+	     subPath:
 	*/
 
 	type containerInfo struct {
@@ -466,8 +516,8 @@ func (dy *DeploymentYaml) mountContainerVolume() (interface{}, error) {
 	}
 
 	type volume struct {
-		Type      string        `json:"volume_type"`
 		Name      string        `json:"volume_name"`
+		Type      string        `json:"volume_type"`
 		Container containerInfo `json:"container"`
 	}
 
@@ -490,14 +540,14 @@ func (dy *DeploymentYaml) mountContainerVolume() (interface{}, error) {
 
 func (dy *DeploymentYaml) liveness() interface{} {
 	/*
-		exec:
-		  command:
-		    ...
-		initialDelaySeconds:
-		timeoutSeconds:
-		periodSeconds:
-		successThreshold:
-		failureThreshold:
+	  exec:
+	    command:
+	      ...
+	  initialDelaySeconds:
+	  timeoutSeconds:
+	  periodSeconds:
+	  successThreshold:
+	  failureThreshold:
 	*/
 
 	command := []string{
@@ -518,14 +568,14 @@ func (dy *DeploymentYaml) liveness() interface{} {
 
 func (dy *DeploymentYaml) readiness() interface{} {
 	/*
-		exec:
-		  command:
-		    ...
-		initialDelaySeconds:
-		timeoutSeconds:
-		periodSeconds:
-		successThreshold:
-		failureThreshold:
+	  exec:
+	    command:
+	      ...
+	  initialDelaySeconds:
+	  timeoutSeconds:
+	  periodSeconds:
+	  successThreshold:
+	  failureThreshold:
 	*/
 
 	command := []string{
@@ -542,22 +592,4 @@ func (dy *DeploymentYaml) readiness() interface{} {
 		"successThreshold":    1,
 		"failureThreshold":    10,
 	}
-}
-
-func (dy *DeploymentYaml) envFrom() interface{} {
-	/*
-		- configMapRef:
-		   name: xxx
-	*/
-	froms := make([]map[string]interface{}, 0)
-
-	pair := map[string]string{
-		"name": dy.ConfigMap,
-	}
-
-	ref := map[string]interface{}{
-		"configMapRef": pair,
-	}
-	froms = append(froms, ref)
-	return froms
 }
