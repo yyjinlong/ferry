@@ -37,24 +37,26 @@ type DeploymentYaml struct {
 
 func (dy *DeploymentYaml) Instance() (string, error) {
 	/*
-		apiVersion
-		kind
-		metadata
-		  ...
-		spec:
-		  ...
+	  apiVersion
+	  kind
+	  metadata
+	    ...
+	  spec:
+	    ...
 	*/
+
+	controller := map[string]interface{}{
+		"apiVersion": "apps/v1",
+		"kind":       "Deployment",
+		"metadata":   dy.metadata(),
+	}
 
 	spec, err := dy.spec()
 	if err != nil {
 		return "", err
 	}
-	controller := map[string]interface{}{
-		"apiVersion": "apps/v1",
-		"kind":       "Deployment",
-		"metadata":   dy.metadata(),
-		"spec":       spec,
-	}
+	controller["spec"] = spec
+
 	config, err := json.Marshal(controller)
 	if err != nil {
 		return "", err
@@ -71,14 +73,14 @@ func (dy *DeploymentYaml) metadata() map[string]string {
 
 func (dy *DeploymentYaml) spec() (map[string]interface{}, error) {
 	/*
-		spec:
-		  replicas:
-		  selector:
-		    ...
-		  strategy:
-		    ...
-		  template:
-		    ...
+	  spec:
+	    replicas:
+	    selector:
+	      ...
+	    strategy:
+	      ...
+	    template:
+	      ...
 	*/
 	spec := make(map[string]interface{})
 	spec["replicas"] = dy.Replicas
@@ -109,6 +111,13 @@ func (dy *DeploymentYaml) labels() map[string]string {
 }
 
 func (dy *DeploymentYaml) strategy() map[string]interface{} {
+	/*
+	  strategy:
+	    type: RollingUpdate
+	    rollingUpdate:
+	      maxSurge: 0
+	      maxUnavailable: 100%
+	*/
 	rollingUpdate := map[string]interface{}{
 		"maxSurge":       0,
 		"maxUnavailable": "100%",
@@ -187,56 +196,9 @@ func (dy *DeploymentYaml) podSpec() (interface{}, error) {
 	spec["hostAliases"] = dy.hostAliases()
 	spec["dnsPolicy"] = "None"
 	spec["dnsConfig"] = dy.dnsConfig()
-	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	spec["affinity"] = dy.affinity()
+	spec["terminationGracePeriodSeconds"] = dy.ReserveTime
 	return spec, nil
-}
-
-func (dy *DeploymentYaml) hostAliases() interface{} {
-	/*
-	  hostAliases:
-	  - hostnames:
-	    - ...
-	    ip:
-	*/
-
-	// 默认主机配置
-	hosts := []map[string]string{{"127.0.0.1": "localhost.localdomain"}}
-
-	hostMap := make(map[string][]string)
-	for _, item := range hosts {
-		for ip, hostname := range item {
-			if hostList, ok := hostMap[ip]; !ok {
-				hostMap[ip] = []string{hostname}
-			} else {
-				hostList = append(hostList, hostname)
-				hostMap[ip] = hostList
-			}
-		}
-	}
-
-	hostAliaseList := make([]interface{}, 0)
-	for ip, hostList := range hostMap {
-		hostAliaseList = append(hostAliaseList, map[string]interface{}{
-			"hostnames": hostList,
-			"ip":        ip,
-		})
-	}
-	return hostAliaseList
-}
-
-func (dy *DeploymentYaml) dnsConfig() interface{} {
-	/*
-	  dnsConfig:
-	    nameservers:
-	    - xxx.xxx.xxx.xxx
-	*/
-	dns := []string{
-		"114.114.114.114",
-	}
-	return map[string][]string{
-		"nameservers": dns,
-	}
 }
 
 func (dy *DeploymentYaml) imagePullSecrets() interface{} {
@@ -302,8 +264,56 @@ func (dy *DeploymentYaml) volumes() (interface{}, error) {
 	}, nil
 }
 
+func (dy *DeploymentYaml) hostAliases() interface{} {
+	/*
+	  hostAliases:
+	  - hostnames:
+	    - ...
+	    ip:
+	*/
+
+	// 默认主机配置
+	hosts := []map[string]string{{"127.0.0.1": "localhost.localdomain"}}
+
+	hostMap := make(map[string][]string)
+	for _, item := range hosts {
+		for ip, hostname := range item {
+			if hostList, ok := hostMap[ip]; !ok {
+				hostMap[ip] = []string{hostname}
+			} else {
+				hostList = append(hostList, hostname)
+				hostMap[ip] = hostList
+			}
+		}
+	}
+
+	hostAliaseList := make([]interface{}, 0)
+	for ip, hostList := range hostMap {
+		hostAliaseList = append(hostAliaseList, map[string]interface{}{
+			"hostnames": hostList,
+			"ip":        ip,
+		})
+	}
+	return hostAliaseList
+}
+
+func (dy *DeploymentYaml) dnsConfig() interface{} {
+	/*
+	  dnsConfig:
+	    nameservers:
+	    - xxx.xxx.xxx.xxx
+	*/
+	dns := []string{
+		"114.114.114.114",
+	}
+	return map[string][]string{
+		"nameservers": dns,
+	}
+}
+
 func (dy *DeploymentYaml) affinity() interface{} {
 	/*
+	  同一deployment下的pod散列在不同node上
 	  podAntiAffinity:
 	    preferredDuringSchedulingIgnoredDuringExecution:
 	    - podAffinityTerm:
@@ -317,7 +327,6 @@ func (dy *DeploymentYaml) affinity() interface{} {
 	      weight: 100
 	*/
 
-	// NOTE: 同一deployment下的pod散列在不同node上
 	compare := map[string]interface{}{
 		"key":      "service",
 		"operator": "In",
@@ -355,9 +364,9 @@ func (dy *DeploymentYaml) containers() (interface{}, error) {
 	    envFrom:
 	    resources:
 	      ...
-	    securityContext:
-	      ...
 	    lifecycle:
+	      ...
+	    securityContext:
 	      ...
 	    volumeMounts:
 	      ...
@@ -484,13 +493,13 @@ func (dy *DeploymentYaml) security() interface{} {
 
 func (dy *DeploymentYaml) lifecycle() interface{} {
 	/*
-	   在容器被终结之前, Kubernetes 将发送一个 preStop 事件.
-	   优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 10秒等待未处理完的请求,
-	             如果没处理完, 则会被强制终止(kill -9)
-	   lifecycle:
-	     preStop:
-	       exec:
-	         command:
+	  在容器被终结之前, Kubernetes 将发送一个 preStop 事件.
+	  优雅关闭: 先发送一个kill信号(kill -3), 之后sleep 10秒等待未处理完的请求,
+	            如果没处理完, 则会被强制终止(kill -9)
+	  lifecycle:
+	    preStop:
+	      exec:
+	        command:
 	*/
 	stopCmd := []string{
 		"/bin/sh",
@@ -505,10 +514,10 @@ func (dy *DeploymentYaml) lifecycle() interface{} {
 
 func (dy *DeploymentYaml) mountContainerVolume() (interface{}, error) {
 	/*
-	   volumeMounts:
-	   - name:
-	     mountPath:
-	     subPath:
+	  volumeMounts:
+	  - name:
+	    mountPath:
+	    subPath:
 	*/
 
 	type containerInfo struct {
