@@ -203,7 +203,7 @@ func (cy *CronjobYaml) nodeSelector() interface{} {
 	    ...
 	*/
 	return map[string]string{
-		"aggregate": "cronjob",
+		"batch": "cronjob",
 	}
 }
 

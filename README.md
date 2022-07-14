@@ -44,7 +44,14 @@ Jinlong Yang
 ### 4.1 节点标签
 
 ```
+# 业务node
 kubectl label node xxxx aggregate=default
+
+# 定时node
+kubectl label node xxxx batch=cronjob
+
+# 查看所有node label
+kubectl get nodes --show-labels
 ```
 
 ### 4.2 ServiceAccount Token
