@@ -67,11 +67,23 @@ func GetServicePipeline(serviceID int64) (*Pipeline, error) {
 	return pipeline, nil
 }
 
+// GetServiceLastPipeline 根据服务id返回最近一次成功的上线信息
+func GetServiceLastPipeline(serviceID int64) (*Pipeline, error) {
+	pipeline := new(Pipeline)
+	if has, err := SEngine().Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
+		Desc("id").Get(pipeline); err != nil {
+		return nil, err
+	} else if !has {
+		return nil, NotFound
+	}
+	return pipeline, nil
+}
+
 // FindPipelineInfo 根据service返回pipeline相关信息
 func FindPipelineInfo(serviceID int64) ([]Pipeline, error) {
 	pList := make([]Pipeline, 0)
 	if err := SEngine().Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
-		Find(&pList); err != nil {
+		Desc("id").Find(&pList); err != nil {
 		return nil, err
 	}
 	return pList, nil

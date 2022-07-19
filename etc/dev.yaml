@@ -18,6 +18,7 @@ k8s:
   deployment: "https://%s:6443/apis/apps/v1/namespaces/%s/deployments"
   service: "https://%s:6443/api/v1/namespaces/%s/services"
   configmap: "https://%s:6443/api/v1/namespaces/%s/configmaps"
+  cronjob: "https://%s:6443/apis/batch/v1/namespaces/%s/cronjobs"
 
 cluster:
   hp: '10.12.28.4'

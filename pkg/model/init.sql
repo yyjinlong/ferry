@@ -126,6 +126,18 @@ create table if not exists pipeline_phase (
     update_at timestamp not null default now()
 );
 
+--
+-- 定时任务
+--
+create table if not exists crontab (
+    id serial primary key,
+    namespace varchar(32) not null,
+    service varchar(32) not null,
+    command varchar(800) not null,
+    schedule varchar(20) not null,
+    create_at timestamp not null default now(),
+    update_at timestamp not null default now()
+);
 
 -- 插入集群
 insert into cluster(name, token, creator) values('hp', '', 'yangjinlong'), ('xq', '', 'yangjinlong');

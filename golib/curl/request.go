@@ -38,6 +38,11 @@ func Patch(url string, header map[string]string, payload []byte, timeout int) (s
 	return body, err
 }
 
+func Delete(url string, header map[string]string, timeout int) (string, error) {
+	_, _, body, err := Curl(http.MethodDelete, url, nil, header, nil, timeout)
+	return body, err
+}
+
 func Curl(mode, url string, cookie map[string]string, header map[string]string, payload []byte, timeout int) (map[string]string, map[string]string, string, error) {
 	request, err := http.NewRequest(mode, url, bytes.NewBuffer(payload))
 	if err != nil {

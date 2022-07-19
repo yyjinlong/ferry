@@ -46,4 +46,10 @@ func URLs(r *gin.Engine) {
 		ro.POST("/check/rollback", api.ExtendContext(controller.CheckRollback))
 		ro.POST("/rollback", api.ExtendContext(controller.Rollback))
 	}
+
+	// 定时任务
+	cr := r.Group("v1", UserAuth)
+	{
+		cr.POST("/cronjob", api.ExtendContext(controller.BuildCronjob))
+	}
 }

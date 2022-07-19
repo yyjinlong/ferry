@@ -155,6 +155,7 @@ func (cy *CronjobYaml) podSpec() (interface{}, error) {
 	      ...
 	    nodeSelector:
 	      ...
+	    restartPolicy:Never:
 	    volumes:
 	      ...
 	    hostAliases:
@@ -175,6 +176,7 @@ func (cy *CronjobYaml) podSpec() (interface{}, error) {
 	spec["containers"] = containers
 	spec["imagePullSecrets"] = cy.imagePullSecrets()
 	spec["nodeSelector"] = cy.nodeSelector()
+	spec["restartPolicy"] = "Never"
 
 	volumes, err := cy.volumes()
 	if err != nil {
@@ -337,6 +339,7 @@ func (cy *CronjobYaml) containers() (interface{}, error) {
 	container["volumeMounts"] = mounts
 	container["terminationMessagePath"] = CRON_TERMINATE_MESSAGE_PATH
 	container["terminationMessagePolicy"] = CRON_TERMINATE_POLICY
+	containerList = append(containerList, container)
 	return containerList, nil
 }
 
@@ -346,7 +349,7 @@ func (cy *CronjobYaml) args() interface{} {
 	  -
 	*/
 
-	cmd := fmt.Sprintf("su - tong -c '%s && sleep 10'", cy.Command)
+	cmd := fmt.Sprintf("su - tong -c \"%s && sleep 10\"", cy.Command)
 	return []string{"/bin/sh", "-c", cmd}
 }
 

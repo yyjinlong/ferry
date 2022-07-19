@@ -31,15 +31,16 @@ const (
 
 // 数据库查询
 const (
-	DB_QUERY_SERVICE_ERROR   = "查询服务: %s 错误: %s"
-	DB_PIPELINE_NOT_FOUND    = "pipeline: %d 查询不存在"
-	DB_PIPELINE_QUERY_ERROR  = "查询pipeline: %d 失败: %s"
-	DB_PIPELINE_UPDATE_ERROR = "查询pipeline变更信息失败: %s"
-	DB_SERVICE_QUERY_ERROR   = "查询service信息失败: %s"
-	DB_QUERY_NAMESPACE_ERROR = "查询命名空间信息失败: %s"
-	DB_QUERY_PHASES_ERROR    = "查询pipeline对应阶段错误: %s"
-	DB_UPDATE_PIPELINE_ERROR = "更新pipeline状态失败: %s"
-	DB_WRITE_LOCK_ERROR      = "服务占锁: %v 失败: %s"
+	DB_QUERY_SERVICE_ERROR                = "查询服务: %s 错误: %s"
+	DB_PIPELINE_NOT_FOUND                 = "pipeline: %d 查询不存在"
+	DB_PIPELINE_QUERY_ERROR               = "查询pipeline: %d 失败: %s"
+	DB_PIPELINE_QUERY_BY_SERVICE_ID_ERROR = "查询pipeline根据服务id: %d 失败: %s"
+	DB_PIPELINE_UPDATE_ERROR              = "查询pipeline变更信息失败: %s"
+	DB_SERVICE_QUERY_ERROR                = "查询service信息失败: %s"
+	DB_QUERY_NAMESPACE_ERROR              = "查询命名空间信息失败: %s"
+	DB_QUERY_PHASES_ERROR                 = "查询pipeline对应阶段错误: %s"
+	DB_UPDATE_PIPELINE_ERROR              = "更新pipeline状态失败: %s"
+	DB_WRITE_LOCK_ERROR                   = "服务占锁: %v 失败: %s"
 )
 
 const (
@@ -85,4 +86,12 @@ const (
 	ROL_CANNOT_EXECUTE     = "不能执行回滚"
 	ROL_PROCESS_NO_EXECUTE = "发布中的deployment不能回滚!"
 	ROL_RECORD_PHASE_ERROR = "记录回滚阶段: %s 错误: %s"
+)
+
+// 定时任务
+const (
+	CRON_PUBLISH_ERROR    = "发布cronjob失败: %s"
+	CRON_WRITE_DB_ERROR   = "数据库存储crontab失败: %s"
+	CRON_BUILD_YAML_ERROR = "构建cronjob yaml失败: %s"
+	CRON_K8S_EXEC_FAILED  = "K8S创建cronjob yaml失败: %s"
 )
