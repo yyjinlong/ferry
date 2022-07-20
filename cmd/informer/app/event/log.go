@@ -20,6 +20,10 @@ import (
 	"nautilus/pkg/util"
 )
 
+var (
+	PHASE_LIST = []string{"sandbox", "online"}
+)
+
 func HandleLogCapturer(obj interface{}, mode string) {
 	data := obj.(*corev1.Event)
 	var (
@@ -73,6 +77,9 @@ func (c *logCapturer) parse() bool {
 
 	afterList := strings.Split(matchList[1], "-")
 	c.phase = afterList[0]
+	if !util.In(c.phase, PHASE_LIST) {
+		return false
+	}
 
 	result := re.FindAllStringSubmatch(c.name, -1)
 	matchResult := result[0][0]
@@ -88,7 +95,7 @@ func (c *logCapturer) parse() bool {
 
 func (c *logCapturer) operate() bool {
 	pipeline, err := model.GetServicePipeline(c.serviceID)
-	if !errors.Is(err, model.NotFound) && err != nil {
+	if errors.Is(err, model.NotFound) || err != nil {
 		log.Errorf("query pipeline by service error: %s", err)
 		return false
 	}
