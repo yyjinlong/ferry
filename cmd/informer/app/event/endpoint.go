@@ -47,7 +47,7 @@ type endpointCapturer struct {
 }
 
 func (e *endpointCapturer) valid() bool {
-	// 检查是否是业务的service
+	// NOTE: 检查是否是业务的service
 	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
 	if reg == nil {
 		return false

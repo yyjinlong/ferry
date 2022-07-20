@@ -69,8 +69,8 @@ func (cy *CronjobYaml) cronSpec() (interface{}, error) {
 		"schedule":                   cy.Schedule,
 		"concurrencyPolicy":          "Forbid",           // 类似文件锁
 		"startingDeadlineSeconds":    CRON_BOOT_DEADLINE, // 开始该任务的截止时间秒数
-		"successfulJobsHistoryLimit": 2,                  // 保留多少已完成的任务数
-		"failedJobsHistoryLimit":     2,                  // 保留多少失败的任务数
+		"successfulJobsHistoryLimit": 0,                  // 保留多少已完成的任务数
+		"failedJobsHistoryLimit":     0,                  // 保留多少失败的任务数
 		"suspend":                    false,
 	}
 

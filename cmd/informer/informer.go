@@ -38,7 +38,8 @@ func main() {
 	clientset := app.GetClientset(*cluster)
 	go app.DeploymentFinishEvent(clientset)
 	go app.PublishLogEvent(clientset)
-	go app.EndpointReadyEvent(clientset)
+	go app.EndpointFinishEvent(clientset)
+	go app.CronjobFinishEvent(clientset)
 
 	done := make(chan int)
 	<-done
