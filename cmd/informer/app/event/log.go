@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	PHASE_LIST = []string{"sandbox", "online"}
+	PHASE_LIST = []string{model.PHASE_SANDBOX, model.PHASE_ONLINE}
 )
 
 func HandleLogCapturer(obj interface{}, mode string) {

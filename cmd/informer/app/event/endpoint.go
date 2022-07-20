@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
@@ -23,9 +22,9 @@ func HandleEndpointCapturer(obj interface{}, mode string, clientset *kubernetes.
 	)
 
 	log.InitFields(log.Fields{
-		"mode":    mode,
-		"name":    name,
-		"version": data.ObjectMeta.ResourceVersion,
+		"mode":     mode,
+		"endpoint": name,
+		"version":  data.ObjectMeta.ResourceVersion,
 	})
 
 	handleEvent(&endpointCapturer{
@@ -106,13 +105,13 @@ func (e *endpointCapturer) operate() bool {
 	switch e.phase {
 	case model.PHASE_SANDBOX:
 		if len(ips) == 1 && e.checkPodReady(namespace, ips) {
-			fmt.Printf("-------service: %s sandbox ready ips: %#v\n", e.serviceName, ips)
+			log.Infof("-------service: %s sandbox ready ips: %#v", e.serviceName, ips)
 			return true
 		}
 
 	case model.PHASE_ONLINE:
 		if len(ips) == serviceObj.Replicas && e.checkPodReady(namespace, ips) {
-			fmt.Printf("-------service: %s online ready ips: %#v\n", e.serviceName, ips)
+			log.Infof("-------service: %s online ready ips: %#v", e.serviceName, ips)
 			return true
 		}
 	}
