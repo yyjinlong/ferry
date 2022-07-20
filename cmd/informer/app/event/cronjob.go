@@ -26,12 +26,6 @@ func HandleJobCapturer(obj interface{}, mode string) {
 		finishTime    = data.Status.CompletionTime
 	)
 
-	log.InitFields(log.Fields{
-		"mode":    mode,
-		"job":     name,
-		"version": data.ObjectMeta.ResourceVersion,
-	})
-
 	handleEvent(&JobCapturer{
 		mode:          mode,
 		name:          name,
@@ -75,6 +69,7 @@ func (jc *JobCapturer) ready() bool {
 	} else {
 		jc.jobResult = 0
 	}
+	log.Infof("check job: %s ready: %d on mode: %s", jc.name, jc.jobResult, jc.mode)
 	return true
 }
 

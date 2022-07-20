@@ -32,8 +32,6 @@ func HandleLogCapturer(obj interface{}, mode string) {
 		fields  = data.ObjectMeta.ManagedFields
 	)
 
-	log.InitFields(log.Fields{"mode": mode, "event": name})
-
 	handleEvent(&logCapturer{
 		name:    name,
 		message: message,

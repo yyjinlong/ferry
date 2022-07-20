@@ -27,12 +27,6 @@ func HandleDeploymentCapturer(obj interface{}, mode string) {
 		replicas        = *data.Spec.Replicas
 	)
 
-	log.InitFields(log.Fields{
-		"mode":       mode,
-		"deployment": deployment,
-		"version":    resourceVersion,
-	})
-
 	handleEvent(&deploymentCapturer{
 		mode:              mode,
 		deployment:        deployment,
@@ -84,7 +78,7 @@ func (c *deploymentCapturer) ready() bool {
 		c.replicas == c.updatedReplicas && c.replicas == c.availableReplicas) {
 		return false
 	}
-	log.Infof("check deployment is ready, replicas: %d", c.replicas)
+	log.Infof("check deployment: %s ready on mode: %s replicas: %d", c.deployment, c.mode, c.replicas)
 	return true
 }
 

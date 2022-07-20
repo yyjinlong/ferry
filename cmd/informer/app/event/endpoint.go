@@ -21,12 +21,6 @@ func HandleEndpointCapturer(obj interface{}, mode string, clientset *kubernetes.
 		name = data.ObjectMeta.Name
 	)
 
-	log.InitFields(log.Fields{
-		"mode":     mode,
-		"endpoint": name,
-		"version":  data.ObjectMeta.ResourceVersion,
-	})
-
 	handleEvent(&endpointCapturer{
 		mode:      mode,
 		name:      name,
@@ -59,6 +53,7 @@ func (e *endpointCapturer) valid() bool {
 }
 
 func (e *endpointCapturer) ready() bool {
+	log.Infof("check endpoint: %s ready on mode: %s", e.name, e.mode)
 	return true
 }
 
