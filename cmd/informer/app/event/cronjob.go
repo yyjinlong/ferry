@@ -28,7 +28,7 @@ func HandleJobCapturer(obj interface{}, mode string) {
 
 	log.InitFields(log.Fields{
 		"mode":    mode,
-		"name":    name,
+		"job":     name,
 		"version": data.ObjectMeta.ResourceVersion,
 	})
 
@@ -75,6 +75,7 @@ func (jc *JobCapturer) ready() bool {
 	} else {
 		jc.jobResult = 0
 	}
+	log.Infof("init job")
 	return true
 }
 
