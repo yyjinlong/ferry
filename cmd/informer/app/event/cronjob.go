@@ -75,7 +75,6 @@ func (jc *JobCapturer) ready() bool {
 	} else {
 		jc.jobResult = 0
 	}
-	log.Infof("init job")
 	return true
 }
 

@@ -15,6 +15,7 @@ import (
 )
 
 type Fields map[string]interface{}
+type F map[string]interface{}
 
 var (
 	logging *logrus.Logger = logrus.New()
@@ -52,6 +53,15 @@ func InitFields(fields Fields) {
 		fieldInfo[k] = v
 	}
 	logger = logging.WithFields(fieldInfo)
+}
+
+func Set(fields F) *logrus.Entry {
+	fieldInfo := logrus.Fields{}
+	for k, v := range fields {
+		fieldInfo[k] = v
+	}
+	logger = logging.WithFields(fieldInfo)
+	return logger
 }
 
 func Debug(args ...interface{}) {

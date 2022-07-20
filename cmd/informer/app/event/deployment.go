@@ -84,7 +84,6 @@ func (c *deploymentCapturer) ready() bool {
 		c.replicas == c.updatedReplicas && c.replicas == c.availableReplicas) {
 		return false
 	}
-	log.Infof("init deployment")
 	log.Infof("check deployment is ready, replicas: %d", c.replicas)
 	return true
 }

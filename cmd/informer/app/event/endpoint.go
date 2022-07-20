@@ -59,7 +59,6 @@ func (e *endpointCapturer) valid() bool {
 }
 
 func (e *endpointCapturer) ready() bool {
-	log.Infof("init endpoint")
 	return true
 }
 

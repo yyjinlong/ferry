@@ -80,7 +80,6 @@ func (c *logCapturer) parse() bool {
 	if !util.In(c.phase, PHASE_LIST) {
 		return false
 	}
-	log.Infof("init log")
 
 	result := re.FindAllStringSubmatch(c.name, -1)
 	matchResult := result[0][0]
