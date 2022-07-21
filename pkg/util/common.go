@@ -31,7 +31,7 @@ func Escape(val string) string {
 	return html.EscapeString(val)
 }
 
-// GetDeployment 根据服务名、服务ID、部署阶段、部署组 来命名deployment name
+// GetDeployment 生成deployment名字 根据服务名、服务ID、部署阶段、部署组 来命名deployment name
 func GetDeployment(serviceName string, serviceID int64, phase, group string) string {
 	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
 }
@@ -47,8 +47,14 @@ func GetDeployGroup(onlineGroup string) string {
 	return BLUE
 }
 
+// GetConfigName 生成configmap名字
 func GetConfigName(serviceName string) string {
 	return fmt.Sprintf("%s-config", serviceName)
+}
+
+// GetCronjobName 生成cronjob名字
+func GetCronjobName(serviceName string, jobID int64) string {
+	return fmt.Sprintf("%s-cronjob-%d", serviceName, jobID)
 }
 
 func In(data string, dataList []string) bool {

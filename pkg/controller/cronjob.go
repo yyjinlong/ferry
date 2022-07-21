@@ -38,3 +38,25 @@ func BuildCronjob(c *gin.Context) {
 	}
 	ResponseSuccess(c, name)
 }
+
+func DeleteCronjob(c *gin.Context) {
+	type params struct {
+		Namespace string `form:"namespace" binding:"required"`
+		Service   string `form:"service" binding:"required"`
+		JobID     int64  `form:"job_id" binding:"required"`
+	}
+
+	var data params
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
+		return
+	}
+
+	cron := publish.NewCronjobDelete()
+	if err := cron.Handle(data.Namespace, data.Service, data.JobID); err != nil {
+		log.ID(cron.Logid).Errorf("delete cronjob failed: %+v", err)
+		Response(c, Failed, err.Error(), nil)
+		return
+	}
+	ResponseSuccess(c, nil)
+}

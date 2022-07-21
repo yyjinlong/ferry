@@ -30,7 +30,7 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 		return "", fmt.Errorf(config.CRON_WRITE_DB_ERROR, err)
 	}
 
-	name := fmt.Sprintf("%s-cronjob-%d", service, crontabID)
+	name := util.GetCronjobName(service, crontabID)
 	log.ID(c.Logid).Infof("generate cronjob name: %s", name)
 
 	svcObj, err := model.GetServiceInfo(service)
@@ -85,4 +85,29 @@ func (c *Cronjob) execute(namespace, name, tpl string) error {
 		return cron.Create(tpl)
 	}
 	return cron.Update(tpl)
+}
+
+func NewCronjobDelete() *CronjobDelete {
+	return &CronjobDelete{Logid: util.UniqueID()}
+}
+
+type CronjobDelete struct {
+	Logid string
+}
+
+func (c *CronjobDelete) Handle(namespace, service string, jobID int64) error {
+	name := util.GetCronjobName(service, jobID)
+	log.ID(c.Logid).Infof("delete cronjob name: %s", name)
+
+	cron := exec.NewCronjob(namespace, name)
+	if !cron.Exist() {
+		log.ID(c.Logid).Infof("cronjob: %s is not exist", name)
+		return nil
+	}
+	err := cron.Delete()
+	if err != nil {
+		log.ID(c.Logid).Errorf("delete cronjob: %s failed: %s", name, err)
+		return err
+	}
+	log.ID(c.Logid).Infof("delete cronjob: %s success", name)
 }

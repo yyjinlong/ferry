@@ -50,5 +50,6 @@ func URLs(r *gin.Engine) {
 	cr := r.Group("v1", UserAuth)
 	{
 		cr.POST("/cronjob", controller.BuildCronjob)
+		cr.POST("/cronjob/delete", controller.DeleteCronjob)
 	}
 }

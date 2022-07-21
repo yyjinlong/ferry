@@ -141,3 +141,8 @@ curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback |
 curl -d 'namespace=default&service=ivr&command=sleep 60&schedule=*/10 * * * *' http://127.0.0.1:8888/v1/cronjob | jq .
 ```
 
+9) 删除cronjob
+
+```
+curl -d 'namespace=default&service=ivr&job_id=7' http://127.0.0.1:8888/v1/cronjob/delete
+```
