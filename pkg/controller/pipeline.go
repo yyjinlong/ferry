@@ -6,12 +6,13 @@
 package controller
 
 import (
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/service/pipeline"
 )
 
-func CreatePipeline(r *api.Request) {
+func CreatePipeline(c *gin.Context) {
 	type params struct {
 		Name       string              `json:"name"`
 		Summary    string              `json:"summary"`
@@ -24,8 +25,8 @@ func CreatePipeline(r *api.Request) {
 	}
 
 	var data params
-	if err := r.BindJSON(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.BindJSON(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -44,16 +45,16 @@ func CreatePipeline(r *api.Request) {
 	cp := pipeline.NewCreatePipeline()
 	if err := cp.Handle(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
 		log.Errorf("create pipeline failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }
 
-func ListPipeline(r *api.Request) {
+func ListPipeline(c *gin.Context) {
 
 }
 
-func QueryPipeline(r *api.Request) {
+func QueryPipeline(c *gin.Context) {
 
 }

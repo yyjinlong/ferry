@@ -8,13 +8,14 @@ package controller
 import (
 	"fmt"
 
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/service/publish"
 )
 
-func BuildCronjob(r *api.Request) {
+func BuildCronjob(c *gin.Context) {
 	type params struct {
 		Namespace string `form:"namespace" binding:"required"`
 		Service   string `form:"service" binding:"required"`
@@ -23,8 +24,8 @@ func BuildCronjob(r *api.Request) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 	log.InitFields(log.Fields{"logid": r.TraceID})
@@ -32,8 +33,8 @@ func BuildCronjob(r *api.Request) {
 	cron := publish.NewCronjob()
 	name, err := cron.Handle(data.Namespace, data.Service, data.Command, data.Schedule)
 	if err != nil {
-		r.Response(api.Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
+		r.Response(c, Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
 		return
 	}
-	r.ResponseSuccess(name)
+	r.ResponseSuccess(c, name)
 }

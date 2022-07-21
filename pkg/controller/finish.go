@@ -6,19 +6,20 @@
 package controller
 
 import (
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
-func Finish(r *api.Request) {
+func Finish(c *gin.Context) {
 	type params struct {
 		ID int64 `form:"pipeline_id" binding:"required"`
 	}
 
 	var data params
 	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -28,8 +29,8 @@ func Finish(r *api.Request) {
 	finish := publish.NewFinish()
 	if err := finish.Handle(pid); err != nil {
 		log.Errorf("finish handle failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }

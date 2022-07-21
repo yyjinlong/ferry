@@ -6,20 +6,21 @@
 package controller
 
 import (
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/service/rollback"
 )
 
-func CheckRollback(r *api.Request) {
+func CheckRollback(c *gin.Context) {
 	type params struct {
 		ID    int64  `form:"pipeline_id" binding:"required"`
 		Phase string `form:"phase" binding:"required"`
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -29,18 +30,18 @@ func CheckRollback(r *api.Request) {
 	)
 	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid, "phase": phase})
 
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }
 
-func Rollback(r *api.Request) {
+func Rollback(c *gin.Context) {
 	type params struct {
 		ID       int64  `form:"pipeline_id" binding:"required"`
 		Username string `form:"username" binding:"required"`
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -53,8 +54,8 @@ func Rollback(r *api.Request) {
 	ro := rollback.NewRollback()
 	if err := ro.Handle(pid, username); err != nil {
 		log.Errorf("execute rollback failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }

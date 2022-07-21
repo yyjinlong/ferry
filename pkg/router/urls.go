@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"nautilus/golib/api"
 	"nautilus/pkg/controller"
 )
 
@@ -24,32 +23,32 @@ func URLs(r *gin.Engine) {
 	// 上线单
 	p := r.Group("v1", UserAuth)
 	{
-		p.POST("/pipeline", api.ExtendContext(controller.CreatePipeline))
+		p.POST("/pipeline", controller.CreatePipeline)
 	}
 
 	// 上线流程
 	d := r.Group("v1", UserAuth)
 	{
 		// 发布流程
-		d.POST("/tag", api.ExtendContext(controller.BuildTag))
-		d.GET("/tag", api.ExtendContext(controller.ReceiveTag))
-		d.POST("/image", api.ExtendContext(controller.BuildImage))
-		d.POST("/configmap", api.ExtendContext(controller.ConfigMap))
-		d.POST("/service", api.ExtendContext(controller.Service))
-		d.POST("/deploy", api.ExtendContext(controller.Deploy))
-		d.POST("/finish", api.ExtendContext(controller.Finish))
+		d.POST("/tag", controller.BuildTag)
+		d.GET("/tag", controller.ReceiveTag)
+		d.POST("/image", controller.BuildImage)
+		d.POST("/configmap", controller.ConfigMap)
+		d.POST("/service", controller.Service)
+		d.POST("/deploy", controller.Deploy)
+		d.POST("/finish", controller.Finish)
 	}
 
 	// 回滚流程
 	ro := r.Group("v1", UserAuth)
 	{
-		ro.POST("/check/rollback", api.ExtendContext(controller.CheckRollback))
-		ro.POST("/rollback", api.ExtendContext(controller.Rollback))
+		ro.POST("/check/rollback", controller.CheckRollback)
+		ro.POST("/rollback", controller.Rollback)
 	}
 
 	// 定时任务
 	cr := r.Group("v1", UserAuth)
 	{
-		cr.POST("/cronjob", api.ExtendContext(controller.BuildCronjob))
+		cr.POST("/cronjob", controller.BuildCronjob)
 	}
 }

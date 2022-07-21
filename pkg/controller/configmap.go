@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/service/publish"
 )
 
-func ConfigMap(r *api.Request) {
+func ConfigMap(c *gin.Context) {
 	type params struct {
 		Namespace string `form:"namespace" binding:"required"` // 命名空间
 		Service   string `form:"service" binding:"required"`   // 服务
@@ -23,8 +24,8 @@ func ConfigMap(r *api.Request) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -37,14 +38,14 @@ func ConfigMap(r *api.Request) {
 
 	var pairInfo map[string]string
 	if err := json.Unmarshal([]byte(pair), &pairInfo); err != nil {
-		r.Response(api.Failed, fmt.Sprintf(config.CM_DECODE_DATA_ERROR, err), nil)
+		Response(c, Failed, fmt.Sprintf(config.CM_DECODE_DATA_ERROR, err), nil)
 		return
 	}
 
 	cm := publish.NewConfigMap()
 	if err := cm.Handle(namespace, service, pair, pairInfo); err != nil {
-		r.Response(api.Failed, fmt.Sprintf(config.CM_PUBLISH_FAILED, err), nil)
+		Response(c, Failed, fmt.Sprintf(config.CM_PUBLISH_FAILED, err), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }

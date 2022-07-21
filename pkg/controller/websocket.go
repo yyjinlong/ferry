@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package api
+package controller
 
 import (
 	"bufio"

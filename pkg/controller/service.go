@@ -6,19 +6,20 @@
 package controller
 
 import (
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
-func Service(r *api.Request) {
+func Service(c *gin.Context) {
 	type params struct {
 		Service string `form:"service" binding:"required"`
 	}
 
 	var data params
 	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -28,8 +29,8 @@ func Service(r *api.Request) {
 	sObj := publish.NewService()
 	if err := sObj.Handle(serviceName); err != nil {
 		log.Errorf("build service failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }

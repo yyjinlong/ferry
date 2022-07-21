@@ -6,20 +6,21 @@
 package controller
 
 import (
-	"nautilus/golib/api"
+	"github.com/gin-gonic/gin"
+
 	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
-func BuildTag(r *api.Request) {
+func BuildTag(c *gin.Context) {
 	type params struct {
 		ID      int64  `form:"pipeline_id" binding:"required"`
 		Service string `form:"service" binding:"required"`
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -32,13 +33,13 @@ func BuildTag(r *api.Request) {
 	build := publish.NewBuildTag()
 	if err := build.Handle(pid, serviceName); err != nil {
 		log.Errorf("build tag failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }
 
-func ReceiveTag(r *api.Request) {
+func ReceiveTag(c *gin.Context) {
 	type params struct {
 		ID     int64  `form:"taskid" binding:"required"`
 		Module string `form:"module" binding:"required"`
@@ -46,8 +47,8 @@ func ReceiveTag(r *api.Request) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
-		r.Response(api.Failed, err.Error(), nil)
+	if err := c.ShouldBind(&data); err != nil {
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
@@ -61,8 +62,8 @@ func ReceiveTag(r *api.Request) {
 	receive := publish.NewReceiveTag()
 	if err := receive.Handle(pid, module, tag); err != nil {
 		log.Errorf("receive tag failed: %+v", err)
-		r.Response(api.Failed, err.Error(), nil)
+		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	r.ResponseSuccess(nil)
+	ResponseSuccess(c, nil)
 }
