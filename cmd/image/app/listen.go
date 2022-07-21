@@ -25,7 +25,6 @@ func (r *receiver) Consumer(body []byte) error {
 		log.Errorf("consume rabbitmq json decode failed: %s", err)
 		return err
 	}
-	log.InitFields(log.Fields{"pid": data.PID, "service": data.Service})
 	msgChan <- data
 	return nil
 }

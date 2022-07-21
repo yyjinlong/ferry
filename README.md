@@ -135,3 +135,9 @@ curl -d "pipeline_id=4" http://127.0.0.1:8888/v1/finish | jq .
 curl -d "pipeline_id=4&username=yangjinlong" http://127.0.0.1:8888/v1/rollback | jq .
 ```
 
+8) 发布cronjob
+
+```
+curl -d 'namespace=default&service=ivr&command=sleep 60&schedule=*/10 * * * *' http://127.0.0.1:8888/v1/cronjob | jq .
+```
+
