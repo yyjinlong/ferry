@@ -28,11 +28,10 @@ func BuildImage(c *gin.Context) {
 		pid     = data.ID
 		service = data.Service
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
 	image := publish.NewBuildImage()
 	if err := image.Handle(pid, service); err != nil {
-		log.Errorf("build image pre handle failed: %+v", err)
+		log.ID(image.Logid).Errorf("build image pre handle failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

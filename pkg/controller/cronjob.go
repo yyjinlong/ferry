@@ -28,13 +28,13 @@ func BuildCronjob(c *gin.Context) {
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
-	log.InitFields(log.Fields{"logid": r.TraceID})
 
 	cron := publish.NewCronjob()
 	name, err := cron.Handle(data.Namespace, data.Service, data.Command, data.Schedule)
 	if err != nil {
-		r.Response(c, Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
+		log.ID(cron.Logid).Errorf("publish cronjob failed: %+v", err)
+		Response(c, Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
 		return
 	}
-	r.ResponseSuccess(c, name)
+	ResponseSuccess(c, name)
 }

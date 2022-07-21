@@ -33,10 +33,9 @@ func ConfigMap(c *gin.Context) {
 		namespace = data.Namespace
 		service   = data.Service
 		pair      = data.Pair
+		pairInfo  map[string]string
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID})
 
-	var pairInfo map[string]string
 	if err := json.Unmarshal([]byte(pair), &pairInfo); err != nil {
 		Response(c, Failed, fmt.Sprintf(config.CM_DECODE_DATA_ERROR, err), nil)
 		return
@@ -44,6 +43,7 @@ func ConfigMap(c *gin.Context) {
 
 	cm := publish.NewConfigMap()
 	if err := cm.Handle(namespace, service, pair, pairInfo); err != nil {
+		log.ID(cm.Logid).Errorf("publish configmap failed: %+v", err)
 		Response(c, Failed, fmt.Sprintf(config.CM_PUBLISH_FAILED, err), nil)
 		return
 	}

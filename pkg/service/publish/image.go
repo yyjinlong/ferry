@@ -18,10 +18,12 @@ import (
 )
 
 func NewBuildImage() *BuildImage {
-	return &BuildImage{}
+	return &BuildImage{Logid: util.UniqueID()}
 }
 
-type BuildImage struct{}
+type BuildImage struct {
+	Logid string
+}
 
 func (bi *BuildImage) Handle(pid int64, service string) error {
 	pipeline, err := model.GetPipeline(pid)
@@ -73,7 +75,7 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 	if err != nil {
 		return fmt.Errorf(config.IMG_BUILD_PARAM_ENCODE_ERROR, err)
 	}
-	log.Infof("publish build image body: %s", string(body))
+	log.ID(bi.Logid).Infof("publish build image body: %s", string(body))
 
 	if err := model.CreateImage(pid); err != nil {
 		return fmt.Errorf(config.IMG_CREATE_IMAGE_INFO_ERROR, err)
@@ -88,6 +90,6 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return fmt.Errorf(config.IMG_SEND_BUILD_TO_MQ_FAILED, err)
 	}
 	mq.Publish(string(body))
-	log.Infof("publish build image info to rabbitmq success.")
+	log.ID(bi.Logid).Infof("publish build image info to rabbitmq success.")
 	return nil
 }

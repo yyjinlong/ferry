@@ -18,17 +18,15 @@ func Service(c *gin.Context) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
+	if err := c.ShouldBind(&data); err != nil {
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
-
 	serviceName := data.Service
-	log.InitFields(log.Fields{"logid": r.TraceID, "service": serviceName})
 
-	sObj := publish.NewService()
-	if err := sObj.Handle(serviceName); err != nil {
-		log.Errorf("build service failed: %+v", err)
+	sv := publish.NewService()
+	if err := sv.Handle(serviceName); err != nil {
+		log.ID(sv.Logid).Errorf("build service failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

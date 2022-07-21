@@ -17,10 +17,12 @@ import (
 )
 
 func NewConfigMap() *ConfigMap {
-	return &ConfigMap{}
+	return &ConfigMap{Logid: util.UniqueID()}
 }
 
-type ConfigMap struct{}
+type ConfigMap struct {
+	Logid string
+}
 
 func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]string) error {
 	configName := util.GetConfigName(service)
@@ -41,7 +43,7 @@ func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]
 	if err := model.UpdateConfigMap(service, pair); err != nil {
 		return fmt.Errorf(config.CM_UPDATE_DB_ERROR, err)
 	}
-	log.Infof("create namespace: %s configmap: %s success", namespace, configName)
+	log.ID(c.Logid).Infof("create namespace: %s configmap: %s success", namespace, configName)
 	return nil
 }
 

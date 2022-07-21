@@ -40,11 +40,10 @@ func CreatePipeline(c *gin.Context) {
 		service    = data.Service
 		moduleList = data.ModuleList
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID, "creator": creator, "service": service})
 
 	cp := pipeline.NewCreatePipeline()
 	if err := cp.Handle(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
-		log.Errorf("create pipeline failed: %+v", err)
+		log.ID(cp.Logid).Errorf("create pipeline failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

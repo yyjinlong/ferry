@@ -7,16 +7,29 @@ package util
 
 import (
 	"fmt"
+	"html"
 	"io"
 	"os"
 	"os/exec"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
 	BLUE  = "blue"
 	GREEN = "green"
 )
+
+// UniqueID 唯一ID
+func UniqueID() string {
+	return uuid.NewV4().String()
+}
+
+// Escape 避免xss注入
+func Escape(val string) string {
+	return html.EscapeString(val)
+}
 
 // GetDeployment 根据服务名、服务ID、部署阶段、部署组 来命名deployment name
 func GetDeployment(serviceName string, serviceID int64, phase, group string) string {

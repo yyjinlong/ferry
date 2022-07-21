@@ -16,10 +16,12 @@ import (
 )
 
 func NewRollback() *Rollback {
-	return &Rollback{}
+	return &Rollback{Logid: util.UniqueID()}
 }
 
-type Rollback struct{}
+type Rollback struct {
+	Logid string
+}
 
 func (ro *Rollback) Handle(pid int64, username string) error {
 	// TODO: 建立websocket
@@ -52,7 +54,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		rollbackGroup = service.OnlineGroup
 		destroyGroup = service.DeployGroup
 	}
-	log.Infof("get rollback_group: %s destroy_group: %s", rollbackGroup, destroyGroup)
+	log.ID(ro.Logid).Infof("get rollback_group: %s destroy_group: %s", rollbackGroup, destroyGroup)
 
 	// NOTE: 占锁
 	if err := model.UpdateStatus(pid, model.PLRollbacking); err != nil {
@@ -79,7 +81,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 			publishes = append(publishes, obj.Name)
 		}
 	}
-	log.Infof("get published phase have: %s", publishes)
+	log.ID(ro.Logid).Infof("get published phase have: %s", publishes)
 
 	namespace, err := model.GetNamespace(service.NamespaceID)
 	if err != nil {
@@ -95,22 +97,22 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		// NOTE: 回滚组恢复指定副本数
 		rollbackDeployment := util.GetDeployment(service.Name, service.ID, phase, rollbackGroup)
 		if err := ro.worker(namespace.Name, rollbackDeployment, replicas); err != nil {
-			log.Errorf("rollback deployment: %s replicas: %d error: %+v", rollbackDeployment, replicas, err)
+			log.ID(ro.Logid).Errorf("rollback deployment: %s replicas: %d error: %+v", rollbackDeployment, replicas, err)
 			return err
 		}
-		log.Infof("rollback deployment: %s replicas: %d finish", rollbackDeployment, replicas)
+		log.ID(ro.Logid).Infof("rollback deployment: %s replicas: %d finish", rollbackDeployment, replicas)
 
 		// NOTE: 销毁组缩成0
 		destroyDeployment := util.GetDeployment(service.Name, service.ID, phase, destroyGroup)
 		if err := ro.worker(namespace.Name, destroyDeployment, 0); err != nil {
-			log.Errorf("destroy deployment: %s scale 0 error: %+v", destroyDeployment, err)
+			log.ID(ro.Logid).Errorf("destroy deployment: %s scale 0 error: %+v", destroyDeployment, err)
 			return err
 		}
 
 		if err := model.CreatePhase(pid, model.PHASE_ROLLBACK, phase, model.PHSuccess, ""); err != nil {
 			return fmt.Errorf(config.ROL_RECORD_PHASE_ERROR, phase, err)
 		}
-		log.Infof("destroy deployment: %s scale 0 finish", destroyDeployment)
+		log.ID(ro.Logid).Infof("destroy deployment: %s scale 0 finish", destroyDeployment)
 	}
 
 	// NOTE: 释放锁
@@ -122,7 +124,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pid, err)
 	}
 
-	log.Infof("rollback phases: %+v success", publishes)
+	log.ID(ro.Logid).Infof("rollback phases: %+v success", publishes)
 	return ro.finish(pid, service.ID, rollbackGroup, destroyGroup)
 }
 
@@ -135,6 +137,6 @@ func (ro *Rollback) finish(pid, serviceID int64, onlineGroup, deployGroup string
 	if err := model.UpdateGroup(pid, serviceID, onlineGroup, deployGroup, model.PLRollbackSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
-	log.Infof("set current online group: %s deploy group: %s for rollback success.", onlineGroup, deployGroup)
+	log.ID(ro.Logid).Infof("set current online group: %s deploy group: %s for rollback success.", onlineGroup, deployGroup)
 	return nil
 }

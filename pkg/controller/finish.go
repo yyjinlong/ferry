@@ -18,17 +18,16 @@ func Finish(c *gin.Context) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
+	if err := c.ShouldBind(&data); err != nil {
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
 
 	pid := data.ID
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
 	finish := publish.NewFinish()
 	if err := finish.Handle(pid); err != nil {
-		log.Errorf("finish handle failed: %+v", err)
+		log.ID(finish.Logid).Errorf("finish handle failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

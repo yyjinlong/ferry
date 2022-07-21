@@ -20,7 +20,7 @@ func Deploy(c *gin.Context) {
 	}
 
 	var data params
-	if err := r.ShouldBind(&data); err != nil {
+	if err := c.ShouldBind(&data); err != nil {
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
@@ -30,11 +30,10 @@ func Deploy(c *gin.Context) {
 		phase    = data.Phase
 		username = data.Username
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid, "phase": phase})
 
 	dep := publish.NewDeploy()
 	if err := dep.Handle(pid, phase, username); err != nil {
-		log.Errorf("build deployment failed: %+v", err)
+		log.ID(dep.Logid).Errorf("build deployment failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

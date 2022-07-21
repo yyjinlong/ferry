@@ -17,10 +17,12 @@ import (
 )
 
 func NewCreatePipeline() *CreatePipeline {
-	return &CreatePipeline{}
+	return &CreatePipeline{Logid: util.UniqueID()}
 }
 
-type CreatePipeline struct{}
+type CreatePipeline struct {
+	Logid string
+}
 
 func (cp *CreatePipeline) Handle(name, summary, creator, rd, qa, pm, service string, moduleList []map[string]string) error {
 	if err := cp.checkParam(name, summary, moduleList); err != nil {
@@ -30,7 +32,7 @@ func (cp *CreatePipeline) Handle(name, summary, creator, rd, qa, pm, service str
 	if err := model.CreatePipeline(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
 		return fmt.Errorf(config.PL_CREATE_PIPELINE_ERROR, err)
 	}
-	log.Infof("create pipeline success")
+	log.ID(cp.Logid).Infof("create pipeline success")
 	return nil
 }
 
@@ -64,17 +66,17 @@ func (cp *CreatePipeline) checkGit(module, branch string) error {
 		return fmt.Errorf(config.PL_QUERY_MODULE_ERROR, module)
 	}
 	param := fmt.Sprintf("git ls-remote --heads %s %s | wc -l", codeModule.ReposAddr, branch)
-	log.Infof("git check param: %s", param)
+	log.ID(cp.Logid).Infof("git check param: %s", param)
 	output, err := util.Call(param)
 	if err != nil {
-		log.Errorf("exec git check command: %s error: %s", param, err)
+		log.ID(cp.Logid).Errorf("exec git check command: %s error: %s", param, err)
 		return fmt.Errorf(config.PL_EXEC_GIT_CHECK_ERROR, err)
 	}
 	tmpR := strings.Trim(string(output), "\n")
 	newR := strings.TrimSpace(tmpR)
 	result, err := strconv.Atoi(newR)
 	if err != nil {
-		log.Errorf("handle check result covert to int error: %s", err)
+		log.ID(cp.Logid).Errorf("handle check result covert to int error: %s", err)
 		return fmt.Errorf(config.PL_RESULT_HANDLER_ERROR, err)
 	}
 	if result == 0 {

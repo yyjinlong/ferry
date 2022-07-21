@@ -15,13 +15,16 @@ import (
 	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func NewBuildTag() *BuildTag {
-	return &BuildTag{}
+	return &BuildTag{Logid: util.UniqueID()}
 }
 
-type BuildTag struct{}
+type BuildTag struct {
+	Logid string
+}
 
 func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 	pidStr := strconv.FormatInt(pid, 10)
@@ -59,7 +62,7 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 		module := codeModule.Name
 
 		param := fmt.Sprintf("%s/maketag -a %s -m %s -b %s -i %d", scriptPath, addr, module, branch, pid)
-		log.Infof("maketag command: %s", param)
+		log.ID(bt.Logid).Infof("maketag command: %s", param)
 		if !bt.do(param) {
 			return fmt.Errorf(config.TAG_BUILD_FAILED)
 		}
@@ -103,16 +106,18 @@ func (bt *BuildTag) do(param string) bool {
 }
 
 func NewReceiveTag() *ReceiveTag {
-	return &ReceiveTag{}
+	return &ReceiveTag{Logid: util.UniqueID()}
 }
 
-type ReceiveTag struct{}
+type ReceiveTag struct {
+	Logid string
+}
 
 func (rt *ReceiveTag) Handle(pid int64, module, tag string) error {
-	log.Infof("receive module: %s build tag value: %s", module, tag)
+	log.ID(rt.Logid).Infof("receive module: %s build tag value: %s", module, tag)
 	if err := model.UpdateTag(pid, module, tag); err != nil {
 		return fmt.Errorf(config.TAG_UPDATE_DB_ERROR, err)
 	}
-	log.Infof("module: %s update tag: %s success", module, tag)
+	log.ID(rt.Logid).Infof("module: %s update tag: %s success", module, tag)
 	return nil
 }

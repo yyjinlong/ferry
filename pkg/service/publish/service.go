@@ -19,10 +19,12 @@ import (
 )
 
 func NewService() *Service {
-	return &Service{}
+	return &Service{Logid: util.UniqueID()}
 }
 
-type Service struct{}
+type Service struct {
+	Logid string
+}
 
 func (s *Service) Handle(serviceName string) error {
 	serviceObj, err := model.GetServiceInfo(serviceName)
@@ -57,7 +59,7 @@ func (s *Service) Handle(serviceName string) error {
 
 func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
 	appid := util.GetAppID(serviceName, serviceID, phase)
-	log.Infof("fetch service appid: %s", appid)
+	log.ID(s.Logid).Infof("fetch service appid: %s", appid)
 
 	svcYaml := &yaml.ServiceYaml{
 		ServiceName:   serviceName,
@@ -71,12 +73,12 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase s
 	if err != nil {
 		return fmt.Errorf(config.SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
-	log.Infof("create service: %s mapping tpl: %s", appid, tpl)
+	log.ID(s.Logid).Infof("create service: %s mapping tpl: %s", appid, tpl)
 
 	if err := s.execute(namespace, serviceName, tpl); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
-	log.Infof("build service success")
+	log.ID(s.Logid).Infof("build service success")
 	return nil
 }
 

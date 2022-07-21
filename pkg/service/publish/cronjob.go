@@ -13,13 +13,16 @@ import (
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util"
 )
 
 func NewCronjob() *Cronjob {
-	return &Cronjob{}
+	return &Cronjob{Logid: util.UniqueID()}
 }
 
-type Cronjob struct{}
+type Cronjob struct {
+	Logid string
+}
 
 func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, error) {
 	crontabID, err := model.CreateCrontab(namespace, service, command, schedule)
@@ -28,7 +31,7 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	}
 
 	name := fmt.Sprintf("%s-cronjob-%d", service, crontabID)
-	log.Infof("generate cronjob name: %s", name)
+	log.ID(c.Logid).Infof("generate cronjob name: %s", name)
 
 	svcObj, err := model.GetServiceInfo(service)
 	if err != nil {
@@ -49,7 +52,7 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	if len(imageInfo) == 0 {
 		return "", fmt.Errorf("get image info is empty")
 	}
-	log.Infof("create cronjob yaml get image info: %s", imageInfo)
+	log.ID(c.Logid).Infof("create cronjob yaml get image info: %s", imageInfo)
 
 	cronYaml := &yaml.CronjobYaml{
 		Namespace:   namespace,
@@ -66,13 +69,13 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	if err != nil {
 		return "", fmt.Errorf(config.CRON_BUILD_YAML_ERROR, err)
 	}
-	log.Infof("generate cronjob yaml(%s) success", name)
+	log.ID(c.Logid).Infof("generate cronjob yaml(%s) success", name)
 	fmt.Println(tpl)
 
 	if err := c.execute(namespace, name, tpl); err != nil {
 		return "", fmt.Errorf(config.CRON_K8S_EXEC_FAILED, err)
 	}
-	log.Infof("create namespace: %s cronjob: %s success", namespace, name)
+	log.ID(c.Logid).Infof("create namespace: %s cronjob: %s success", namespace, name)
 	return name, nil
 }
 

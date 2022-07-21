@@ -15,10 +15,12 @@ import (
 )
 
 func NewFinish() *Finish {
-	return &Finish{}
+	return &Finish{Logid: util.UniqueID()}
 }
 
-type Finish struct{}
+type Finish struct {
+	Logid string
+}
 
 func (f *Finish) Handle(pid int64) error {
 	pipeline, err := model.GetPipeline(pid)
@@ -33,11 +35,11 @@ func (f *Finish) Handle(pid int64) error {
 
 	onlineGroup := service.DeployGroup
 	deployGroup := util.GetDeployGroup(onlineGroup)
-	log.Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
+	log.ID(f.Logid).Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
 
 	if err := model.UpdateGroup(pid, service.ID, onlineGroup, deployGroup, model.PLSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
-	log.Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)
+	log.ID(f.Logid).Infof("set current online group: %s deploy group: %s success.", onlineGroup, deployGroup)
 	return nil
 }

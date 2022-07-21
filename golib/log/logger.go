@@ -64,7 +64,7 @@ func Set(fields F) *logrus.Entry {
 	return logger
 }
 
-func V(traceID string) *logrus.Entry {
+func ID(traceID string) *logrus.Entry {
 	fieldInfo := logrus.Fields{"logid": traceID}
 	logger = logging.WithFields(fieldInfo)
 	return logger

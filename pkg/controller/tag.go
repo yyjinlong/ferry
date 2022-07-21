@@ -28,11 +28,10 @@ func BuildTag(c *gin.Context) {
 		pid         = data.ID
 		serviceName = data.Service
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
 	build := publish.NewBuildTag()
 	if err := build.Handle(pid, serviceName); err != nil {
-		log.Errorf("build tag failed: %+v", err)
+		log.ID(build.Logid).Errorf("build tag failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
@@ -57,11 +56,10 @@ func ReceiveTag(c *gin.Context) {
 		module = data.Module
 		tag    = data.Tag
 	)
-	log.InitFields(log.Fields{"logid": r.TraceID, "pipeline_id": pid})
 
 	receive := publish.NewReceiveTag()
 	if err := receive.Handle(pid, module, tag); err != nil {
-		log.Errorf("receive tag failed: %+v", err)
+		log.ID(receive.Logid).Errorf("receive tag failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
