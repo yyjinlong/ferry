@@ -8,7 +8,8 @@ package publish
 import (
 	"fmt"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
@@ -17,12 +18,10 @@ import (
 )
 
 func NewDeploy() *Deploy {
-	return &Deploy{Logid: util.UniqueID()}
+	return &Deploy{}
 }
 
-type Deploy struct {
-	Logid string
-}
+type Deploy struct{}
 
 func (d *Deploy) Handle(pid int64, phase, username string) error {
 	// TODO: 建立websocket
@@ -54,7 +53,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 		deployment = util.GetDeployment(serviceName, serviceID, phase, deployGroup)
 		appid      = util.GetAppID(serviceName, serviceID, phase)
 	)
-	log.ID(d.Logid).Infof("current deploy group: %s deployment name: %s appid: %s", deployGroup, deployment, appid)
+	log.Infof("current deploy group: %s deployment name: %s appid: %s", deployGroup, deployment, appid)
 
 	imageInfo, err := model.FindImageInfo(pid)
 	if err != nil {
@@ -64,7 +63,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	if len(imageInfo) == 0 {
 		return fmt.Errorf("get image info is empty")
 	}
-	log.ID(d.Logid).Infof("create yaml get image info: %s", imageInfo)
+	log.Infof("create yaml get image info: %s", imageInfo)
 
 	replicas := svcObj.Replicas
 	if phase == model.PHASE_SANDBOX {
@@ -94,18 +93,18 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	if err != nil {
 		return fmt.Errorf(config.PUB_BUILD_DEPLOYMENT_YAML_ERROR, err)
 	}
-	log.ID(d.Logid).Infof("generate deployment yaml(%s) success", deployment)
+	log.Infof("generate deployment yaml(%s) success", deployment)
 	fmt.Println(tpl)
 
 	if err := d.execute(namespace, deployment, tpl); err != nil {
 		return fmt.Errorf(config.PUB_K8S_DEPLOYMENT_EXEC_FAILED, err)
 	}
-	log.ID(d.Logid).Infof("pubish deployment: %s to k8s success", deployment)
+	log.Infof("pubish deployment: %s to k8s success", deployment)
 
 	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, phase, model.PHProcess, tpl); err != nil {
 		return fmt.Errorf(config.PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
 	}
-	log.ID(d.Logid).Infof("record deployment: %s to db success", deployment)
+	log.Infof("record deployment: %s to db success", deployment)
 	return nil
 }
 

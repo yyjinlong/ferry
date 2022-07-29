@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/service/publish"
 )
@@ -32,7 +32,7 @@ func BuildCronjob(c *gin.Context) {
 	cron := publish.NewCronjob()
 	name, err := cron.Handle(data.Namespace, data.Service, data.Command, data.Schedule)
 	if err != nil {
-		log.ID(cron.Logid).Errorf("publish cronjob failed: %+v", err)
+		log.Errorf("publish cronjob failed: %+v", err)
 		Response(c, Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
 		return
 	}
@@ -54,7 +54,7 @@ func DeleteCronjob(c *gin.Context) {
 
 	cron := publish.NewCronjobDelete()
 	if err := cron.Handle(data.Namespace, data.Service, data.JobID); err != nil {
-		log.ID(cron.Logid).Errorf("delete cronjob failed: %+v", err)
+		log.Errorf("delete cronjob failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

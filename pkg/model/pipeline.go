@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type Pipeline struct {
@@ -48,7 +48,7 @@ const (
 
 func GetPipeline(pipelineID int64) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine().ID(pipelineID).Get(pipeline); err != nil {
+	if has, err := SEngine.ID(pipelineID).Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -59,7 +59,7 @@ func GetPipeline(pipelineID int64) (*Pipeline, error) {
 // GetServicePipeline 根据服务id返回最近一次的上线信息
 func GetServicePipeline(serviceID int64) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine().Where("service_id = ?", serviceID).Desc("id").Get(pipeline); err != nil {
+	if has, err := SEngine.Where("service_id = ?", serviceID).Desc("id").Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -70,7 +70,7 @@ func GetServicePipeline(serviceID int64) (*Pipeline, error) {
 // GetServiceLastPipeline 根据服务id返回最近一次成功的上线信息
 func GetServiceLastPipeline(serviceID int64) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine().Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
+	if has, err := SEngine.Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
 		Desc("id").Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
@@ -82,7 +82,7 @@ func GetServiceLastPipeline(serviceID int64) (*Pipeline, error) {
 // FindPipelineInfo 根据service返回pipeline相关信息
 func FindPipelineInfo(serviceID int64) ([]Pipeline, error) {
 	pList := make([]Pipeline, 0)
-	if err := SEngine().Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
+	if err := SEngine.Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
 		Desc("id").Find(&pList); err != nil {
 		return nil, err
 	}
@@ -91,14 +91,14 @@ func FindPipelineInfo(serviceID int64) ([]Pipeline, error) {
 
 func FindUpdateInfo(pipelineID int64) ([]PipelineUpdate, error) {
 	uqList := make([]PipelineUpdate, 0)
-	if err := SEngine().Where("pipeline_id = ?", pipelineID).Find(&uqList); err != nil {
+	if err := SEngine.Where("pipeline_id = ?", pipelineID).Find(&uqList); err != nil {
 		return nil, err
 	}
 	return uqList, nil
 }
 
 func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, moduleInfoList []map[string]string) error {
-	session := MEngine().NewSession()
+	session := MEngine.NewSession()
 	defer session.Close()
 
 	if err := session.Begin(); err != nil {
@@ -151,7 +151,7 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 func SetLock(serviceID int64, lock string) error {
 	service := new(Service)
 	service.Lock = lock
-	if _, err := MEngine().Cols("lock").ID(serviceID).Update(service); err != nil {
+	if _, err := MEngine.Cols("lock").ID(serviceID).Update(service); err != nil {
 		return err
 	}
 	return nil
@@ -160,7 +160,7 @@ func SetLock(serviceID int64, lock string) error {
 func UpdateStatus(pipelineID int64, status int) error {
 	pipeline := new(Pipeline)
 	pipeline.Status = status
-	if affected, err := MEngine().Cols("status", "update_at").ID(pipelineID).Update(pipeline); err != nil {
+	if affected, err := MEngine.Cols("status", "update_at").ID(pipelineID).Update(pipeline); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound
@@ -169,7 +169,7 @@ func UpdateStatus(pipelineID int64, status int) error {
 }
 
 func UpdateGroup(pipelineID, serviceID int64, onlineGroup, deployGroup string, status int) error {
-	session := MEngine().NewSession()
+	session := MEngine.NewSession()
 	defer session.Close()
 
 	if err := session.Begin(); err != nil {

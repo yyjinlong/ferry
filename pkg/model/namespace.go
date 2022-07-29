@@ -19,7 +19,7 @@ type Namespace struct {
 
 func GetNamespace(namespaceID int64) (*Namespace, error) {
 	ns := new(Namespace)
-	if has, err := SEngine().ID(namespaceID).Get(ns); err != nil {
+	if has, err := SEngine.ID(namespaceID).Get(ns); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -29,7 +29,7 @@ func GetNamespace(namespaceID int64) (*Namespace, error) {
 
 func GetNamespaceByName(name string) (*Namespace, error) {
 	ns := new(Namespace)
-	if has, err := SEngine().Where("name=?", name).Get(ns); err != nil {
+	if has, err := SEngine.Where("name=?", name).Get(ns); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound

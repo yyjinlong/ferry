@@ -15,10 +15,10 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/db"
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
+	"nautilus/pkg/model"
 	"nautilus/pkg/router"
 )
 
@@ -34,10 +34,9 @@ func main() {
 		return
 	}
 	config.ParseConfig(*configFile)
+	config.InitLogger(config.Config().LogFile)
 
-	log.InitLogger(config.Config().LogFile)
-
-	db.Connect("postgres",
+	model.Connect("postgres",
 		config.Config().Postgres.Master,
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)

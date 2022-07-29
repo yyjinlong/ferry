@@ -48,7 +48,7 @@ type CodeModule struct {
 
 func GetServiceInfo(name string) (*Service, error) {
 	service := new(Service)
-	if has, err := SEngine().Where("name = ?", name).Get(service); err != nil {
+	if has, err := SEngine.Where("name = ?", name).Get(service); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -58,7 +58,7 @@ func GetServiceInfo(name string) (*Service, error) {
 
 func GetServiceByID(serviceID int64) (*Service, error) {
 	service := new(Service)
-	if has, err := SEngine().ID(serviceID).Get(service); err != nil {
+	if has, err := SEngine.ID(serviceID).Get(service); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -68,7 +68,7 @@ func GetServiceByID(serviceID int64) (*Service, error) {
 
 func GetCodeModuleInfo(module string) (*CodeModule, error) {
 	codeModule := new(CodeModule)
-	if has, err := SEngine().Where("name=?", module).Get(codeModule); err != nil {
+	if has, err := SEngine.Where("name=?", module).Get(codeModule); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -78,7 +78,7 @@ func GetCodeModuleInfo(module string) (*CodeModule, error) {
 
 func GetCodeModuleInfoByID(moduleID int64) (*CodeModule, error) {
 	codeModule := new(CodeModule)
-	if has, err := SEngine().ID(moduleID).Get(codeModule); err != nil {
+	if has, err := SEngine.ID(moduleID).Get(codeModule); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -88,14 +88,14 @@ func GetCodeModuleInfoByID(moduleID int64) (*CodeModule, error) {
 
 func FindCodeModules(serviceID int64) ([]CodeModule, error) {
 	moduleList := make([]CodeModule, 0)
-	if err := SEngine().Where("service_id = ?", serviceID).Find(&moduleList); err != nil {
+	if err := SEngine.Where("service_id = ?", serviceID).Find(&moduleList); err != nil {
 		return nil, err
 	}
 	return moduleList, nil
 }
 
 func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
-	session := MEngine().NewSession()
+	session := MEngine.NewSession()
 	defer session.Close()
 
 	if err := session.Begin(); err != nil {
@@ -131,7 +131,7 @@ func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
 func UpdateConfigMap(name string, pair string) error {
 	service := new(Service)
 	service.Configmap = pair
-	if affected, err := MEngine().Where("name = ?", name).Cols("configmap").Update(service); err != nil {
+	if affected, err := MEngine.Where("name = ?", name).Cols("configmap").Update(service); err != nil {
 		return err
 	} else if affected == 0 {
 		return NotFound

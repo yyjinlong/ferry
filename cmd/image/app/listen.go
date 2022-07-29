@@ -8,9 +8,10 @@ package app
 import (
 	"encoding/json"
 
-	"nautilus/golib/log"
-	"nautilus/golib/rmq"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
+	"nautilus/pkg/util/rmq"
 )
 
 var (

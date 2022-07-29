@@ -27,7 +27,7 @@ const (
 
 func GetImagInfo(pipelineID int64) (*PipelineImage, error) {
 	pi := new(PipelineImage)
-	if has, err := SEngine().Where("pipeline_id=?", pipelineID).Get(pi); err != nil {
+	if has, err := SEngine.Where("pipeline_id=?", pipelineID).Get(pi); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -38,7 +38,7 @@ func GetImagInfo(pipelineID int64) (*PipelineImage, error) {
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
 func FindImageInfo(pipelineID int64) (map[string]string, error) {
 	pi := new(PipelineImage)
-	if has, err := SEngine().Where("pipeline_id = ?", pipelineID).Get(pi); err != nil {
+	if has, err := SEngine.Where("pipeline_id = ?", pipelineID).Get(pi); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -55,7 +55,7 @@ func CreateImage(pipelineID int64) error {
 	image := new(PipelineImage)
 	image.PipelineID = pipelineID
 	image.Status = PIProcess
-	if _, err := MEngine().Insert(image); err != nil {
+	if _, err := MEngine.Insert(image); err != nil {
 		return err
 	}
 	return nil
@@ -66,7 +66,7 @@ func UpdateImage(pipelineID int64, imageURL, imageTag string) error {
 	image.PipelineID = pipelineID
 	image.ImageURL = imageURL
 	image.ImageTag = imageTag
-	if _, err := MEngine().Where("pipeline_id=?", pipelineID).Update(image); err != nil {
+	if _, err := MEngine.Where("pipeline_id=?", pipelineID).Update(image); err != nil {
 		return err
 	}
 	return nil

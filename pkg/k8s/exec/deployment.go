@@ -9,9 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"nautilus/golib/curl"
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
+	"nautilus/pkg/util/curl"
 )
 
 func NewDeployments(namespace, deployment string) *Deployments {
@@ -98,7 +99,7 @@ func (d *Deployments) Scale(replicas int) error {
 
 	spec := resp["spec"].(map[string]interface{})
 	if len(spec) != 0 && spec["replicas"].(float64) == float64(replicas) {
-		log.Infof("scale deployment: %s replicas: %d success.", d.deployment, replicas)
+		log.Infof("scale deployment: %s replicas: %d success", d.deployment, replicas)
 	}
 	return nil
 }

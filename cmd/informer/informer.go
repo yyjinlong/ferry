@@ -9,9 +9,8 @@ import (
 	"flag"
 
 	"nautilus/cmd/informer/app"
-	"nautilus/golib/db"
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
+	"nautilus/pkg/model"
 )
 
 var (
@@ -27,10 +26,9 @@ func main() {
 		return
 	}
 	config.ParseConfig(*configFile)
+	config.InitLogger(config.Config().Informer.LogFile)
 
-	log.InitLogger(config.Config().Informer.LogFile)
-
-	db.Connect("postgres",
+	model.Connect("postgres",
 		config.Config().Postgres.Master,
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)

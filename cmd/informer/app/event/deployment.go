@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
@@ -176,6 +176,6 @@ func (c *deploymentCapturer) operate() bool {
 		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, c.phase, err)
 		return false
 	}
-	log.Infof("update pipeline: %d to db on phase: %s success.", pipelineID, c.phase)
+	log.Infof("update pipeline: %d to db on phase: %s success", pipelineID, c.phase)
 	return true
 }

@@ -8,9 +8,9 @@ package publish
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
@@ -19,12 +19,10 @@ import (
 )
 
 func NewService() *Service {
-	return &Service{Logid: util.UniqueID()}
+	return &Service{}
 }
 
-type Service struct {
-	Logid string
-}
+type Service struct{}
 
 func (s *Service) Handle(serviceName string) error {
 	serviceObj, err := model.GetServiceInfo(serviceName)
@@ -59,7 +57,7 @@ func (s *Service) Handle(serviceName string) error {
 
 func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
 	appid := util.GetAppID(serviceName, serviceID, phase)
-	log.ID(s.Logid).Infof("fetch service appid: %s", appid)
+	log.Infof("fetch service appid: %s", appid)
 
 	svcYaml := &yaml.ServiceYaml{
 		ServiceName:   serviceName,
@@ -73,12 +71,12 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase s
 	if err != nil {
 		return fmt.Errorf(config.SVC_BUILD_SERVICE_YAML_ERROR, err)
 	}
-	log.ID(s.Logid).Infof("create service: %s mapping tpl: %s", appid, tpl)
+	log.Infof("create service: %s mapping tpl: %s", appid, tpl)
 
 	if err := s.execute(namespace, serviceName, tpl); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
-	log.ID(s.Logid).Infof("build service success")
+	log.Infof("build service success")
 	return nil
 }
 

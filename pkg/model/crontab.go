@@ -20,7 +20,7 @@ func CreateCrontab(namespace, service, command, schedule string) (int64, error) 
 	crontab.Service = service
 	crontab.Command = command
 	crontab.Schedule = schedule
-	if _, err := MEngine().Insert(crontab); err != nil {
+	if _, err := MEngine.Insert(crontab); err != nil {
 		return 0, err
 	}
 	return crontab.ID, nil

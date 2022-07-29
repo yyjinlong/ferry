@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
 	"nautilus/pkg/service/publish"
 )
@@ -43,7 +43,7 @@ func ConfigMap(c *gin.Context) {
 
 	cm := publish.NewConfigMap()
 	if err := cm.Handle(namespace, service, pair, pairInfo); err != nil {
-		log.ID(cm.Logid).Errorf("publish configmap failed: %+v", err)
+		log.Errorf("publish configmap failed: %+v", err)
 		Response(c, Failed, fmt.Sprintf(config.CM_PUBLISH_FAILED, err), nil)
 		return
 	}

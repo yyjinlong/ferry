@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/pipeline"
 )
 
@@ -43,7 +43,7 @@ func CreatePipeline(c *gin.Context) {
 
 	cp := pipeline.NewCreatePipeline()
 	if err := cp.Handle(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
-		log.ID(cp.Logid).Errorf("create pipeline failed: %+v", err)
+		log.Errorf("create pipeline failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

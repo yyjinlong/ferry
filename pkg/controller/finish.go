@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
@@ -27,7 +27,7 @@ func Finish(c *gin.Context) {
 
 	finish := publish.NewFinish()
 	if err := finish.Handle(pid); err != nil {
-		log.ID(finish.Logid).Errorf("finish handle failed: %+v", err)
+		log.Errorf("finish handle failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

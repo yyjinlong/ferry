@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"nautilus/cmd/informer/app/event"
-	"nautilus/golib/log"
 	"nautilus/pkg/config"
 )
 

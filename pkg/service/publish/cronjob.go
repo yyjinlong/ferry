@@ -8,7 +8,8 @@ package publish
 import (
 	"fmt"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
@@ -17,12 +18,10 @@ import (
 )
 
 func NewCronjob() *Cronjob {
-	return &Cronjob{Logid: util.UniqueID()}
+	return &Cronjob{}
 }
 
-type Cronjob struct {
-	Logid string
-}
+type Cronjob struct{}
 
 func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, error) {
 	crontabID, err := model.CreateCrontab(namespace, service, command, schedule)
@@ -31,7 +30,7 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	}
 
 	name := util.GetCronjobName(service, crontabID)
-	log.ID(c.Logid).Infof("generate cronjob name: %s", name)
+	log.Infof("generate cronjob name: %s", name)
 
 	svcObj, err := model.GetServiceInfo(service)
 	if err != nil {
@@ -52,7 +51,7 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	if len(imageInfo) == 0 {
 		return "", fmt.Errorf("get image info is empty")
 	}
-	log.ID(c.Logid).Infof("create cronjob yaml get image info: %s", imageInfo)
+	log.Infof("create cronjob yaml get image info: %s", imageInfo)
 
 	cronYaml := &yaml.CronjobYaml{
 		Namespace:   namespace,
@@ -69,13 +68,13 @@ func (c *Cronjob) Handle(namespace, service, command, schedule string) (string, 
 	if err != nil {
 		return "", fmt.Errorf(config.CRON_BUILD_YAML_ERROR, err)
 	}
-	log.ID(c.Logid).Infof("generate cronjob yaml(%s) success", name)
+	log.Infof("generate cronjob yaml(%s) success", name)
 	fmt.Println(tpl)
 
 	if err := c.execute(namespace, name, tpl); err != nil {
 		return "", fmt.Errorf(config.CRON_K8S_EXEC_FAILED, err)
 	}
-	log.ID(c.Logid).Infof("create namespace: %s cronjob: %s success", namespace, name)
+	log.Infof("create namespace: %s cronjob: %s success", namespace, name)
 	return name, nil
 }
 
@@ -97,17 +96,18 @@ type CronjobDelete struct {
 
 func (c *CronjobDelete) Handle(namespace, service string, jobID int64) error {
 	name := util.GetCronjobName(service, jobID)
-	log.ID(c.Logid).Infof("delete cronjob name: %s", name)
+	log.Infof("delete cronjob name: %s", name)
 
 	cron := exec.NewCronjob(namespace, name)
 	if !cron.Exist() {
-		log.ID(c.Logid).Infof("cronjob: %s is not exist", name)
+		log.Infof("cronjob: %s is not exist", name)
 		return nil
 	}
 	err := cron.Delete()
 	if err != nil {
-		log.ID(c.Logid).Errorf("delete cronjob: %s failed: %s", name, err)
+		log.Errorf("delete cronjob: %s failed: %s", name, err)
 		return err
 	}
-	log.ID(c.Logid).Infof("delete cronjob: %s success", name)
+	log.Infof("delete cronjob: %s success", name)
+	return nil
 }

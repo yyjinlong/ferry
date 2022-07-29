@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/rollback"
 )
 
@@ -50,7 +50,7 @@ func Rollback(c *gin.Context) {
 
 	ro := rollback.NewRollback()
 	if err := ro.Handle(pid, username); err != nil {
-		log.ID(ro.Logid).Errorf("execute rollback failed: %+v", err)
+		log.Errorf("execute rollback failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

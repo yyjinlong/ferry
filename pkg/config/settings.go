@@ -6,9 +6,15 @@
 package config
 
 import (
+	"io"
 	"io/ioutil"
+	"os"
+	"path"
+	"runtime"
+	"strconv"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -83,6 +89,30 @@ func Config() Settings {
 	lock.RLock()
 	defer lock.RUnlock()
 	return setting
+}
+
+// -----------log配置--------------
+func InitLogger(logFile string) {
+	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Open log file failed: %s", err)
+	}
+
+	// 同时写文件和屏幕
+	writers := []io.Writer{f, os.Stdout}
+	allWriters := io.MultiWriter(writers...)
+
+	log.SetReportCaller(true)
+	log.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:03:04",
+
+		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+			filename := path.Base(frame.File)
+			return frame.Function, filename + ":" + strconv.Itoa(frame.Line)
+		},
+	})
+	log.SetOutput(allWriters)
+	log.SetLevel(log.InfoLevel)
 }
 
 // -----------多集群映射-----------

@@ -8,9 +8,10 @@ package exec
 import (
 	"fmt"
 
-	"nautilus/golib/curl"
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
+	"nautilus/pkg/util/curl"
 )
 
 func NewServices(namespace, name string) *Services {

@@ -8,7 +8,8 @@ package publish
 import (
 	"fmt"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/k8s/yaml"
@@ -17,12 +18,10 @@ import (
 )
 
 func NewConfigMap() *ConfigMap {
-	return &ConfigMap{Logid: util.UniqueID()}
+	return &ConfigMap{}
 }
 
-type ConfigMap struct {
-	Logid string
-}
+type ConfigMap struct{}
 
 func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]string) error {
 	configName := util.GetConfigName(service)
@@ -43,7 +42,7 @@ func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]
 	if err := model.UpdateConfigMap(service, pair); err != nil {
 		return fmt.Errorf(config.CM_UPDATE_DB_ERROR, err)
 	}
-	log.ID(c.Logid).Infof("create namespace: %s configmap: %s success", namespace, configName)
+	log.Infof("create namespace: %s configmap: %s success", namespace, configName)
 	return nil
 }
 

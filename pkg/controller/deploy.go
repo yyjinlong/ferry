@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
@@ -33,7 +33,7 @@ func Deploy(c *gin.Context) {
 
 	dep := publish.NewDeploy()
 	if err := dep.Handle(pid, phase, username); err != nil {
-		log.ID(dep.Logid).Errorf("build deployment failed: %+v", err)
+		log.Errorf("build deployment failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

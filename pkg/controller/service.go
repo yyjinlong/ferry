@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
@@ -26,7 +26,7 @@ func Service(c *gin.Context) {
 
 	sv := publish.NewService()
 	if err := sv.Handle(serviceName); err != nil {
-		log.ID(sv.Logid).Errorf("build service failed: %+v", err)
+		log.Errorf("build service failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

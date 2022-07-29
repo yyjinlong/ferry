@@ -12,9 +12,9 @@ type Cluster struct {
 	CreateAt time.Time `xorm:"timestamp notnull created"`
 }
 
-func GetCluster(cluster string) (*Cluster, error) {
+func GetClusterByName(cluster string) (*Cluster, error) {
 	cr := new(Cluster)
-	if has, err := SEngine().Where("name = ?", cluster).Get(cr); err != nil {
+	if has, err := SEngine.Where("name = ?", cluster).Get(cr); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound

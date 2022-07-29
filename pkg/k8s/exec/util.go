@@ -9,7 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 )
@@ -28,7 +29,7 @@ func getAddress(cluster string) string {
 }
 
 func getToken(cluster string) string {
-	obj, err := model.GetCluster(cluster)
+	obj, err := model.GetClusterByName(cluster)
 	if err != nil {
 		log.Errorf("query token error: %+v by cluster: %s", err, cluster)
 		return ""

@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
@@ -31,7 +31,7 @@ func BuildTag(c *gin.Context) {
 
 	build := publish.NewBuildTag()
 	if err := build.Handle(pid, serviceName); err != nil {
-		log.ID(build.Logid).Errorf("build tag failed: %+v", err)
+		log.Errorf("build tag failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}
@@ -59,7 +59,7 @@ func ReceiveTag(c *gin.Context) {
 
 	receive := publish.NewReceiveTag()
 	if err := receive.Handle(pid, module, tag); err != nil {
-		log.ID(receive.Logid).Errorf("receive tag failed: %+v", err)
+		log.Errorf("receive tag failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

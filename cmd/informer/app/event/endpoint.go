@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/k8s/client"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"

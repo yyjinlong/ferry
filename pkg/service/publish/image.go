@@ -10,20 +10,19 @@ import (
 	"errors"
 	"fmt"
 
-	"nautilus/golib/log"
-	"nautilus/golib/rmq"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
+	"nautilus/pkg/util/rmq"
 )
 
 func NewBuildImage() *BuildImage {
-	return &BuildImage{Logid: util.UniqueID()}
+	return &BuildImage{}
 }
 
-type BuildImage struct {
-	Logid string
-}
+type BuildImage struct{}
 
 func (bi *BuildImage) Handle(pid int64, service string) error {
 	pipeline, err := model.GetPipeline(pid)
@@ -75,7 +74,7 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 	if err != nil {
 		return fmt.Errorf(config.IMG_BUILD_PARAM_ENCODE_ERROR, err)
 	}
-	log.ID(bi.Logid).Infof("publish build image body: %s", string(body))
+	log.Infof("publish build image body: %s", string(body))
 
 	if err := model.CreateImage(pid); err != nil {
 		return fmt.Errorf(config.IMG_CREATE_IMAGE_INFO_ERROR, err)
@@ -90,6 +89,6 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return fmt.Errorf(config.IMG_SEND_BUILD_TO_MQ_FAILED, err)
 	}
 	mq.Publish(string(body))
-	log.ID(bi.Logid).Infof("publish build image info to rabbitmq success.")
+	log.Infof("publish build image info to rabbitmq success")
 	return nil
 }

@@ -7,8 +7,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
-	"nautilus/golib/log"
 	"nautilus/pkg/service/publish"
 )
 
@@ -31,7 +31,7 @@ func BuildImage(c *gin.Context) {
 
 	image := publish.NewBuildImage()
 	if err := image.Handle(pid, service); err != nil {
-		log.ID(image.Logid).Errorf("build image pre handle failed: %+v", err)
+		log.Errorf("build image pre handle failed: %+v", err)
 		Response(c, Failed, err.Error(), nil)
 		return
 	}

@@ -9,9 +9,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-
-	"nautilus/golib/log"
 )
 
 var (

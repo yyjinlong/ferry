@@ -12,7 +12,8 @@ import (
 	"strconv"
 	"time"
 
-	"nautilus/golib/log"
+	log "github.com/sirupsen/logrus"
+
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
@@ -93,7 +94,7 @@ func (p *pipeline) run(data Image) {
 	if !p.UpdateImage() {
 		return
 	}
-	log.Infof("push image: %s to registry success.", p.targetURL)
+	log.Infof("push image: %s to registry success", p.targetURL)
 }
 
 func (p *pipeline) downloadCode(module, repo, tag, codePath string) error {
@@ -127,7 +128,7 @@ func (p *pipeline) copyDockerfile() bool {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
 		return false
 	}
-	log.Infof("copy dockerfile: %s success.", dstFile)
+	log.Infof("copy dockerfile: %s success", dstFile)
 	return true
 }
 

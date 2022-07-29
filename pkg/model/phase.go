@@ -52,7 +52,7 @@ var (
 // FindPhases 根据pipeline id返回对应的阶段
 func FindPhases(pipelineID int64) ([]PipelinePhase, error) {
 	ppList := make([]PipelinePhase, 0)
-	if err := SEngine().Where("pipeline_id=?", pipelineID).Desc("id").Find(&ppList); err != nil {
+	if err := SEngine.Where("pipeline_id=?", pipelineID).Desc("id").Find(&ppList); err != nil {
 		return nil, err
 	}
 	return ppList, nil
@@ -60,7 +60,7 @@ func FindPhases(pipelineID int64) ([]PipelinePhase, error) {
 
 func FindKindPhases(pipelineID int64, kind string) ([]PipelinePhase, error) {
 	ppList := make([]PipelinePhase, 0)
-	if err := SEngine().Where("pipeline_id=? and kind=?", pipelineID, kind).Desc("id").Find(&ppList); err != nil {
+	if err := SEngine.Where("pipeline_id=? and kind=?", pipelineID, kind).Desc("id").Find(&ppList); err != nil {
 		return nil, err
 	}
 	return ppList, nil
@@ -68,7 +68,7 @@ func FindKindPhases(pipelineID int64, kind string) ([]PipelinePhase, error) {
 
 func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 	ph := new(PipelinePhase)
-	if has, err := SEngine().Where("pipeline_id=? and kind=? and name=?",
+	if has, err := SEngine.Where("pipeline_id=? and kind=? and name=?",
 		pipelineID, kind, phase).Get(ph); err != nil {
 		return false
 	} else if !has {
@@ -79,7 +79,7 @@ func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 
 func GetPhaseInfo(pipelineID int64, kind, phase string) (*PipelinePhase, error) {
 	phaseObj := new(PipelinePhase)
-	if has, err := SEngine().Where("pipeline_id = ? and kind = ? and name = ?", pipelineID, kind, phase).Get(phaseObj); err != nil {
+	if has, err := SEngine.Where("pipeline_id = ? and kind = ? and name = ?", pipelineID, kind, phase).Get(phaseObj); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -89,7 +89,7 @@ func GetPhaseInfo(pipelineID int64, kind, phase string) (*PipelinePhase, error) 
 
 func CreatePhase(pipelineID int64, kind, name string, status int, deployment string) error {
 	phase := new(PipelinePhase)
-	if has, err := MEngine().Where("pipeline_id=? and kind =? and name=?", pipelineID, kind, name).Get(phase); has {
+	if has, err := MEngine.Where("pipeline_id=? and kind =? and name=?", pipelineID, kind, name).Get(phase); has {
 		return nil
 	} else if err != nil {
 		return err
@@ -100,7 +100,7 @@ func CreatePhase(pipelineID int64, kind, name string, status int, deployment str
 	phase.Status = status
 	phase.PipelineID = pipelineID
 	phase.Deployment = deployment
-	if _, err := MEngine().Insert(phase); err != nil {
+	if _, err := MEngine.Insert(phase); err != nil {
 		return err
 	}
 	return nil
@@ -109,7 +109,7 @@ func CreatePhase(pipelineID int64, kind, name string, status int, deployment str
 func UpdatePhase(pipelineID int64, kind, name string, status int) error {
 	phase := new(PipelinePhase)
 	phase.Status = status
-	if affected, err := MEngine().Cols("status").Where("pipeline_id=? and kind=? and name=?",
+	if affected, err := MEngine.Cols("status").Where("pipeline_id=? and kind=? and name=?",
 		pipelineID, kind, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
@@ -122,7 +122,7 @@ func UpdatePhaseV2(pipelineID int64, kind, name string, status int, version stri
 	phase := new(PipelinePhase)
 	phase.Status = status
 	phase.ResourceVersion = version
-	if affected, err := MEngine().Cols("status", "resource_version").Where(
+	if affected, err := MEngine.Cols("status", "resource_version").Where(
 		"pipeline_id=? and kind=? and name=?", pipelineID, kind, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
@@ -133,7 +133,7 @@ func UpdatePhaseV2(pipelineID int64, kind, name string, status int, version stri
 
 func RealtimeLog(pipelineID int64, kind, name, msg string) error {
 	phase := new(PipelinePhase)
-	if has, err := MEngine().Where("pipeline_id=? and kind=? and name=?",
+	if has, err := MEngine.Where("pipeline_id=? and kind=? and name=?",
 		pipelineID, kind, name).Get(phase); err != nil {
 		return err
 	} else if !has {
@@ -145,7 +145,7 @@ func RealtimeLog(pipelineID int64, kind, name, msg string) error {
 	}
 
 	phase.Log = phase.Log + "\n" + msg
-	if affected, err := MEngine().Cols("log").Where("pipeline_id=? and kind=? and name=?",
+	if affected, err := MEngine.Cols("log").Where("pipeline_id=? and kind=? and name=?",
 		pipelineID, kind, name).Update(phase); err != nil {
 		return err
 	} else if affected == 0 {
