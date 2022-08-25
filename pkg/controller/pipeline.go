@@ -26,7 +26,7 @@ func CreatePipeline(c *gin.Context) {
 
 	var data params
 	if err := c.BindJSON(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -44,7 +44,7 @@ func CreatePipeline(c *gin.Context) {
 	cp := pipeline.NewCreatePipeline()
 	if err := cp.Handle(name, summary, creator, rd, qa, pm, service, moduleList); err != nil {
 		log.Errorf("create pipeline failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

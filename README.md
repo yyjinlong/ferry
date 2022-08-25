@@ -36,7 +36,8 @@ Jinlong Yang
 
 * 新服务上线默认为blue
 * 蓝绿两组分别创建对应的deployment
-* 不再监听endpoint事件, 等待deployment发布完成, 自动将另一组缩成0, 读取endpoint信息并记录
+* 等待deployment发布完成, 自动将另一组缩成0
+* endpoint事件中, 所有pod都running后, 再获取对应的ip信息
 
 
 ## 4 依赖准备
@@ -93,7 +94,7 @@ curl -d 'namespace=default&service=ivr&pair={"LOG_PATH": "/home/tong/www/log/ivr
 
 ## 7 发布流程
 
-1) 创建job
+1) 创建发布任务
 
 ```
 curl -H 'content-type: application/json' -d '{"name": "ivr test", "summary": "test", "service": "ivr",  "module_list": [{"name": "ivr", "branch": "yy"}], "creator": "yangjinlong", "rd": "yangjinlong", "qa": "yangjinlong", "pm": "yangjinlong"}' http://127.0.0.1:8888/v1/pipeline

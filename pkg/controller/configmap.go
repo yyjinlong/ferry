@@ -25,7 +25,7 @@ func ConfigMap(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -37,14 +37,14 @@ func ConfigMap(c *gin.Context) {
 	)
 
 	if err := json.Unmarshal([]byte(pair), &pairInfo); err != nil {
-		Response(c, Failed, fmt.Sprintf(config.CM_DECODE_DATA_ERROR, err), nil)
+		ResponseFailed(c, fmt.Sprintf(config.CM_DECODE_DATA_ERROR, err))
 		return
 	}
 
 	cm := publish.NewConfigMap()
 	if err := cm.Handle(namespace, service, pair, pairInfo); err != nil {
 		log.Errorf("publish configmap failed: %+v", err)
-		Response(c, Failed, fmt.Sprintf(config.CM_PUBLISH_FAILED, err), nil)
+		ResponseFailed(c, fmt.Sprintf(config.CM_PUBLISH_FAILED, err))
 		return
 	}
 	ResponseSuccess(c, nil)

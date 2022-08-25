@@ -100,7 +100,7 @@ func Curl(mode, url string, cookie map[string]string, header map[string]string, 
 
 func Parse(response *http.Response, url string) (map[string]string, map[string]string, string, error) {
 	statusCode := response.StatusCode
-	if statusCode != 200 && statusCode != 201 {
+	if statusCode != 200 && statusCode != 201 && statusCode != 204 {
 		return nil, nil, "", fmt.Errorf("request url: %s status code: %d", url, statusCode)
 	}
 

@@ -36,3 +36,8 @@ func Response(c *gin.Context, code int, msg string, data interface{}) {
 func ResponseSuccess(c *gin.Context, data interface{}) {
 	Response(c, Success, "success", data)
 }
+
+// ResponseFailed 简化响应信息
+func ResponseFailed(c *gin.Context, errmsg string) {
+	Response(c, Failed, errmsg, nil)
+}

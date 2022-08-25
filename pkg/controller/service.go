@@ -19,7 +19,7 @@ func Service(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	serviceName := data.Service
@@ -27,7 +27,7 @@ func Service(c *gin.Context) {
 	sv := publish.NewService()
 	if err := sv.Handle(serviceName); err != nil {
 		log.Errorf("build service failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

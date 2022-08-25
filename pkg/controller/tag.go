@@ -20,7 +20,7 @@ func BuildTag(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -32,7 +32,7 @@ func BuildTag(c *gin.Context) {
 	build := publish.NewBuildTag()
 	if err := build.Handle(pid, serviceName); err != nil {
 		log.Errorf("build tag failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)
@@ -47,7 +47,7 @@ func ReceiveTag(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -60,7 +60,7 @@ func ReceiveTag(c *gin.Context) {
 	receive := publish.NewReceiveTag()
 	if err := receive.Handle(pid, module, tag); err != nil {
 		log.Errorf("receive tag failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

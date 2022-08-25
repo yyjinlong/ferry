@@ -19,7 +19,7 @@ func Finish(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -28,7 +28,7 @@ func Finish(c *gin.Context) {
 	finish := publish.NewFinish()
 	if err := finish.Handle(pid); err != nil {
 		log.Errorf("finish handle failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

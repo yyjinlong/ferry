@@ -21,7 +21,7 @@ func Deploy(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -34,7 +34,7 @@ func Deploy(c *gin.Context) {
 	dep := publish.NewDeploy()
 	if err := dep.Handle(pid, phase, username); err != nil {
 		log.Errorf("build deployment failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

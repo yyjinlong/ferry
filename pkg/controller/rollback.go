@@ -20,7 +20,7 @@ func CheckRollback(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -39,7 +39,7 @@ func Rollback(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -51,7 +51,7 @@ func Rollback(c *gin.Context) {
 	ro := rollback.NewRollback()
 	if err := ro.Handle(pid, username); err != nil {
 		log.Errorf("execute rollback failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

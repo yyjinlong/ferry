@@ -20,7 +20,7 @@ func BuildImage(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -32,7 +32,7 @@ func BuildImage(c *gin.Context) {
 	image := publish.NewBuildImage()
 	if err := image.Handle(pid, service); err != nil {
 		log.Errorf("build image pre handle failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)

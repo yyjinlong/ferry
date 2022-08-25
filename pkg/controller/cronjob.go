@@ -25,7 +25,7 @@ func BuildCronjob(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
@@ -33,7 +33,7 @@ func BuildCronjob(c *gin.Context) {
 	name, err := cron.Handle(data.Namespace, data.Service, data.Command, data.Schedule)
 	if err != nil {
 		log.Errorf("publish cronjob failed: %+v", err)
-		Response(c, Failed, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err), nil)
+		ResponseFailed(c, fmt.Sprintf(config.CRON_PUBLISH_ERROR, err))
 		return
 	}
 	ResponseSuccess(c, name)
@@ -48,14 +48,14 @@ func DeleteCronjob(c *gin.Context) {
 
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 
 	cron := publish.NewCronjobDelete()
 	if err := cron.Handle(data.Namespace, data.Service, data.JobID); err != nil {
 		log.Errorf("delete cronjob failed: %+v", err)
-		Response(c, Failed, err.Error(), nil)
+		ResponseFailed(c, err.Error())
 		return
 	}
 	ResponseSuccess(c, nil)
