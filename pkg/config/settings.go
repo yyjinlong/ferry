@@ -104,7 +104,7 @@ func InitLogger(logFile string) {
 
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.JSONFormatter{
-		TimestampFormat: "2006-01-02 15:03:04",
+		TimestampFormat: "2006-01-02 15:04:05",
 
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			filename := path.Base(frame.File)
