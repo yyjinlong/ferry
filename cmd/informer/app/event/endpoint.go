@@ -157,8 +157,11 @@ func GetServicePods(clientset *kubernetes.Clientset, namespace, service, phase s
 func isCurrentService(podName, service, phase string) bool {
 	reg := regexp.MustCompile(`-\d+-`)
 	matchList := reg.Split(podName, -1)
-	currentService := matchList[0]
+	if len(matchList) < 2 {
+		return false
+	}
 
+	currentService := matchList[0]
 	afterList := strings.Split(matchList[1], "-")
 	currentPhase := afterList[0]
 	if currentService == service && currentPhase == phase {
