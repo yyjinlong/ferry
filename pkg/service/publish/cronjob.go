@@ -11,10 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/k8s/exec"
-	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
+	"nautilus/pkg/util/k8s/exec"
+	"nautilus/pkg/util/k8s/yaml"
 )
 
 func NewCronjob() *Cronjob {

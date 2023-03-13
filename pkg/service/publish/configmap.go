@@ -11,10 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/k8s/exec"
-	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
+	"nautilus/pkg/util/k8s/exec"
+	"nautilus/pkg/util/k8s/yaml"
 )
 
 func NewConfigMap() *ConfigMap {
@@ -24,7 +24,7 @@ func NewConfigMap() *ConfigMap {
 type ConfigMap struct{}
 
 func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]string) error {
-	configName := util.GetConfigName(service)
+	configName := util.GetConfigmapName(service)
 
 	cmYaml := &yaml.ConfigmapYaml{
 		Namespace: namespace,

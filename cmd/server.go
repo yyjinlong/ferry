@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -23,16 +24,12 @@ import (
 )
 
 var (
-	configFile = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
-	help       = flag.Bool("h", false, "show help info.")
+	configFile  = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
+	gracePeriod = 2 * time.Second
 )
 
 func main() {
 	flag.Parse()
-	if *help {
-		flag.PrintDefaults()
-		return
-	}
 	config.ParseConfig(*configFile)
 	config.InitLogger(config.Config().LogFile)
 
@@ -43,8 +40,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	qs := make(chan os.Signal, 1)
-	signal.Notify(qs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	quitSignal := make(chan os.Signal, 1)
+	signal.Notify(quitSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	r := gin.Default()
 	r.Use(cors.Default())
@@ -57,7 +54,7 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); err == http.ErrServerClosed {
-			log.Info("listen and serve shutdown....")
+			log.Infof("Stopping everything, waiting %s...", gracePeriod)
 		} else if err != nil {
 			log.Errorf("listen and serve failed: %s", err)
 			cancel()
@@ -65,11 +62,11 @@ func main() {
 	}()
 
 	select {
-	case sig := <-qs:
-		if sig == syscall.SIGINT || sig == syscall.SIGTERM || sig == syscall.SIGQUIT {
-			log.Info("quit the server with ctrl c")
-			server.Shutdown(ctx)
-			cancel()
-		}
+	case <-quitSignal:
+		log.Infof("Signal(ctrl-c) captured, exiting...")
+		server.Shutdown(ctx)
+		cancel()
 	}
+
+	time.Sleep(gracePeriod)
 }

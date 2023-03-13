@@ -6,6 +6,7 @@
 package config
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,6 +17,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Settings struct {
@@ -95,7 +98,7 @@ func Config() Settings {
 func InitLogger(logFile string) {
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("Open log file failed: %s", err)
+		panic(err)
 	}
 
 	// 同时写文件和屏幕
@@ -105,7 +108,6 @@ func InitLogger(logFile string) {
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
-
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			filename := path.Base(frame.File)
 			return frame.Function, filename + ":" + strconv.Itoa(frame.Line)
@@ -127,4 +129,31 @@ func GetAddress(idc string) string {
 		XQ: Config().Cluster.XQ,
 	}
 	return mapping[idc]
+}
+
+func GetClientset(cluster string) (*kubernetes.Clientset, error) {
+	var clusterConfig string
+	if cluster == HP {
+		clusterConfig = setting.K8S.HPConfig
+	} else if cluster == XQ {
+		clusterConfig = setting.K8S.XQConfig
+	} else {
+		return nil, fmt.Errorf("unknown cluster: %s", cluster)
+	}
+
+	configFile, err := ioutil.ReadFile(clusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeconfig, err := clientcmd.RESTConfigFromKubeConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
 }

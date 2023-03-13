@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
+	"nautilus/pkg/util/k8s/exec"
 )
 
 func NewRollback() *Rollback {
@@ -94,7 +94,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		}
 
 		// NOTE: 回滚组恢复指定副本数
-		rollbackDeployment := util.GetDeployment(service.Name, service.ID, phase, rollbackGroup)
+		rollbackDeployment := util.GetDeploymentName(service.Name, service.ID, phase, rollbackGroup)
 		if err := ro.worker(namespace.Name, rollbackDeployment, replicas); err != nil {
 			log.Errorf("rollback deployment: %s replicas: %d error: %+v", rollbackDeployment, replicas, err)
 			return err
@@ -102,13 +102,13 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		log.Infof("rollback deployment: %s replicas: %d finish", rollbackDeployment, replicas)
 
 		// NOTE: 销毁组缩成0
-		destroyDeployment := util.GetDeployment(service.Name, service.ID, phase, destroyGroup)
+		destroyDeployment := util.GetDeploymentName(service.Name, service.ID, phase, destroyGroup)
 		if err := ro.worker(namespace.Name, destroyDeployment, 0); err != nil {
 			log.Errorf("destroy deployment: %s scale 0 error: %+v", destroyDeployment, err)
 			return err
 		}
 
-		if err := model.CreatePhase(pid, model.PHASE_ROLLBACK, phase, model.PHSuccess, ""); err != nil {
+		if err := model.CreatePhase(pid, model.PHASE_ROLLBACK, phase, model.PHSuccess); err != nil {
 			return fmt.Errorf(config.ROL_RECORD_PHASE_ERROR, phase, err)
 		}
 		log.Infof("destroy deployment: %s scale 0 finish", destroyDeployment)

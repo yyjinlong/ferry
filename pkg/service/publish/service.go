@@ -12,10 +12,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"nautilus/pkg/config"
-	"nautilus/pkg/k8s/exec"
-	"nautilus/pkg/k8s/yaml"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util"
+	"nautilus/pkg/util/k8s/exec"
+	"nautilus/pkg/util/k8s/yaml"
 )
 
 func NewService() *Service {

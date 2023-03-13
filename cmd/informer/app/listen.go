@@ -22,35 +22,6 @@ import (
 	"nautilus/pkg/config"
 )
 
-func getClusterConfig(cluster string) string {
-	switch cluster {
-	case config.HP:
-		return config.Config().K8S.HPConfig
-	case config.XQ:
-		return config.Config().K8S.XQConfig
-	}
-	return ""
-}
-
-func GetClientset(cluster string) *kubernetes.Clientset {
-	clusterConfig := getClusterConfig(cluster)
-	config, err := ioutil.ReadFile(clusterConfig)
-	if err != nil {
-		log.Panicf("read kubeconfig file error: %s", err)
-	}
-
-	kubeconfig, err := clientcmd.RESTConfigFromKubeConfig(config)
-	if err != nil {
-		log.Panicf("get rest config from kubeconfig error: %s", err)
-	}
-
-	clientset, err := kubernetes.NewForConfig(kubeconfig)
-	if err != nil {
-		log.Panicf("get clientset from kubeconfig error: %s", err)
-	}
-	return clientset
-}
-
 // DeploymentFinishEvent deployment完成事件
 func DeploymentFinishEvent(clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})

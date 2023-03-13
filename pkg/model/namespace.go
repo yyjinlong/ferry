@@ -36,3 +36,11 @@ func GetNamespaceByName(name string) (*Namespace, error) {
 	}
 	return ns, nil
 }
+
+func GetClusterByNamespace(namespace string) (string, error) {
+	ns, err := GetNamespaceByName(namespace)
+	if err != nil {
+		return "", err
+	}
+	return ns.Cluster, nil
+}

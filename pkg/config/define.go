@@ -38,6 +38,7 @@ const (
 	DB_PIPELINE_UPDATE_ERROR              = "查询pipeline变更信息失败: %s"
 	DB_SERVICE_QUERY_ERROR                = "查询service信息失败: %s"
 	DB_QUERY_NAMESPACE_ERROR              = "查询命名空间信息失败: %s"
+	DB_QUERY_CLUSTER_ERROR                = "查询cluster信息失败: %s"
 	DB_QUERY_PHASES_ERROR                 = "查询pipeline对应阶段错误: %s"
 	DB_UPDATE_PIPELINE_ERROR              = "更新pipeline状态失败: %s"
 	DB_WRITE_LOCK_ERROR                   = "服务占锁: %v 失败: %s"
@@ -71,9 +72,12 @@ const (
 
 const (
 	PUB_DEPLOY_FINISHED               = "服务已部署完成, 不能重复操作!"
-	PUB_BUILD_DEPLOYMENT_YAML_ERROR   = "创建deployment yaml失败: %s"
 	PUB_K8S_DEPLOYMENT_EXEC_FAILED    = "K8S创建deployment失败: %s"
 	PUB_RECORD_DEPLOYMENT_TO_DB_ERROR = "写deployment信息到数据库失败: %s"
+	PUB_CREATE_VOLUMES_ERROR          = "创建volumes失败: %s"
+	PUB_CREATE_VOLUME_MOUNT_ERROR     = "挂载volume失败: %s"
+	PUB_FETCH_IMAGE_INFO_ERROR        = "获取镜像信息为空!"
+	PUB_GET_CLIENTSET_ERROR           = "获取clientset失败: %s"
 )
 
 // 确认完成

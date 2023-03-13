@@ -18,7 +18,6 @@ type PipelinePhase struct {
 	Kind            string    `xorm:"varchar(20)"`
 	Status          int       `xorm:"int notnull"`
 	Log             string    `xorm:"text"`
-	Deployment      string    `xorm:"text"`
 	ResourceVersion string    `xorm:"varchar(32)"`
 	CreateAt        time.Time `xorm:"timestamp notnull created"`
 	UpdateAt        time.Time `xorm:"timestamp notnull updated"`
@@ -87,7 +86,7 @@ func GetPhaseInfo(pipelineID int64, kind, phase string) (*PipelinePhase, error) 
 	return phaseObj, nil
 }
 
-func CreatePhase(pipelineID int64, kind, name string, status int, deployment string) error {
+func CreatePhase(pipelineID int64, kind, name string, status int) error {
 	phase := new(PipelinePhase)
 	if has, err := MEngine.Where("pipeline_id=? and kind =? and name=?", pipelineID, kind, name).Get(phase); has {
 		return nil
@@ -99,7 +98,6 @@ func CreatePhase(pipelineID int64, kind, name string, status int, deployment str
 	phase.Kind = kind
 	phase.Status = status
 	phase.PipelineID = pipelineID
-	phase.Deployment = deployment
 	if _, err := MEngine.Insert(phase); err != nil {
 		return err
 	}
