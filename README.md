@@ -55,39 +55,7 @@ kubectl label node xxxx batch=cronjob
 kubectl get nodes --show-labels
 ```
 
-### 4.2 ServiceAccount Token
-
-```
-(1) 命令行
-
-kubectl create serviceaccount nautilus-api -n kube-system
-
-kubectl create clusterrolebinding nautilus-api --clusterrole=cluster-admin --group=kube-system:nautilus-api
-
-(2) yaml
-
-$ cat account.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: nautilus-api
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: nautilus-api
-subjects:
-- kind: ServiceAccount
-  name: nautilus-api
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-```
-
-### 4.3 imagePullSecrets
+### 4.2 imagePullSecrets
 
 ```
 # 登录私有仓库
