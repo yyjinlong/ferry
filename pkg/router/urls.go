@@ -49,7 +49,7 @@ func URLs(r *gin.Engine) {
 	// 定时任务
 	cr := r.Group("v1", UserAuth)
 	{
-		cr.POST("/cronjob", controller.BuildCronjob)
-		cr.POST("/cronjob/delete", controller.DeleteCronjob)
+		cr.POST("/cronjob", controller.BuildCronJob)
+		cr.POST("/cronjob/delete", controller.DeleteCronJob)
 	}
 }

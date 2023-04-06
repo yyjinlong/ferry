@@ -16,7 +16,6 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
 )
 
 func NewBuildTag() *BuildTag {
@@ -74,13 +73,13 @@ func (bt *BuildTag) do(param string) bool {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println(config.TAG_CREATE_PIPE_ERROR, err)
+		log.Errorf(config.TAG_CREATE_PIPE_ERROR, err)
 		return false
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		fmt.Println(config.TAG_START_EXEC_ERROR, err)
+		log.Errorf(config.TAG_START_EXEC_ERROR, err)
 		return false
 	}
 
@@ -94,7 +93,7 @@ func (bt *BuildTag) do(param string) bool {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println(config.TAG_WAIT_FINISH_ERROR, err)
+		log.Errorf(config.TAG_WAIT_FINISH_ERROR, err)
 		return false
 	}
 
@@ -105,12 +104,10 @@ func (bt *BuildTag) do(param string) bool {
 }
 
 func NewReceiveTag() *ReceiveTag {
-	return &ReceiveTag{Logid: util.UniqueID()}
+	return &ReceiveTag{}
 }
 
-type ReceiveTag struct {
-	Logid string
-}
+type ReceiveTag struct{}
 
 func (rt *ReceiveTag) Handle(pid int64, module, tag string) error {
 	log.Infof("receive module: %s build tag value: %s", module, tag)

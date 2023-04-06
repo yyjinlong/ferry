@@ -12,7 +12,7 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/k8s"
 )
 
 func NewFinish() *Finish {
@@ -33,7 +33,7 @@ func (f *Finish) Handle(pid int64) error {
 	}
 
 	onlineGroup := service.DeployGroup
-	deployGroup := util.GetDeployGroup(onlineGroup)
+	deployGroup := k8s.GetDeployGroup(onlineGroup)
 	log.Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
 
 	if err := model.UpdateGroup(pid, service.ID, onlineGroup, deployGroup, model.PLSuccess); err != nil {

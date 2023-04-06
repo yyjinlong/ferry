@@ -19,7 +19,7 @@ type Service struct {
 	QuotaMaxCPU   int       `xorm:"int"`
 	QuotaMem      int       `xorm:"int"`
 	QuotaMaxMem   int       `xorm:"int"`
-	Replicas      int       `xorm:"int"`
+	Replicas      int32     `xorm:"int"`
 	Volume        string    `xorm:"text"`
 	Configmap     string    `xorm:"text"`
 	ReserveTime   int       `xorm:"int"`

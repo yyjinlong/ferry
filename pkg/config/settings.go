@@ -21,15 +21,20 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	// HP k8s cluster: hp
+	HP = "hp"
+	// XQ k8s cluster: xq
+	XQ = "xq"
+)
+
 type Settings struct {
 	Address  string       `yaml:"address"`
 	LogFile  string       `yaml:"logfile"`
 	Postgres PostgresInfo `yaml:"postgres"`
 	RabbitMQ RabbtimqInfo `yaml:"rabbitmq"`
 	Image    ImageInfo    `yaml:"image"`
-	Informer InformerInfo `yaml:"informer"`
 	K8S      K8SInfo      `yaml:"k8s"`
-	Cluster  ClusterInfo  `yaml:"cluster"`
 }
 
 type PostgresInfo struct {
@@ -46,27 +51,14 @@ type RabbtimqInfo struct {
 }
 
 type ImageInfo struct {
-	LogFile  string `yaml:"logfile"`
+	Release  string `yaml:"release"`
 	Registry string `yaml:"registry"`
-	Dir      string `yaml:"dir"`
-}
-
-type InformerInfo struct {
-	LogFile string `yaml:"logfile"`
 }
 
 type K8SInfo struct {
-	HPConfig   string `yaml:"hpconfig"`
-	XQConfig   string `yaml:"xqconfig"`
-	Deployment string `yaml:"deployment"`
-	Service    string `yaml:"service"`
-	ConfigMap  string `yaml:"configmap"`
-	Cronjob    string `yaml:"cronjob"`
-}
-
-type ClusterInfo struct {
-	HP string `yaml:"hp"`
-	XQ string `yaml:"xq"`
+	HPConfig string `yaml:"hpconfig"`
+	XQConfig string `yaml:"xqconfig"`
+	ImageKey string `yaml:"imageKey"`
 }
 
 var (
@@ -94,7 +86,7 @@ func Config() Settings {
 	return setting
 }
 
-// -----------log配置--------------
+// InitLogger create and set logger
 func InitLogger(logFile string) {
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
@@ -117,27 +109,15 @@ func InitLogger(logFile string) {
 	log.SetLevel(log.InfoLevel)
 }
 
-// -----------多集群映射-----------
-const (
-	HP = "hp"
-	XQ = "xq"
-)
-
-func GetAddress(idc string) string {
-	mapping := map[string]string{
-		HP: Config().Cluster.HP,
-		XQ: Config().Cluster.XQ,
-	}
-	return mapping[idc]
-}
-
+// GetClientset get client-go clientset
 func GetClientset(cluster string) (*kubernetes.Clientset, error) {
 	var clusterConfig string
-	if cluster == HP {
+	switch cluster {
+	case HP:
 		clusterConfig = setting.K8S.HPConfig
-	} else if cluster == XQ {
+	case XQ:
 		clusterConfig = setting.K8S.XQConfig
-	} else {
+	default:
 		return nil, fmt.Errorf("unknown cluster: %s", cluster)
 	}
 
@@ -146,12 +126,12 @@ func GetClientset(cluster string) (*kubernetes.Clientset, error) {
 		return nil, err
 	}
 
-	kubeconfig, err := clientcmd.RESTConfigFromKubeConfig(configFile)
+	kubeConfig, err := clientcmd.RESTConfigFromKubeConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeconfig)
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}

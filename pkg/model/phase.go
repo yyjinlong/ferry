@@ -8,7 +8,7 @@ package model
 import (
 	"time"
 
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 )
 
 type PipelinePhase struct {
@@ -138,7 +138,7 @@ func RealtimeLog(pipelineID int64, kind, name, msg string) error {
 		return NotFound
 	}
 
-	if util.Ini(phase.Status, []int{PHSuccess, PHFailed}) {
+	if cm.Ini(phase.Status, []int{PHSuccess, PHFailed}) {
 		return nil
 	}
 

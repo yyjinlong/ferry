@@ -12,8 +12,8 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
-	"nautilus/pkg/util/k8s/exec"
+	"nautilus/pkg/util/cm"
+	"nautilus/pkg/util/k8s"
 )
 
 func NewRollback() *Rollback {
@@ -23,39 +23,46 @@ func NewRollback() *Rollback {
 type Rollback struct{}
 
 func (ro *Rollback) Handle(pid int64, username string) error {
-	// TODO: 建立websocket
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	if util.Ini(pipeline.Status, []int{model.PLRollbackSuccess, model.PLTerminate}) {
+	if cm.Ini(pipeline.Status, []int{model.PLRollbackSuccess, model.PLTerminate}) {
 		return fmt.Errorf(config.ROL_CANNOT_EXECUTE)
 	}
 
-	// NOTE: 获取回滚组和销毁组
-	service, err := model.GetServiceByID(pipeline.ServiceID)
+	svc, err := model.GetServiceByID(pipeline.ServiceID)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
+	}
+
+	ns, err := model.GetNamespace(svc.NamespaceID)
+	if err != nil {
+		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}
 
 	var (
 		rollbackGroup string // 回滚组恢复指定副本数
 		destroyGroup  string // 销毁组缩成0
+		namespace     = ns.Name
+		service       = svc.Name
+		replicas      = svc.Replicas
+		serviceID     = svc.ID
 	)
 
+	// (1) 获取回滚组和销毁组
 	if pipeline.Status == model.PLSuccess {
-		// 发布成功时
-		rollbackGroup = service.DeployGroup
-		destroyGroup = service.OnlineGroup
+		// 发布成功时, 销毁当前在线组
+		destroyGroup = svc.OnlineGroup
 	} else {
-		// 发布过程中
-		rollbackGroup = service.OnlineGroup
-		destroyGroup = service.DeployGroup
+		// 发布过程中, 销毁当前部署组
+		destroyGroup = svc.DeployGroup
 	}
-	log.Infof("get rollback_group: %s destroy_group: %s", rollbackGroup, destroyGroup)
+	rollbackGroup = k8s.GetAnotherGroup(destroyGroup)
+	log.Infof("get rollback group: %s destroy group: %s", rollbackGroup, destroyGroup)
 
-	// NOTE: 占锁
+	// (2) 占锁
 	if err := model.UpdateStatus(pid, model.PLRollbacking); err != nil {
 		return fmt.Errorf(config.DB_UPDATE_PIPELINE_ERROR, err)
 	}
@@ -64,7 +71,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pid, err)
 	}
 
-	// NOTE: 获取已发布的阶段
+	// (3) 获取已发布的阶段
 	phases, err := model.FindKindPhases(pid, model.PHASE_DEPLOY)
 	if err != nil {
 		return fmt.Errorf(config.DB_QUERY_PHASES_ERROR, err)
@@ -76,45 +83,45 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 			return fmt.Errorf(config.ROL_PROCESS_NO_EXECUTE)
 		}
 
-		if util.Ini(obj.Status, []int{model.PHSuccess, model.PHFailed}) {
+		if cm.Ini(obj.Status, []int{model.PHSuccess, model.PHFailed}) {
 			publishes = append(publishes, obj.Name)
 		}
 	}
 	log.Infof("get published phase have: %s", publishes)
 
-	namespace, err := model.GetNamespace(service.NamespaceID)
+	// (4) 回滚组恢复指定副本、销毁组缩成0
+	resource, err := k8s.New(namespace)
 	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
+		return err
 	}
 
 	for _, phase := range publishes {
-		replicas := service.Replicas
 		if phase == model.PHASE_SANDBOX {
 			replicas = 1
 		}
 
-		// NOTE: 回滚组恢复指定副本数
-		rollbackDeployment := util.GetDeploymentName(service.Name, service.ID, phase, rollbackGroup)
-		if err := ro.worker(namespace.Name, rollbackDeployment, replicas); err != nil {
-			log.Errorf("rollback deployment: %s replicas: %d error: %+v", rollbackDeployment, replicas, err)
+		// 第一步: 回滚组恢复指定副本数
+		rollbackDepName := k8s.GetDeploymentName(service, serviceID, phase, rollbackGroup)
+		if err := resource.Scale(namespace, rollbackDepName, replicas); err != nil {
+			log.Errorf("rollback deployment: %s replicas: %d error: %+v", rollbackDepName, replicas, err)
 			return err
 		}
-		log.Infof("rollback deployment: %s replicas: %d finish", rollbackDeployment, replicas)
+		log.Infof("rollback deployment: %s replicas: %d success", rollbackDepName, replicas)
 
-		// NOTE: 销毁组缩成0
-		destroyDeployment := util.GetDeploymentName(service.Name, service.ID, phase, destroyGroup)
-		if err := ro.worker(namespace.Name, destroyDeployment, 0); err != nil {
-			log.Errorf("destroy deployment: %s scale 0 error: %+v", destroyDeployment, err)
+		// 第二步: 销毁组缩成0
+		destroyDepName := k8s.GetDeploymentName(service, serviceID, phase, destroyGroup)
+		if err := resource.Scale(namespace, destroyDepName, 0); err != nil {
+			log.Errorf("destroy deployment: %s scale 0 error: %+v", destroyDepName, err)
 			return err
 		}
+		log.Infof("destroy deployment: %s scale 0 success", destroyDepName)
 
 		if err := model.CreatePhase(pid, model.PHASE_ROLLBACK, phase, model.PHSuccess); err != nil {
 			return fmt.Errorf(config.ROL_RECORD_PHASE_ERROR, phase, err)
 		}
-		log.Infof("destroy deployment: %s scale 0 finish", destroyDeployment)
 	}
 
-	// NOTE: 释放锁
+	// (5) 释放锁
 	if err := model.UpdateStatus(pid, model.PLRollbackSuccess); err != nil {
 		return fmt.Errorf(config.DB_UPDATE_PIPELINE_ERROR, err)
 	}
@@ -122,20 +129,11 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 	if err := model.SetLock(pipeline.ServiceID, ""); err != nil {
 		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pid, err)
 	}
+	log.Infof("rollback all phases: %+v success", publishes)
 
-	log.Infof("rollback phases: %+v success", publishes)
-	return ro.finish(pid, service.ID, rollbackGroup, destroyGroup)
-}
-
-func (ro *Rollback) worker(namespace, deployment string, replicas int) error {
-	dep := exec.NewDeployments(namespace, deployment)
-	return dep.Scale(replicas)
-}
-
-func (ro *Rollback) finish(pid, serviceID int64, onlineGroup, deployGroup string) error {
-	if err := model.UpdateGroup(pid, serviceID, onlineGroup, deployGroup, model.PLRollbackSuccess); err != nil {
+	// (6) 完成
+	if err := model.UpdateGroup(pid, serviceID, rollbackGroup, destroyGroup, model.PLRollbackSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
-	log.Infof("set current online group: %s deploy group: %s for rollback success", onlineGroup, deployGroup)
 	return nil
 }

@@ -9,12 +9,12 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
-	"nautilus/pkg/util/k8s/exec"
-	"nautilus/pkg/util/k8s/yaml"
+	"nautilus/pkg/util/k8s"
 )
 
 func NewConfigMap() *ConfigMap {
@@ -23,33 +23,29 @@ func NewConfigMap() *ConfigMap {
 
 type ConfigMap struct{}
 
-func (c *ConfigMap) Handle(namespace, service, pair string, pairInfo map[string]string) error {
-	configName := util.GetConfigmapName(service)
+func (c *ConfigMap) Handle(namespace, service, pair string, data map[string]string) error {
+	configName := k8s.GetConfigmapName(service)
 
-	cmYaml := &yaml.ConfigmapYaml{
-		Namespace: namespace,
-		Name:      configName,
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configName,
+			Namespace: namespace,
+		},
+		Data: data,
 	}
-	tpl, err := cmYaml.Instance(pairInfo)
+
+	resource, err := k8s.New(namespace)
 	if err != nil {
-		return fmt.Errorf(config.CM_BUILD_YAML_ERROR, err)
+		return err
 	}
-
-	if err := c.execute(namespace, configName, tpl); err != nil {
+	if err := resource.CreateOrUpdateConfigMap(namespace, configMap); err != nil {
 		return fmt.Errorf(config.CM_K8S_EXEC_FAILED, err)
 	}
+	log.Infof("publish configmap: %s to k8s success", configName)
 
 	if err := model.UpdateConfigMap(service, pair); err != nil {
 		return fmt.Errorf(config.CM_UPDATE_DB_ERROR, err)
 	}
-	log.Infof("create namespace: %s configmap: %s success", namespace, configName)
+	log.Infof("record configmap: %s to db success", configName)
 	return nil
-}
-
-func (c *ConfigMap) execute(namespace, name, tpl string) error {
-	cMap := exec.NewConfigMap(namespace, name)
-	if !cMap.Exist() {
-		return cMap.Create(tpl)
-	}
-	return cMap.Update(tpl)
 }

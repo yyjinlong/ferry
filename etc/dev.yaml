@@ -6,28 +6,17 @@ postgres:
   slave1: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
   slave2: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
 
+k8s:
+  hpconfig: "/Users/yangjinlong/.kube/config"
+  xqconfig: "/Users/yangjinlong/.kube/config"
+  imageKey: "harborkey"
+
 rabbitmq:
   address: "amqp://rabbit:yangjinlong@10.12.24.19:5672/core"
   exchange: "nautilus"
   queue: "all-build-image"
   routingKey: "build-image"
 
-k8s:
-  hpconfig: "/Users/yangjinlong/.kube/config"
-  xqconfig: "/Users/yangjinlong/.kube/config"
-  deployment: "https://%s:6443/apis/apps/v1/namespaces/%s/deployments"
-  service: "https://%s:6443/api/v1/namespaces/%s/services"
-  configmap: "https://%s:6443/api/v1/namespaces/%s/configmaps"
-  cronjob: "https://%s:6443/apis/batch/v1/namespaces/%s/cronjobs"
-
-cluster:
-  hp: '10.12.28.4'
-  xq: '10.12.28.4'
-
 image:
-  logfile: "/tmp/nautilus-image.log"
+  release: "/tmp/release"
   registry: "10.12.28.4:80/release"
-  dir: "/tmp/release"
-
-informer:
-  logfile: "/tmp/nautilus-informer.log"

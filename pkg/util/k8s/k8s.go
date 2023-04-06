@@ -10,11 +10,17 @@ import (
 type Resource interface {
 	Deployment
 	Service
+	ConfigMap
+	Pod
+	CronJob
 }
 
 type resource struct {
 	Deployment
 	Service
+	ConfigMap
+	Pod
+	CronJob
 }
 
 func New(namespace string) (Resource, error) {
@@ -31,5 +37,8 @@ func New(namespace string) (Resource, error) {
 	return &resource{
 		Deployment: NewDeploymentResource(clientset),
 		Service:    NewServiceResource(clientset),
+		ConfigMap:  NewConfigMapResource(clientset),
+		Pod:        NewPodResouce(clientset),
+		CronJob:    NewCronJobResource(clientset),
 	}, nil
 }

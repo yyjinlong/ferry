@@ -15,7 +15,7 @@ import (
 	"nautilus/pkg/service/publish"
 )
 
-func BuildCronjob(c *gin.Context) {
+func BuildCronJob(c *gin.Context) {
 	type params struct {
 		Namespace string `form:"namespace" binding:"required"`
 		Service   string `form:"service" binding:"required"`
@@ -39,7 +39,7 @@ func BuildCronjob(c *gin.Context) {
 	ResponseSuccess(c, name)
 }
 
-func DeleteCronjob(c *gin.Context) {
+func DeleteCronJob(c *gin.Context) {
 	type params struct {
 		Namespace string `form:"namespace" binding:"required"`
 		Service   string `form:"service" binding:"required"`
@@ -52,7 +52,7 @@ func DeleteCronjob(c *gin.Context) {
 		return
 	}
 
-	cron := publish.NewCronjobDelete()
+	cron := publish.NewCronJobDelete()
 	if err := cron.Handle(data.Namespace, data.Service, data.JobID); err != nil {
 		log.Errorf("delete cronjob failed: %+v", err)
 		ResponseFailed(c, err.Error())

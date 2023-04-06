@@ -18,7 +18,7 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 	"nautilus/pkg/util/k8s"
 )
 
@@ -29,19 +29,16 @@ func NewDeploy() *Deploy {
 type Deploy struct{}
 
 func (d *Deploy) Handle(pid int64, phase, username string) error {
-	// TODO: 建立websocket
-
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
-		return fmt.Errorf(config.PUB_DEPLOY_FINISHED)
+	if err := d.checkStatus(pipeline.Status); err != nil {
+		return err
 	}
 
-	serviceID := pipeline.ServiceID
-	svc, err := model.GetServiceByID(serviceID)
+	svc, err := model.GetServiceByID(pipeline.ServiceID)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
@@ -52,16 +49,23 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	}
 
 	var (
+		serviceID      = pipeline.ServiceID
 		serviceName    = svc.Name
 		deployGroup    = svc.DeployGroup
 		replicas       = int32(svc.Replicas)
 		graceTime      = int64(svc.ReserveTime)
 		namespace      = ns.Name
-		deploymentName = util.GetDeploymentName(serviceName, serviceID, phase, deployGroup)
-		appid          = util.GetAppID(serviceName, serviceID, phase)
-		configmapName  = util.GetConfigmapName(serviceName)
+		deploymentName = k8s.GetDeploymentName(serviceName, serviceID, phase, deployGroup)
+		appid          = k8s.GetAppID(serviceName, serviceID, phase)
+		configMapName  = k8s.GetConfigmapName(serviceName)
+		labels         = d.generateLabels(deploymentName, phase, appid)
 	)
-	log.Infof("current deploy group: %s deployment name: %s appid: %s", deployGroup, deploymentName, appid)
+
+	if phase == model.PHASE_SANDBOX {
+		// 沙盒阶段默认返回1个副本
+		replicas = 1
+	}
+	log.Infof("publish get deployment name: %s group: %s replicas: %d", deploymentName, deployGroup, replicas)
 
 	imageInfo, err := model.FindImageInfo(pid)
 	if err != nil {
@@ -71,24 +75,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	if len(imageInfo) == 0 {
 		return fmt.Errorf(config.PUB_FETCH_IMAGE_INFO_ERROR)
 	}
-	log.Infof("create yaml get image info: %s", imageInfo)
-
-	if phase == model.PHASE_SANDBOX {
-		// NOTE: 沙盒阶段默认返回1个副本
-		replicas = 1
-	}
-
-	surge := intstr.IntOrString{
-		Type:   intstr.Int,
-		IntVal: 0,
-	}
-
-	unavailable := intstr.IntOrString{
-		Type:   intstr.String,
-		StrVal: "100%",
-	}
-
-	labels := d.generateLabels(deploymentName, phase, appid)
+	log.Infof("publish get deployment image info: %s", imageInfo)
 
 	volumes, err := d.generateVolumes(svc.Volume)
 	if err != nil {
@@ -114,8 +101,14 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       &surge,
-					MaxUnavailable: &unavailable,
+					MaxSurge: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 0,
+					},
+					MaxUnavailable: &intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "100%",
+					},
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -129,7 +122,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					DNSConfig:                     d.generatePodDNSConfig(),
 					ImagePullSecrets:              d.generateImagePullSecret(),
-					HostAliases:                   d.generateHostAliases(),
+					HostAliases:                   d.generateHostAlias(),
 					Volumes:                       volumes,
 					TerminationGracePeriodSeconds: &graceTime,
 					Containers: []corev1.Container{
@@ -138,7 +131,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 							Image:           fmt.Sprintf("%s:%s", imageInfo["image_url"], imageInfo["image_tag"]),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env:             d.generateEnvs(namespace, serviceName, phase),
-							EnvFrom:         d.generateEnvFroms(configmapName),
+							EnvFrom:         d.generateEnvFroms(configMapName),
 							SecurityContext: d.generateContainerSecurity(),
 							Resources:       d.generateResources(svc.QuotaCPU, svc.QuotaMaxCPU, svc.QuotaMem, svc.QuotaMaxMem),
 							VolumeMounts:    volumeMounts,
@@ -193,12 +186,26 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	if err := resource.CreateOrUpdateDeployment(namespace, dep); err != nil {
 		return fmt.Errorf(config.PUB_K8S_DEPLOYMENT_EXEC_FAILED, err)
 	}
-	log.Infof("pubish deployment: %s to k8s success", deploymentName)
+	log.Infof("publish deployment: %s to k8s success", deploymentName)
 
 	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, phase, model.PHProcess); err != nil {
 		return fmt.Errorf(config.PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
 	}
 	log.Infof("record deployment: %s to db success", deploymentName)
+	return nil
+}
+
+func (d *Deploy) checkStatus(status int) error {
+	statusList := []int{
+		model.PLSuccess,
+		model.PLFailed,
+		model.PLRollbackSuccess,
+		model.PLRollbackFailed,
+		model.PLTerminate,
+	}
+	if cm.Ini(status, statusList) {
+		return fmt.Errorf(config.PUB_DEPLOY_FINISHED)
+	}
 	return nil
 }
 
@@ -254,12 +261,12 @@ func (d *Deploy) generatePodDNSConfig() *corev1.PodDNSConfig {
 func (d *Deploy) generateImagePullSecret() []corev1.LocalObjectReference {
 	return []corev1.LocalObjectReference{
 		{
-			Name: "harborkey",
+			Name: config.Config().K8S.ImageKey,
 		},
 	}
 }
 
-func (d *Deploy) generateHostAliases() []corev1.HostAlias {
+func (d *Deploy) generateHostAlias() []corev1.HostAlias {
 	return []corev1.HostAlias{
 		{
 			IP:        "127.0.0.1",
@@ -332,27 +339,14 @@ func (d *Deploy) generateEnvs(namespace, service, stage string) []corev1.EnvVar 
 	}
 }
 
-func (d *Deploy) generateEnvFroms(configmapName string) []corev1.EnvFromSource {
+func (d *Deploy) generateEnvFroms(configMapName string) []corev1.EnvFromSource {
 	return []corev1.EnvFromSource{
 		{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: configmapName,
+					Name: configMapName,
 				},
 			},
-		},
-	}
-}
-
-func (d *Deploy) generateResources(minCPU, maxCPU, minMem, maxMem int) corev1.ResourceRequirements {
-	return corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", minCPU)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", minMem)),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", maxCPU)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", maxMem)),
 		},
 	}
 }
@@ -376,6 +370,19 @@ func (d *Deploy) generateContainerSecurity() *corev1.SecurityContext {
 		RunAsNonRoot:             &runAsNonRoot,
 		ReadOnlyRootFilesystem:   &readOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+	}
+}
+
+func (d *Deploy) generateResources(minCPU, maxCPU, minMem, maxMem int) corev1.ResourceRequirements {
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", minCPU)),
+			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", minMem)),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", maxCPU)),
+			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", maxMem)),
+		},
 	}
 }
 

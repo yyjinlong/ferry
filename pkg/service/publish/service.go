@@ -10,12 +10,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
-	"nautilus/pkg/util/k8s/exec"
-	"nautilus/pkg/util/k8s/yaml"
+	"nautilus/pkg/util/k8s"
 )
 
 func NewService() *Service {
@@ -25,21 +26,21 @@ func NewService() *Service {
 type Service struct{}
 
 func (s *Service) Handle(serviceName string) error {
-	serviceObj, err := model.GetServiceInfo(serviceName)
+	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	nsObj, err := model.GetNamespace(serviceObj.NamespaceID)
+	ns, err := model.GetNamespace(svc.NamespaceID)
 	if err != nil {
 		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}
 
 	var (
-		namespace     = nsObj.Name
-		serviceID     = serviceObj.ID
-		port          = serviceObj.Port
-		containerPort = serviceObj.ContainerPort
+		namespace     = ns.Name
+		serviceID     = svc.ID
+		port          = svc.Port
+		containerPort = svc.ContainerPort
 	)
 
 	var eg errgroup.Group
@@ -56,34 +57,38 @@ func (s *Service) Handle(serviceName string) error {
 }
 
 func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
-	appid := util.GetAppID(serviceName, serviceID, phase)
-	log.Infof("fetch service appid: %s", appid)
-
-	svcYaml := &yaml.ServiceYaml{
-		ServiceName:   serviceName,
-		ServiceID:     serviceID,
-		Phase:         phase,
-		AppID:         appid,
-		ExposePort:    port,
-		ContainerPort: containerPort,
+	name := k8s.GetAppID(serviceName, serviceID, phase)
+	labels := map[string]string{
+		"appid": name,
 	}
-	tpl, err := svcYaml.Instance()
+
+	so := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       name,
+					Port:       int32(port),
+					TargetPort: intstr.FromInt(containerPort),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+
+	resource, err := k8s.New(namespace)
 	if err != nil {
-		return fmt.Errorf(config.SVC_BUILD_SERVICE_YAML_ERROR, err)
+		return err
 	}
-	log.Infof("create service: %s mapping tpl: %s", appid, tpl)
-
-	if err := s.execute(namespace, serviceName, tpl); err != nil {
+	if err := resource.CreateOrUpdateService(namespace, so); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
-	log.Infof("build service success")
+	log.Infof("publish service: %s to k8s success", name)
 	return nil
-}
-
-func (s *Service) execute(namespace, serviceName, tpl string) error {
-	ss := exec.NewServices(namespace, serviceName)
-	if !ss.Exist() {
-		return ss.Create(tpl)
-	}
-	return ss.Update(tpl)
 }

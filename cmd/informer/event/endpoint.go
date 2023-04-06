@@ -15,48 +15,6 @@ import (
 	"nautilus/pkg/util"
 )
 
-func HandleEndpointCapturer(obj interface{}, mode string, clientset *kubernetes.Clientset) {
-	var (
-		data = obj.(*corev1.Endpoints)
-		name = data.ObjectMeta.Name
-	)
-
-	handleEvent(&endpointCapturer{
-		mode:      mode,
-		name:      name,
-		subsets:   data.Subsets,
-		clientset: clientset,
-	})
-}
-
-type endpointCapturer struct {
-	mode        string
-	name        string
-	subsets     []corev1.EndpointSubset
-	clientset   *kubernetes.Clientset
-	serviceID   int64
-	serviceName string
-	phase       string
-}
-
-func (e *endpointCapturer) valid() bool {
-	// NOTE: 检查是否是业务的service
-	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
-	if reg == nil {
-		return false
-	}
-	result := reg.FindAllStringSubmatch(e.name, -1)
-	if len(result) == 0 {
-		return false
-	}
-	return true
-}
-
-func (e *endpointCapturer) ready() bool {
-	log.Infof("check endpoint: %s ready on mode: %s", e.name, e.mode)
-	return true
-}
-
 func (e *endpointCapturer) parse() bool {
 	reg := regexp.MustCompile(`-\d+-`)
 	if reg == nil {
@@ -168,4 +126,121 @@ func isCurrentService(podName, service, phase string) bool {
 		return true
 	}
 	return false
+}
+
+const (
+	ENDPOINT_KEY = "redispaas:distributed:endpoint"
+	ENDPOINT_VAL = "endpoint"
+)
+
+type Endpoint interface {
+	HandleEndpoint(obj interface{}, mode, clusterName string) error
+}
+
+type EndpointResource struct {
+	clientset *kubernetes.Clientset
+}
+
+func NewEndpointResource(clientset *kubernetes.Clientset) *EndpointResource {
+	return &EndpointResource{
+		clientset: clientset,
+	}
+}
+
+func (e *EndpointResource) HandleEndpoint(obj interface{}, mode, clusterName string) error {
+	var (
+		data    = obj.(*corev1.Endpoints)
+		name    = data.ObjectMeta.Name
+		subsets = data.Subsets
+	)
+
+	if !e.filter(name) {
+		return nil
+	}
+
+	ips, ready := e.parseIP(subsets)
+	if !ready {
+		return nil
+	}
+
+	// 获取分布式锁, 超时时间为20秒.
+	rs := session.NewRedisService()
+	rs.Connect(
+		config.Config().Redis.Addr,
+		config.Config().Redis.Password,
+		config.Config().Redis.DB,
+		config.Config().Redis.Pool,
+	)
+	if rs.AcquireLock(ENDPOINT_KEY, ENDPOINT_VAL, 20) {
+		defer func() {
+			rs.ReleaseLock(ENDPOINT_KEY)
+		}()
+
+		component, serviceName, err := e.parseName(name)
+		if err != nil {
+			log.Errorf("redis cluster: %s parse endpoint name error: %+v", name, err)
+			return err
+		}
+		log.Infof("redis cluster: %s current endpoint get change ips: %v", name, ips)
+
+		// 获取到锁, 进行流量更新
+		cluster := service.NewCluster()
+		treenode := cluster.GenerateTreeNode(serviceName, component)
+		if err := cluster.UpdateTraffic(treenode, clusterName, component, serviceName, ips); err != nil {
+			log.Errorf("redis cluster: %s update traffic failed: %+v", name, err)
+			return err
+		}
+		log.Infof("redis cluster: %s update traffic ips: %v success", name, ips)
+
+		if component == "predixy" {
+			if err := model.UpdateClusterStatus(serviceName, model.CLUSTER_SUCCESS); err != nil {
+				log.Errorf("redis cluster: %s update cluster status failed: %+v", name, err)
+				return err
+			}
+			log.Infof("redis cluster: %s update cluster status success", name)
+		}
+	}
+	return nil
+}
+
+func (e *EndpointResource) filter(name string) bool {
+	// 检查是否是业务的service
+	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
+	if reg == nil {
+		return false
+	}
+	result := reg.FindAllStringSubmatch(e.name, -1)
+	if len(result) == 0 {
+		return false
+	}
+	return true
+}
+
+func (e *EndpointResource) parseIP(subsets []corev1.EndpointSubset) ([]string, bool) {
+	ready := false
+	ips := make([]string, 0)
+	for _, item := range subsets {
+		// NotReadyAddresses list is empty, indicate pod is ready
+		if len(item.NotReadyAddresses) == 0 {
+			ready = true
+		}
+
+		for _, addr := range item.Addresses {
+			ips = append(ips, addr.IP)
+		}
+	}
+	sort.Strings(ips)
+	return ips, ready
+}
+
+// parse endpoint name return component and service
+func (e *EndpointResource) parseName(name string) (string, string, error) {
+	segments := strings.SplitN(name, "-", 3)
+	if len(segments) < 3 {
+		return "", "", fmt.Errorf("error endpoint name: %s", name)
+	}
+
+	prefix := segments[0]
+	component := PREFIX_MAP[prefix]
+	return component, segments[2], nil
 }

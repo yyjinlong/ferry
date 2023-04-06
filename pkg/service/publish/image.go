@@ -14,7 +14,7 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 	"nautilus/pkg/util/rmq"
 )
 
@@ -30,15 +30,15 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return fmt.Errorf(config.IMG_QUERY_PIPELINE_ERROR, err)
 	}
 
-	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLFailed, model.PLRollbackSuccess, model.PLRollbackFailed, model.PLTerminate}) {
-		return fmt.Errorf(config.IMG_BUILD_FINISHED)
+	if err := bi.checkStatus(pipeline.Status); err != nil {
+		return err
 	}
 
 	pipelineImage, err := model.GetImagInfo(pid)
 	if err != nil && !errors.Is(err, model.NotFound) {
 		return fmt.Errorf(config.IMG_QUERY_IS_BUILD_ERROR, err)
 	}
-	if pipelineImage != nil && util.Ini(pipelineImage.Status, []int{model.PIProcess, model.PISuccess, model.PIFailed}) {
+	if pipelineImage != nil && cm.Ini(pipelineImage.Status, []int{model.PIProcess, model.PISuccess, model.PIFailed}) {
 		return fmt.Errorf(config.IMG_QUERY_IMAGE_IS_BUILED)
 	}
 
@@ -48,7 +48,7 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 	}
 
 	language := ""
-	builds := make([]map[string]string, 0)
+	builds := make([]config.ModuleInfo, 0)
 	for _, item := range updateList {
 		codeModule, err := model.GetCodeModuleInfoByID(item.CodeModuleID)
 		if err != nil {
@@ -56,19 +56,18 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		}
 		language = codeModule.Language
 
-		tagInfo := map[string]string{
-			"module": codeModule.Name,
-			"repo":   codeModule.ReposAddr,
-			"tag":    item.CodeTag,
-		}
-		builds = append(builds, tagInfo)
+		builds = append(builds, config.ModuleInfo{
+			Module: codeModule.Name,
+			Repo:   codeModule.ReposAddr,
+			Tag:    item.CodeTag,
+		})
 	}
 
-	image := map[string]interface{}{
-		"pid":     pid,
-		"type":    language,
-		"service": service,
-		"build":   builds,
+	image := config.Image{
+		PID:     pid,
+		Type:    language,
+		Service: service,
+		Build:   builds,
 	}
 	body, err := json.Marshal(image)
 	if err != nil {
@@ -90,5 +89,19 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 	}
 	mq.Publish(string(body))
 	log.Infof("publish build image info to rabbitmq success")
+	return nil
+}
+
+func (bi *BuildImage) checkStatus(status int) error {
+	statusList := []int{
+		model.PLSuccess,
+		model.PLFailed,
+		model.PLRollbackSuccess,
+		model.PLRollbackFailed,
+		model.PLTerminate,
+	}
+	if cm.Ini(status, statusList) {
+		return fmt.Errorf(config.IMG_BUILD_FINISHED)
+	}
 	return nil
 }

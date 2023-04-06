@@ -21,6 +21,7 @@ type Deployment interface {
 	CreateOrUpdateDeployment(namespace string, deployment *appsv1.Deployment) error
 	DeleteDeployment(namespace, name string) error
 	ListDeployments(namespace string) (*appsv1.DeploymentList, error)
+	Scale(namespace, name string, replicas int32) error
 }
 
 type DeploymentResource struct {
@@ -92,6 +93,14 @@ func (r *DeploymentResource) DeleteDeployment(namespace, name string) error {
 }
 
 func (r *DeploymentResource) ListDeployments(namespace string) (*appsv1.DeploymentList, error) {
-	deployments, err := r.clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
-	return deployments, err
+	return r.clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
+func (r *DeploymentResource) Scale(namespace, name string, replicas int32) error {
+	deployment, err := r.GetDeployment(namespace, name)
+	if err != nil {
+		return err
+	}
+	deployment.Spec.Replicas = &replicas
+	return r.UpdateDeployment(namespace, deployment)
 }

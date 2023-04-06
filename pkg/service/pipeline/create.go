@@ -14,7 +14,7 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 )
 
 func NewCreatePipeline() *CreatePipeline {
@@ -66,7 +66,7 @@ func (cp *CreatePipeline) checkGit(module, branch string) error {
 	}
 	param := fmt.Sprintf("git ls-remote --heads %s %s | wc -l", codeModule.ReposAddr, branch)
 	log.Infof("git check param: %s", param)
-	output, err := util.Call(param)
+	output, err := cm.Call(param)
 	if err != nil {
 		log.Errorf("exec git check command: %s error: %s", param, err)
 		return fmt.Errorf(config.PL_EXEC_GIT_CHECK_ERROR, err)
