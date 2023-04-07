@@ -15,70 +15,62 @@ import (
 	"nautilus/pkg/util"
 )
 
-type pipeline struct {
-	pid       int64
-	service   string
-	appPath   string
-	buildPath string
-	codePath  string
-	imageURL  string
-	imageTag  string
-	targetURL string
-}
-
-func (p *pipeline) copyDockerfile() bool {
+// DockerfileCopy copy docker file to build dir
+func DockerfileCopy(appPath, buildPath string) error {
 	var (
-		srcFile = filepath.Join(p.appPath, "app", "Dockerfile")
-		dstFile = filepath.Join(p.buildPath, "Dockerfile")
+		srcFile = filepath.Join(appPath, "app", "Dockerfile")
+		dstFile = filepath.Join(buildPath, "Dockerfile")
 	)
+
 	if err := util.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
-		return false
+		return err
 	}
 	log.Infof("copy dockerfile: %s success", dstFile)
-	return true
+	return nil
 }
 
-func (p *pipeline) dockerBuild() bool {
-	// note: 基于服务镜像, 构建包含代码的release镜像
-	si, err := model.GetServiceInfo(p.service)
+// DockerBuild 基于服务镜像, 构建包含代码的release镜像
+func DockerBuild(service, targetURL, buildPath string) error {
+	si, err := model.GetServiceInfo(service)
 	if err != nil {
-		log.Errorf("query service: %s failed: %s", p.service, err)
-		return false
+		log.Errorf("query service: %s failed: %s", service, err)
+		return err
 	}
 
 	var (
 		serviceImageAddr = si.ImageAddr
 		pull             = fmt.Sprintf("docker pull %s", serviceImageAddr)
 		repo             = fmt.Sprintf("repo=%s", serviceImageAddr)
-		param            = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, p.targetURL, p.buildPath)
+		param            = fmt.Sprintf("docker build --build-arg %s -t %s %s", repo, targetURL, buildPath)
 	)
 
-	// note: docker pull 服务镜像
+	// docker pull 服务镜像
 	log.Info(pull)
 	if err := util.Execute(pull); err != nil {
 		log.Errorf("docker pull error: %+v", err)
-		return false
+		return err
 	}
 	log.Infof("docker pull service image: %s success", serviceImageAddr)
 
-	// note: docker build --build-arg repo=服务镜像 -t release镜像:版本 dockerfile路径
+	// docker build --build-arg repo=服务镜像 -t release镜像:版本 dockerfile路径
 	log.Info(param)
 	if err := util.Execute(param); err != nil {
 		log.Errorf("docker build error: %+v", err)
-		return false
+		return err
 	}
-	log.Infof("docker build release image: %s success", p.targetURL)
-	return true
+	log.Infof("docker build release image: %s success", targetURL)
+	return nil
 }
 
-func (p *pipeline) dockerPush() bool {
-	param := fmt.Sprintf("docker push %s", p.targetURL)
+// DockerPush docker push
+func DockerPush(targetURL string) error {
+	param := fmt.Sprintf("docker push %s", targetURL)
 	log.Info(param)
 	if err := util.Execute(param); err != nil {
-		log.Errorf("docker push error: %+v", err)
-		return false
+		log.Errorf("docker push release image: %s error: %+v", targetURL, err)
+		return err
 	}
-	log.Infof("docker push release image: %s success", p.targetURL)
-	return true
+	log.Infof("docker push release image: %s success", targetURL)
+	return nil
 }

@@ -16,6 +16,19 @@ type Receiver interface {
 	Consumer([]byte) error
 }
 
+type RabbitMQ struct {
+	addr          string
+	exchange      string
+	queue         string
+	routingKey    string
+	conn          *amqp.Connection
+	channel       *amqp.Channel
+	connNotify    chan *amqp.Error
+	channelNotify chan *amqp.Error
+	isConnected   bool
+	connChangeCh  chan struct{} // 连接改变
+}
+
 func NewRabbitMQ(addr, exchange, queue, routingKey string) (*RabbitMQ, error) {
 	rmq := &RabbitMQ{
 		addr:         addr,
@@ -33,19 +46,6 @@ func NewRabbitMQ(addr, exchange, queue, routingKey string) (*RabbitMQ, error) {
 		rmq.QueueBind()
 	})
 	return rmq, nil
-}
-
-type RabbitMQ struct {
-	addr          string
-	exchange      string
-	queue         string
-	routingKey    string
-	conn          *amqp.Connection
-	channel       *amqp.Channel
-	connNotify    chan *amqp.Error
-	channelNotify chan *amqp.Error
-	isConnected   bool
-	connChangeCh  chan struct{} // 连接改变
 }
 
 func (r *RabbitMQ) Connect() error {

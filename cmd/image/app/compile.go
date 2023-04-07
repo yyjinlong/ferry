@@ -10,30 +10,31 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 )
 
-func downloadCode(module, repo, tag, codePath string) error {
+func DownloadCode(module, repo, tag, codePath string) error {
 	directory := filepath.Join(codePath, module)
-	util.Rmdir(directory)
+	cm.Rmdir(directory)
 	log.Infof("download code directory: %s", directory)
 
-	if err := util.ExecuteDir(codePath, "git", "clone", repo); err != nil {
+	if err := cm.ExecuteDir(codePath, "git", "clone", repo); err != nil {
 		return err
 	}
 	log.Infof("git clone %s success", repo)
 
-	if err := util.ExecuteDir(directory, "git", "checkout", tag); err != nil {
+	if err := cm.ExecuteDir(directory, "git", "checkout", tag); err != nil {
 		return err
 	}
 	log.Infof("git checkout %s success", tag)
 	return nil
 }
 
-func compile(language string) error {
+func Compile(language string) error {
 	switch language {
 	case PYTHON:
 	case GOLANG:
+		// 执行Makefile
 	}
 	return nil
 }

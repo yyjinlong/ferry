@@ -79,41 +79,32 @@ func worker(data Image) {
 	util.Mkdir(codePath)  // 代码路径: 主路径/服务/上线单ID/code
 
 	for _, item := range data.Build {
-		if err := downloadCode(item.Module, item.Repo, item.Tag, codePath); err != nil {
+		if err := CownloadCode(item.Module, item.Repo, item.Tag, codePath); err != nil {
 			log.Errorf("download code failed: %+v", err)
 			return
 		}
 	}
 
-	if err := compile(data.Type); err != nil {
+	if err := Compile(data.Type); err != nil {
 		log.Errorf("compile code failed: %+v", err)
 		return
 	}
 
-	p := &pipeline{
-		pid:       data.PID,
-		service:   data.Service,
-		appPath:   appPath,
-		buildPath: buildPath,
-		codePath:  codePath,
-		imageURL:  imageURL,
-		imageTag:  imageTag,
-		targetURL: targetURL,
-	}
-
-	if !p.copyDockerfile() {
-		return
-	}
-	if !p.dockerBuild() {
-		return
-	}
-	if !p.dockerPush() {
+	if err := DockerfileCopy(appPath, buildPath); err != nil {
 		return
 	}
 
-	if err := model.UpdateImage(p.pid, p.imageURL, p.imageTag); err != nil {
-		log.Errorf("write image info to db error: %s", err)
+	if err := DockerBuild(service, targetURL, buildPath); err != nil {
 		return
 	}
-	log.Infof("write relase image: %s to database success", p.targetURL)
+
+	if err := DockerPush(targetURL); err != nil {
+		return
+	}
+
+	if err := model.UpdateImage(pid, imageURL, imageTag); err != nil {
+		log.Errorf("write release image: %s to db error: %s", targetURL, err)
+		return
+	}
+	log.Infof("write relase image: %s to db success", targetURL)
 }
