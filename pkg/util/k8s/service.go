@@ -34,10 +34,8 @@ func (s *ServiceResource) GetService(namespace, name string) (*corev1.Service, e
 }
 
 func (s *ServiceResource) CreateService(namespace string, service *corev1.Service) error {
-	if _, err := s.clientset.CoreV1().Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{}); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.clientset.CoreV1().Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	return err
 }
 
 func (s *ServiceResource) CreateIfNotExistsService(namespace string, service *corev1.Service) error {
@@ -51,10 +49,8 @@ func (s *ServiceResource) CreateIfNotExistsService(namespace string, service *co
 }
 
 func (s *ServiceResource) UpdateService(namespace string, service *corev1.Service) error {
-	if _, err := s.clientset.CoreV1().Services(namespace).Update(context.TODO(), service, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.clientset.CoreV1().Services(namespace).Update(context.TODO(), service, metav1.UpdateOptions{})
+	return err
 }
 
 func (s *ServiceResource) CreateOrUpdateService(namespace string, service *corev1.Service) error {

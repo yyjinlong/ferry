@@ -13,6 +13,7 @@ type Resource interface {
 	ConfigMap
 	Pod
 	CronJob
+	Secret
 }
 
 type resource struct {
@@ -21,6 +22,7 @@ type resource struct {
 	ConfigMap
 	Pod
 	CronJob
+	Secret
 }
 
 func New(namespace string) (Resource, error) {
@@ -40,5 +42,6 @@ func New(namespace string) (Resource, error) {
 		ConfigMap:  NewConfigMapResource(clientset),
 		Pod:        NewPodResouce(clientset),
 		CronJob:    NewCronJobResource(clientset),
+		Secret:     NewSecretResource(clientset),
 	}, nil
 }

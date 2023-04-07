@@ -34,18 +34,12 @@ func (c *CronJobResource) GetCronJob(namespace, name string) (*batchv1.CronJob, 
 
 func (c *CronJobResource) CreateCronJob(namespace string, cronJob *batchv1.CronJob) error {
 	_, err := c.clientset.BatchV1().CronJobs(namespace).Create(context.TODO(), cronJob, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (c *CronJobResource) UpdateCronJob(namespace string, cronJob *batchv1.CronJob) error {
 	_, err := c.clientset.BatchV1().CronJobs(namespace).Update(context.TODO(), cronJob, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (c *CronJobResource) CreateOrUpdateCronJob(namespace string, cronJob *batchv1.CronJob) error {

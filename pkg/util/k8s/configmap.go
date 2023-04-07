@@ -33,17 +33,13 @@ func (c *ConfigMapResource) GetConfigMap(namespace, name string) (*corev1.Config
 }
 
 func (c *ConfigMapResource) CreateConfigMap(namespace string, configMap *corev1.ConfigMap) error {
-	if _, err := c.clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, metav1.CreateOptions{}); err != nil {
-		return err
-	}
-	return nil
+	_, err := c.clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+	return err
 }
 
 func (c *ConfigMapResource) UpdateConfigMap(namespace string, configMap *corev1.ConfigMap) error {
-	if _, err := c.clientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-	return nil
+	_, err := c.clientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	return err
 }
 
 func (c *ConfigMapResource) CreateOrUpdateConfigMap(namespace string, configMap *corev1.ConfigMap) error {
