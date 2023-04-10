@@ -7,6 +7,7 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -15,18 +16,22 @@ import (
 	"nautilus/pkg/util/cm"
 )
 
-// DockerfileCopy copy docker file to build dir
-func DockerfileCopy(appPath, buildPath string) error {
-	var (
-		srcFile = filepath.Join(appPath, "app", "Dockerfile")
-		dstFile = filepath.Join(buildPath, "Dockerfile")
-	)
+// Dockerfile generate docker file on build dir
+func Dockerfile(buildPath string) error {
+	tpl := `
+ARG repo
+FROM ${repo}
 
-	if err := cm.Copy(srcFile, dstFile); err != nil {
-		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
+ARG deploy_path=/home/tong/www
+
+ADD --chown=tong:tong ./code ${deploy_path}`
+
+	dockerfile := filepath.Join(buildPath, "Dockerfile")
+	if err := ioutil.WriteFile(dockerfile, []byte(tpl), 0644); err != nil {
+		log.Errorf("generate dockerfile: %s error: %+v", dockerfile, err)
 		return err
 	}
-	log.Infof("copy dockerfile: %s success", dstFile)
+	log.Infof("generate dockerfile: %s success", dockerfile)
 	return nil
 }
 

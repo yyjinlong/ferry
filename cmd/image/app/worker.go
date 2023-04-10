@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -58,17 +57,11 @@ func HandleMsg() {
 	}
 }
 
-func __file__() string {
-	_, curPath, _, _ := runtime.Caller(1)
-	return curPath
-}
-
 func worker(data config.Image) {
 	var (
 		pid       = data.PID
 		service   = data.Service
 		buildPath = filepath.Join(config.Config().Image.Release, service, strconv.FormatInt(pid, 10))
-		appPath   = filepath.Dir(filepath.Dir(__file__()))
 		codePath  = filepath.Join(buildPath, "code")
 		imageURL  = fmt.Sprintf("%s/%s", config.Config().Image.Registry, service)
 		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
@@ -85,7 +78,7 @@ func worker(data config.Image) {
 		}
 	}
 
-	if err := DockerfileCopy(appPath, buildPath); err != nil {
+	if err := Dockerfile(buildPath); err != nil {
 		return
 	}
 	if err := DockerBuild(service, targetURL, buildPath); err != nil {
