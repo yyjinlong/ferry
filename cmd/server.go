@@ -31,7 +31,7 @@ var (
 func main() {
 	flag.Parse()
 	config.ParseConfig(*configFile)
-	config.InitLogger(config.Config().LogFile)
+	config.InitLogger(config.Config().Log.Server)
 
 	model.Connect("postgres",
 		config.Config().Postgres.Master,

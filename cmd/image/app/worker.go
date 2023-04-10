@@ -17,18 +17,18 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 	"nautilus/pkg/util/rmq"
 )
 
 var (
-	msgChan = make(chan Image)
+	msgChan = make(chan config.Image)
 )
 
 type receiver struct{}
 
 func (r *receiver) Consumer(body []byte) error {
-	var data Image
+	var data config.Image
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Errorf("consume rabbitmq json decode failed: %s", err)
 		return err
@@ -58,46 +58,39 @@ func HandleMsg() {
 	}
 }
 
-func getCurPath() string {
+func __file__() string {
 	_, curPath, _, _ := runtime.Caller(1)
 	return curPath
 }
 
-func worker(data Image) {
+func worker(data config.Image) {
 	var (
 		pid       = data.PID
 		service   = data.Service
-		buildPath = filepath.Join(config.Config().Image.Dir, service, strconv.FormatInt(pid, 10))
-		appPath   = filepath.Dir(filepath.Dir(getCurPath()))
+		buildPath = filepath.Join(config.Config().Image.Release, service, strconv.FormatInt(pid, 10))
+		appPath   = filepath.Dir(filepath.Dir(__file__()))
 		codePath  = filepath.Join(buildPath, "code")
 		imageURL  = fmt.Sprintf("%s/%s", config.Config().Image.Registry, service)
 		imageTag  = fmt.Sprintf("v-%s", time.Now().Format("20060102_150405"))
 		targetURL = fmt.Sprintf("%s:%s", imageURL, imageTag)
 	)
 
-	util.Mkdir(buildPath) // 构建路径: 主路径/服务/上线单ID
-	util.Mkdir(codePath)  // 代码路径: 主路径/服务/上线单ID/code
+	cm.Mkdir(buildPath) // 构建路径: 主路径/服务/上线单ID
+	cm.Mkdir(codePath)  // 代码路径: 主路径/服务/上线单ID/code
 
 	for _, item := range data.Build {
-		if err := CownloadCode(item.Module, item.Repo, item.Tag, codePath); err != nil {
-			log.Errorf("download code failed: %+v", err)
+		if err := Compile(item.Module, item.Repo, item.Tag, codePath, data.Type); err != nil {
+			log.Errorf("compile code failed: %+v", err)
 			return
 		}
-	}
-
-	if err := Compile(data.Type); err != nil {
-		log.Errorf("compile code failed: %+v", err)
-		return
 	}
 
 	if err := DockerfileCopy(appPath, buildPath); err != nil {
 		return
 	}
-
 	if err := DockerBuild(service, targetURL, buildPath); err != nil {
 		return
 	}
-
 	if err := DockerPush(targetURL); err != nil {
 		return
 	}

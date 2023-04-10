@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 )
 
 // DockerfileCopy copy docker file to build dir
@@ -22,7 +22,7 @@ func DockerfileCopy(appPath, buildPath string) error {
 		dstFile = filepath.Join(buildPath, "Dockerfile")
 	)
 
-	if err := util.Copy(srcFile, dstFile); err != nil {
+	if err := cm.Copy(srcFile, dstFile); err != nil {
 		log.Errorf("copy dockerfile: %s failed: %s", srcFile, err)
 		return err
 	}
@@ -47,7 +47,7 @@ func DockerBuild(service, targetURL, buildPath string) error {
 
 	// docker pull 服务镜像
 	log.Info(pull)
-	if err := util.Execute(pull); err != nil {
+	if err := cm.Execute(pull); err != nil {
 		log.Errorf("docker pull error: %+v", err)
 		return err
 	}
@@ -55,7 +55,7 @@ func DockerBuild(service, targetURL, buildPath string) error {
 
 	// docker build --build-arg repo=服务镜像 -t release镜像:版本 dockerfile路径
 	log.Info(param)
-	if err := util.Execute(param); err != nil {
+	if err := cm.Execute(param); err != nil {
 		log.Errorf("docker build error: %+v", err)
 		return err
 	}
@@ -67,7 +67,7 @@ func DockerBuild(service, targetURL, buildPath string) error {
 func DockerPush(targetURL string) error {
 	param := fmt.Sprintf("docker push %s", targetURL)
 	log.Info(param)
-	if err := util.Execute(param); err != nil {
+	if err := cm.Execute(param); err != nil {
 		log.Errorf("docker push release image: %s error: %+v", targetURL, err)
 		return err
 	}

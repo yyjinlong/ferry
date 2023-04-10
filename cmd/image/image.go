@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 	config.ParseConfig(*configFile)
-	config.InitLogger(config.Config().Image.LogFile)
+	config.InitLogger(config.Config().Log.Image)
 
 	model.Connect("postgres",
 		config.Config().Postgres.Master,

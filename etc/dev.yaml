@@ -1,5 +1,9 @@
 address: "0.0.0.0:8888"
-logfile: "/tmp/nautilus.log"
+
+log:
+  server: "/tmp/nautilus.log"
+  image: "/tmp/image.log"
+  informer: "/tmp/informer.log"
 
 postgres:
   master: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"

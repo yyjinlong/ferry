@@ -13,7 +13,15 @@ import (
 	"nautilus/pkg/util/cm"
 )
 
-func DownloadCode(module, repo, tag, codePath string) error {
+const (
+	PYTHON   = "python"
+	GOLANG   = "golang"
+	JAVA_JAR = "jar"
+	JAVA_MVN = "maven"
+)
+
+func Compile(module, repo, tag, codePath, language string) error {
+	// (1) download code
 	directory := filepath.Join(codePath, module)
 	cm.Rmdir(directory)
 	log.Infof("download code directory: %s", directory)
@@ -27,14 +35,21 @@ func DownloadCode(module, repo, tag, codePath string) error {
 		return err
 	}
 	log.Infof("git checkout %s success", tag)
-	return nil
-}
 
-func Compile(language string) error {
+	// (2) compile
 	switch language {
-	case PYTHON:
 	case GOLANG:
-		// 执行Makefile
+		// 执行Makefile, 编译成二进制
+
+	case JAVA_JAR:
+		// jar包格式: 执行Makefile, 调用maven编译
+
+	case JAVA_MVN:
+		// java程序: 执行Makefile, 调用maven编译
+
+	default:
+		// 默认动态类型语言, 不需要编译
+
 	}
 	return nil
 }

@@ -30,11 +30,17 @@ const (
 
 type Settings struct {
 	Address  string       `yaml:"address"`
-	LogFile  string       `yaml:"logfile"`
+	Log      LogInfo      `yaml:"log"`
 	Postgres PostgresInfo `yaml:"postgres"`
 	RabbitMQ RabbtimqInfo `yaml:"rabbitmq"`
 	Image    ImageInfo    `yaml:"image"`
 	K8S      K8SInfo      `yaml:"k8s"`
+}
+
+type LogInfo struct {
+	Server   string `yaml:"server"`
+	Image    string `yaml:"image"`
+	Informer string `yaml:"informer"`
 }
 
 type PostgresInfo struct {
