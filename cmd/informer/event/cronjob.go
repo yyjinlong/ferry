@@ -13,92 +13,90 @@ import (
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
-func HandleJobCapturer(obj interface{}, mode string) {
+type CronJob interface {
+	HandleCronJob(obj interface{}, mode, cluster string) error
+}
+
+type CronJobResource struct {
+	clientset *kubernetes.Clientset
+}
+
+func NewCronJobResource(clientset *kubernetes.Clientset) *CronJobResource {
+	return &CronJobResource{
+		clientset: clientset,
+	}
+}
+
+func (r *CronJobResource) HandleCronJob(obj interface{}, mode, cluster string) error {
 	var (
 		data          = obj.(*batchv1.Job)
-		name          = data.ObjectMeta.Name
-		successPodNum = data.Status.Succeeded
-		failPodNum    = data.Status.Failed
-		beginTime     = data.Status.StartTime
-		finishTime    = data.Status.CompletionTime
+		name          = data.ObjectMeta.Name       // job名称
+		successPodNum = data.Status.Succeeded      // 运行成功的pod数量
+		failPodNum    = data.Status.Failed         // 运行失败的pod数量
+		beginTime     = data.Status.StartTime      // job开始时间
+		finishTime    = data.Status.CompletionTime // job结束时间
+		jobResult     = 0                          // job运行结果 0 运行中 1 运行成功 2 运行失败
 	)
 
-	handleEvent(&JobCapturer{
-		mode:          mode,
-		name:          name,
-		successPodNum: successPodNum,
-		failPodNum:    failPodNum,
-		beginTime:     beginTime,
-		finishTime:    finishTime,
-	})
+	// 检查是否是业务的cronjob
+	if !r.filter(name) {
+		return nil
+	}
+
+	if successPodNum >= 1 {
+		jobResult = 1
+	} else if failPodNum >= 1 {
+		jobResult = 2
+	}
+	log.Infof("[cronjob] check %s job result: %d on mode: %s", name, jobResult, mode)
+
+	jobID, service, err := r.parseInfo(name)
+	if err != nil {
+		return err
+	}
+
+	if err := r.callback(jobID, service, beginTime, finishTime, jobResult); err != nil {
+		return err
+	}
+	return nil
 }
 
-type JobCapturer struct {
-	mode          string
-	name          string       // job名称
-	successPodNum int32        // 运行成功的pod数量
-	failPodNum    int32        // 运行失败的pod数量
-	beginTime     *metav1.Time // job开始时间
-	finishTime    *metav1.Time // job结束时间
-	jobResult     int          // job运行结果 0 运行中 1 运行成功 2 运行失败
-	jobID         int64        // job id
-	service       string       // job对应的服务
-}
-
-func (jc *JobCapturer) valid() bool {
-	// NOTE: 检查是否是业务的cronjob
-	reg := regexp.MustCompile(`[\w+-]-cronjob-\d+-`)
-	if reg == nil {
+func (r *CronJobResource) filter(name string) bool {
+	re := regexp.MustCompile(`[\w+-]-cronjob-\d+-`)
+	if re == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(jc.name, -1)
+	result := re.FindAllStringSubmatch(name, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (jc *JobCapturer) ready() bool {
-	if jc.successPodNum >= 1 {
-		jc.jobResult = 1
-	} else if jc.failPodNum >= 1 {
-		jc.jobResult = 2
-	} else {
-		jc.jobResult = 0
-	}
-	log.Infof("check job: %s ready: %d on mode: %s", jc.name, jc.jobResult, jc.mode)
-	return true
-}
-
-func (jc *JobCapturer) parse() bool {
-	reg := regexp.MustCompile(`-\d+-`)
+func (r *CronJobResource) parseInfo(name string) (int64, string, error) {
+	re := regexp.MustCompile(`-\d+-`)
 
 	// 获取服务ID
-	result := reg.FindAllStringSubmatch(jc.name, -1)
-	matchResult := result[0][0]
-	jobIDStr := strings.Trim(matchResult, "-")
-	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	result := re.FindStringSubmatch(name)
+	match := strings.Trim(result[0], "-")
+	jobID, err := strconv.ParseInt(match, 10, 64)
 	if err != nil {
-		log.Errorf("parse job id convert to int64 error: %s", err)
-		return false
+		log.Errorf("[cronjob] parse: %s convert to int64 error: %s", name, err)
+		return 0, "", err
 	}
-	jc.jobID = jobID
 
 	// 获取服务名
-	matchList := reg.Split(jc.name, -1)
+	matchList := re.Split(name, -1)
 	before := matchList[0]
 	beforeList := strings.Split(before, "-cronjob")
-	jc.service = beforeList[0]
-	return true
+	service := beforeList[0]
+	return jobID, service, nil
 }
 
-func (jc *JobCapturer) operate() bool {
-	if jc.jobResult == 1 {
-		log.Infof("service: %s job: %d begin: %v end: %v running success", jc.service, jc.jobID, jc.beginTime, jc.finishTime)
-	} else if jc.jobResult == 2 {
-		log.Infof("service: %s job: %d begin: %v end: %v running failed", jc.service, jc.jobID, jc.beginTime, jc.finishTime)
-	}
-	return true
+func (r *CronJobResource) callback(jobID int64, service string, begin, finish *metav1.Time, result int) error {
+	log.Infof("service: %s job: %d begin: %v end: %v running result: %d success", service, jobID, begin, finish, result)
+	return nil
 }

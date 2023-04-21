@@ -32,9 +32,19 @@ func (f *Finish) Handle(pid int64) error {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	onlineGroup := service.DeployGroup
-	deployGroup := k8s.GetDeployGroup(onlineGroup)
+	var (
+		serviceID   = service.ID
+		serviceName = service.Name
+		onlineGroup = service.DeployGroup
+		deployGroup = k8s.GetDeployGroup(onlineGroup)
+	)
 	log.Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
+
+	// 另一组缩成0
+	for _, phase := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
+		oldDeployment := k8s.GetDeploymentName(serviceName, serviceID, phase, onlineGroup)
+		fmt.Println("----缩成0的deployment: ", oldDeployment)
+	}
 
 	if err := model.UpdateGroup(pid, service.ID, onlineGroup, deployGroup, model.PLSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)

@@ -8,7 +8,7 @@ package main
 import (
 	"flag"
 
-	"nautilus/cmd/informer/app"
+	"nautilus/cmd/informer/event"
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 )
@@ -26,18 +26,23 @@ func main() {
 		return
 	}
 	config.ParseConfig(*configFile)
-	config.InitLogger(config.Config().Informer.LogFile)
+	config.InitLogger(config.Config().Log.Informer)
 
 	model.Connect("postgres",
 		config.Config().Postgres.Master,
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
-	clientset := app.GetClientset(*cluster)
-	go app.DeploymentFinishEvent(clientset)
-	go app.PublishLogEvent(clientset)
-	go app.EndpointFinishEvent(clientset)
-	go app.CronjobFinishEvent(clientset)
+	clientset, err := config.GetClientset(*cluster)
+	if err != nil {
+		panic(err)
+	}
+
+	e := event.NewEvent(clientset)
+	go event.DeploymentEvent(e, *cluster, clientset)
+	go event.EndpointEvent(e, *cluster, clientset)
+	go event.CronjobEvent(e, *cluster, clientset)
+	go event.LogEvent(e, *cluster, clientset)
 
 	done := make(chan int)
 	<-done

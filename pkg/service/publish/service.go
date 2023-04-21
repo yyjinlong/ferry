@@ -31,7 +31,7 @@ func (s *Service) Handle(serviceName string) error {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	ns, err := model.GetNamespace(svc.NamespaceID)
+	ns, err := model.GetNamespaceByID(svc.NamespaceID)
 	if err != nil {
 		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}

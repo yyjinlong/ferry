@@ -17,7 +17,7 @@ type Namespace struct {
 	CreateAt time.Time `xorm:"timestamp notnull created"`
 }
 
-func GetNamespace(namespaceID int64) (*Namespace, error) {
+func GetNamespaceByID(namespaceID int64) (*Namespace, error) {
 	ns := new(Namespace)
 	if has, err := SEngine.ID(namespaceID).Get(ns); err != nil {
 		return nil, err

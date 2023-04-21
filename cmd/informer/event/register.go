@@ -3,27 +3,50 @@
 // author: jinlong yang
 //
 
-package app
+package event
 
 import (
-	"io/ioutil"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
-
-	"nautilus/cmd/informer/app/event"
-	"nautilus/pkg/config"
 )
 
-// DeploymentFinishEvent deployment完成事件
-func DeploymentFinishEvent(clientset *kubernetes.Clientset) {
+const (
+	Create = "create"
+	Update = "update"
+	Delete = "delete"
+)
+
+type Event interface {
+	Deployment
+	Endpoint
+	CronJob
+	Log
+}
+
+type handler struct {
+	Deployment
+	Endpoint
+	CronJob
+	Log
+}
+
+func NewEvent(clientset *kubernetes.Clientset) Event {
+	return handler{
+		Deployment: NewDeploymentResource(clientset),
+		Endpoint:   NewEndpointResource(clientset),
+		CronJob:    NewCronJobResource(clientset),
+		Log:        NewLogResouce(clientset),
+	}
+}
+
+// DeploymentEvent deployment事件
+func DeploymentEvent(e Event, cluster string, clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
@@ -31,7 +54,7 @@ func DeploymentFinishEvent(clientset *kubernetes.Clientset) {
 	deploymentInformer := sharedInformer.Apps().V1().Deployments().Informer()
 	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			event.HandleDeploymentCapturer(obj, event.Create)
+			e.HandleDeployment(obj, Create, cluster)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldDep := oldObj.(*appsv1.Deployment)
@@ -39,34 +62,15 @@ func DeploymentFinishEvent(clientset *kubernetes.Clientset) {
 			if oldDep.ObjectMeta.ResourceVersion == newDep.ObjectMeta.ResourceVersion {
 				return
 			}
-			event.HandleDeploymentCapturer(newObj, event.Update)
+			e.HandleDeployment(newObj, Update, cluster)
 		},
 		DeleteFunc: func(obj interface{}) {},
 	})
 	deploymentInformer.Run(stopCh)
 }
 
-// PublishLogEvent 发布日志事件
-func PublishLogEvent(clientset *kubernetes.Clientset) {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
-	eventInformer := sharedInformer.Core().V1().Events().Informer()
-	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			event.HandleLogCapturer(obj, event.Create)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			event.HandleLogCapturer(newObj, event.Update)
-		},
-		DeleteFunc: func(obj interface{}) {},
-	})
-	eventInformer.Run(stopCh)
-}
-
-// EndpointFinishEvent endpoint完成事件
-func EndpointFinishEvent(clientset *kubernetes.Clientset) {
+// EndpointEvent endpoint事件
+func EndpointEvent(e Event, cluster string, clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
@@ -74,7 +78,7 @@ func EndpointFinishEvent(clientset *kubernetes.Clientset) {
 	endpointInformer := sharedInformer.Core().V1().Endpoints().Informer()
 	endpointInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			event.HandleEndpointCapturer(obj, event.Create, clientset)
+			e.HandleEndpoint(obj, Create, cluster)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldEnd := oldObj.(*corev1.Endpoints)
@@ -82,17 +86,36 @@ func EndpointFinishEvent(clientset *kubernetes.Clientset) {
 			if oldEnd.ObjectMeta.ResourceVersion == newEnd.ObjectMeta.ResourceVersion {
 				return
 			}
-			event.HandleEndpointCapturer(newObj, event.Update, clientset)
+			e.HandleEndpoint(newObj, Update, cluster)
 		},
 		DeleteFunc: func(obj interface{}) {
-			event.HandleEndpointCapturer(obj, event.Delete, clientset)
+			e.HandleEndpoint(obj, Delete, cluster)
 		},
 	})
 	endpointInformer.Run(stopCh)
 }
 
-// CronjobFinishEvent cronjob完成事件
-func CronjobFinishEvent(clientset *kubernetes.Clientset) {
+// LogEvent 发布日志事件
+func LogEvent(e Event, cluster string, clientset *kubernetes.Clientset) {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 0)
+	eventInformer := sharedInformer.Core().V1().Events().Informer()
+	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			e.HandleLog(obj, Create, cluster)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			e.HandleLog(newObj, Update, cluster)
+		},
+		DeleteFunc: func(obj interface{}) {},
+	})
+	eventInformer.Run(stopCh)
+}
+
+// CronjobEvent cronjob事件
+func CronjobEvent(e Event, cluster string, clientset *kubernetes.Clientset) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
@@ -100,7 +123,7 @@ func CronjobFinishEvent(clientset *kubernetes.Clientset) {
 	cronjobInformer := sharedInformer.Batch().V1().Jobs().Informer()
 	cronjobInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			event.HandleJobCapturer(obj, event.Create)
+			e.HandleCronJob(obj, Create, cluster)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldJob := oldObj.(*batchv1.Job)
@@ -108,10 +131,10 @@ func CronjobFinishEvent(clientset *kubernetes.Clientset) {
 			if oldJob.ObjectMeta.ResourceVersion == newJob.ObjectMeta.ResourceVersion {
 				return
 			}
-			event.HandleJobCapturer(newObj, event.Update)
+			e.HandleCronJob(newObj, Update, cluster)
 		},
 		DeleteFunc: func(obj interface{}) {
-			event.HandleJobCapturer(obj, event.Delete)
+			e.HandleCronJob(obj, Delete, cluster)
 		},
 	})
 	cronjobInformer.Run(stopCh)

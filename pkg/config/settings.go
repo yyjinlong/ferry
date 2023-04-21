@@ -62,8 +62,8 @@ type ImageInfo struct {
 }
 
 type K8SInfo struct {
-	HPConfig string `yaml:"hpconfig"`
-	XQConfig string `yaml:"xqconfig"`
+	HP       string `yaml:"hp"`
+	XQ       string `yaml:"xq"`
 	ImageKey string `yaml:"imageKey"`
 }
 
@@ -120,9 +120,9 @@ func GetClientset(cluster string) (*kubernetes.Clientset, error) {
 	var clusterConfig string
 	switch cluster {
 	case HP:
-		clusterConfig = setting.K8S.HPConfig
+		clusterConfig = setting.K8S.HP
 	case XQ:
-		clusterConfig = setting.K8S.XQConfig
+		clusterConfig = setting.K8S.XQ
 	default:
 		return nil, fmt.Errorf("unknown cluster: %s", cluster)
 	}

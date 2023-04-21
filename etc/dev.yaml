@@ -11,8 +11,8 @@ postgres:
   slave2: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
 
 k8s:
-  hpconfig: "/Users/yangjinlong/.kube/config"
-  xqconfig: "/Users/yangjinlong/.kube/config"
+  hp: "/Users/yangjinlong/.kube/config"
+  xq: "/Users/yangjinlong/.kube/config"
   imageKey: "harborkey"
 
 rabbitmq:

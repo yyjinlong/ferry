@@ -42,6 +42,10 @@ func (r *RedisService) Ping() error {
 	return r.client.Ping(context.Background()).Err()
 }
 
+func (r *RedisService) Close() error {
+	return r.client.Close()
+}
+
 func (r *RedisService) Set(key, val string, expiration int) error {
 	return r.client.Set(context.Background(), key, val, time.Duration(expiration)*time.Second).Err()
 }

@@ -120,7 +120,6 @@ create table if not exists pipeline_phase (
     kind varchar(20) check(kind in ('deploy', 'rollback')),
     status int not null check(status in (0, 1, 2, 3, 4)) default 0,               -- 0 待执行 1 执行中 3 执行成功  4 执行失败
     log text,                                                                     -- 阶段日志
-    resource_version varchar(32),                                                 -- 该阶段deployment的resourceVersion
     create_at timestamp not null default now(),
     update_at timestamp not null default now()
 );

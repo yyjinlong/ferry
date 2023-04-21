@@ -12,15 +12,14 @@ import (
 )
 
 type PipelinePhase struct {
-	ID              int64
-	PipelineID      int64     `xorm:"bigint notnull"`
-	Name            string    `xorm:"varchar(20)"`
-	Kind            string    `xorm:"varchar(20)"`
-	Status          int       `xorm:"int notnull"`
-	Log             string    `xorm:"text"`
-	ResourceVersion string    `xorm:"varchar(32)"`
-	CreateAt        time.Time `xorm:"timestamp notnull created"`
-	UpdateAt        time.Time `xorm:"timestamp notnull updated"`
+	ID         int64
+	PipelineID int64     `xorm:"bigint notnull"`
+	Name       string    `xorm:"varchar(20)"`
+	Kind       string    `xorm:"varchar(20)"`
+	Status     int       `xorm:"int notnull"`
+	Log        string    `xorm:"text"`
+	CreateAt   time.Time `xorm:"timestamp notnull created"`
+	UpdateAt   time.Time `xorm:"timestamp notnull updated"`
 }
 
 // 状态定义
@@ -116,10 +115,9 @@ func UpdatePhase(pipelineID int64, kind, name string, status int) error {
 	return nil
 }
 
-func UpdatePhaseV2(pipelineID int64, kind, name string, status int, version string) error {
+func UpdatePhaseV2(pipelineID int64, kind, name string, status int) error {
 	phase := new(PipelinePhase)
 	phase.Status = status
-	phase.ResourceVersion = version
 	if affected, err := MEngine.Cols("status", "resource_version").Where(
 		"pipeline_id=? and kind=? and name=?", pipelineID, kind, name).Update(phase); err != nil {
 		return err

@@ -13,169 +13,145 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes"
 
-	"nautilus/pkg/k8s/exec"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util"
+	"nautilus/pkg/util/cm"
 )
 
-func HandleDeploymentCapturer(obj interface{}, mode string) {
-	data := obj.(*appsv1.Deployment)
+type Deployment interface {
+	HandleDeployment(obj interface{}, mode, cluster string) error
+}
+
+type DeploymentResource struct {
+	clientset *kubernetes.Clientset
+}
+
+func NewDeploymentResource(clientset *kubernetes.Clientset) *DeploymentResource {
+	return &DeploymentResource{
+		clientset: clientset,
+	}
+}
+
+func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster string) error {
 	var (
-		deployment      = data.ObjectMeta.Name
-		resourceVersion = data.ObjectMeta.ResourceVersion
-		replicas        = *data.Spec.Replicas
+		data              = obj.(*appsv1.Deployment)
+		name              = data.ObjectMeta.Name
+		namespace         = data.ObjectMeta.Namespace
+		replicas          = *data.Spec.Replicas
+		updatedReplicas   = data.Status.UpdatedReplicas
+		availableReplicas = data.Status.AvailableReplicas
 	)
 
-	handleEvent(&deploymentCapturer{
-		mode:              mode,
-		deployment:        deployment,
-		resourceVersion:   resourceVersion,
-		replicas:          replicas,
-		updatedReplicas:   data.Status.UpdatedReplicas,
-		availableReplicas: data.Status.AvailableReplicas,
-		metaGeneration:    data.ObjectMeta.Generation,
-		statGeneration:    data.Status.ObservedGeneration,
-	})
+	// 检测是否是业务的deployment
+	if !r.filter(name) {
+		return nil
+	}
+
+	// 忽略副本数为0的deployment
+	if replicas == 0 {
+		return nil
+	}
+
+	// 检查deployment是否ready
+	if !(data.ObjectMeta.Generation == data.Status.ObservedGeneration &&
+		replicas == updatedReplicas &&
+		replicas == availableReplicas) {
+		return nil
+	}
+
+	serviceID, serviceName, phase, group, err := r.parseInfo(name)
+	if err != nil {
+		return err
+	}
+	log.Infof("[deployment] check: %s ready with group: %s replicas: %d", name, group, replicas)
+
+	pipeline, err := model.GetServicePipeline(serviceID)
+	if !errors.Is(err, model.NotFound) && err != nil {
+		log.Errorf("[deployment] query pipeline by service id: %d error: %s", err, serviceID)
+		return err
+	}
+	pipelineID := pipeline.ID
+
+	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+		log.Info("[deployment] check deploy is finished")
+		return err
+	}
+
+	svc, err := model.GetServiceByID(serviceID)
+	if err != nil {
+		log.Errorf("[deployment] query service by id: %d failed: %s", serviceID, err)
+		return err
+	}
+	namespaceID := svc.NamespaceID
+
+	ns, err := model.GetNamespaceByID(namespaceID)
+	if err != nil {
+		log.Errorf("[deployment] query namespace by id: %d failed: %s", namespaceID, err)
+		return err
+	}
+
+	if namespace != ns.Name {
+		log.Errorf("[deployment] service: %s namespace: %s != %s", serviceName, ns.Name, namespace)
+		return nil
+	}
+
+	kind := model.PHASE_DEPLOY
+	if pipeline.Status == model.PLRollbacking {
+		kind = model.PHASE_ROLLBACK
+	}
+	log.Infof("[deployment] get pipeline: %d kind: %s phase: %s", pipelineID, kind, phase)
+
+	ph, err := model.GetPhaseInfo(pipelineID, kind, phase)
+	if err != nil {
+		log.Errorf("[deployment] query phase info error: %s", err)
+		return err
+	}
+
+	// 判断该阶段是否完成
+	if ph.Status == model.PHSuccess {
+		return nil
+	}
+
+	// deployment ready更新阶段完成
+	if err := model.UpdatePhaseV2(pipelineID, kind, phase, model.PHSuccess); err != nil {
+		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, phase, err)
+		return err
+	}
+	log.Infof("[deployment] update pipeline: %d to db on phase: %s success", pipelineID, phase)
+	return nil
 }
 
-type deploymentCapturer struct {
-	mode              string
-	deployment        string
-	resourceVersion   string
-	replicas          int32
-	updatedReplicas   int32
-	availableReplicas int32
-	metaGeneration    int64
-	statGeneration    int64
-	serviceID         int64
-	serviceName       string
-	phase             string
-	group             string
-}
-
-func (c *deploymentCapturer) valid() bool {
-	// NOTE: 检测是否是业务的deployment
-	reg := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
-	if reg == nil {
+func (r *DeploymentResource) filter(name string) bool {
+	re := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
+	if re == nil {
 		return false
 	}
-	result := reg.FindAllStringSubmatch(c.deployment, -1)
+	result := re.FindAllStringSubmatch(name, -1)
 	if len(result) == 0 {
 		return false
 	}
 	return true
 }
 
-func (c *deploymentCapturer) ready() bool {
-	// NOTE: 忽略副本数为0的deployment
-	if c.replicas == 0 {
-		return false
-	}
-
-	// NOTE: 检查deployment是否就绪(spec中的副本数是否等于status中的副本数)
-	if !(c.metaGeneration == c.statGeneration &&
-		c.replicas == c.updatedReplicas && c.replicas == c.availableReplicas) {
-		return false
-	}
-	log.Infof("check deployment: %s ready on mode: %s replicas: %d", c.deployment, c.mode, c.replicas)
-	return true
-}
-
-func (c *deploymentCapturer) parse() bool {
-	reg := regexp.MustCompile(`-\d+-`)
-	if reg == nil {
-		return false
-	}
+func (r *DeploymentResource) parseInfo(name string) (int64, string, string, string, error) {
+	re := regexp.MustCompile(`-\d+-`)
 
 	// 获取服务名、阶段、蓝绿组
-	matchList := reg.Split(c.deployment, -1)
-	c.serviceName = matchList[0]
+	matchList := re.Split(name, -1)
+	serviceName := matchList[0]
 
 	afterList := strings.Split(matchList[1], "-")
-	c.phase = afterList[0]
-	c.group = afterList[1]
+	phase := afterList[0]
+	group := afterList[1]
 
 	// 获取服务ID
-	result := reg.FindAllStringSubmatch(c.deployment, -1)
-	matchResult := result[0][0]
-	serviceIDStr := strings.Trim(matchResult, "-")
-	serviceID, err := strconv.ParseInt(serviceIDStr, 10, 64)
+	result := re.FindStringSubmatch(name)
+	match := strings.Trim(result[0], "-")
+	serviceID, err := strconv.ParseInt(match, 10, 64)
 	if err != nil {
-		log.Errorf("parse service id convert to int64 error: %s", err)
-		return false
+		log.Errorf("[deployment] parse: %s convert to int64 error: %s", name, err)
+		return 0, "", "", "", err
 	}
-	c.serviceID = serviceID
-	return true
-}
-
-func (c *deploymentCapturer) operate() bool {
-	pipeline, err := model.GetServicePipeline(c.serviceID)
-	if !errors.Is(err, model.NotFound) && err != nil {
-		log.Errorf("query pipeline by service error: %s", err)
-		return false
-	}
-
-	if util.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbacking, model.PLRollbackSuccess}) {
-		log.Info("check deploy is finished so stop")
-		return false
-	}
-
-	pipelineID := pipeline.ID
-	serviceID := pipeline.ServiceID
-	svcObj, err := model.GetServiceByID(serviceID)
-	if err != nil {
-		log.Errorf("query service by id: %d failed: %s", serviceID, err)
-		return false
-	}
-
-	namespaceID := svcObj.NamespaceID
-	nsObj, err := model.GetNamespace(namespaceID)
-	if err != nil {
-		log.Errorf("query namespace by id: %d failed: %s", namespaceID, err)
-		return false
-	}
-	namespace := nsObj.Name
-
-	kind := model.PHASE_DEPLOY
-	if util.Ini(pipeline.Status, []int{model.PLRollbacking, model.PLRollbackSuccess, model.PLRollbackFailed}) {
-		kind = model.PHASE_ROLLBACK
-	}
-	log.Infof("get pipeline: %d kind: %s phase: %s", pipelineID, kind, c.phase)
-
-	phaseObj, err := model.GetPhaseInfo(pipelineID, kind, c.phase)
-	if errors.Is(err, model.NotFound) {
-		return false
-	}
-	if err != nil {
-		log.Errorf("query phase info error: %s", err)
-		return false
-	}
-
-	// 判断resourceVersion是否相同
-	if phaseObj.ResourceVersion == c.resourceVersion {
-		return true
-	}
-
-	// 判断该阶段是否完成
-	if util.Ini(phaseObj.Status, []int{model.PHSuccess, model.PHFailed}) {
-		return true
-	}
-
-	// 如果就绪的是当前的部署组, 并且对应该阶段也正在发布, 则需要将旧的deployment缩成0
-	if c.mode == Update && svcObj.OnlineGroup != "" && c.group == svcObj.DeployGroup && model.CheckPhaseIsDeploy(pipelineID, kind, c.phase) {
-		oldDeployment := util.GetDeployment(c.serviceName, c.serviceID, c.phase, svcObj.OnlineGroup)
-		dep := exec.NewDeployments(namespace, oldDeployment)
-		if err := dep.Scale(0); err != nil {
-			return false
-		}
-		log.Infof("---- scale deployment: %s replicas: 0 on phase: %s success", oldDeployment, c.phase)
-	}
-
-	if err := model.UpdatePhaseV2(pipelineID, kind, c.phase, model.PHSuccess, c.resourceVersion); err != nil {
-		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, c.phase, err)
-		return false
-	}
-	log.Infof("update pipeline: %d to db on phase: %s success", pipelineID, c.phase)
-	return true
+	return serviceID, serviceName, phase, group, nil
 }
