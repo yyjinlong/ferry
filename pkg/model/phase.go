@@ -35,6 +35,7 @@ const (
 	PHASE_IMAGE   = "image"
 	PHASE_SANDBOX = "sandbox"
 	PHASE_ONLINE  = "online"
+	PHASE_FINISH  = "finish"
 )
 
 // 阶段类别
