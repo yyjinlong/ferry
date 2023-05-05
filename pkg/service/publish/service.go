@@ -44,10 +44,14 @@ func (s *Service) Handle(serviceName string) error {
 	)
 
 	var eg errgroup.Group
-	for _, phase := range model.PHASE_NAME_LIST {
-		phase := phase
+	for _, item := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
+		phase := item
 		eg.Go(func() error {
-			return s.worker(namespace, serviceName, serviceID, phase, port, containerPort)
+			return s.worker(namespace, serviceName, serviceID, phase, k8s.BLUE, port, containerPort)
+		})
+
+		eg.Go(func() error {
+			return s.worker(namespace, serviceName, serviceID, phase, k8s.GREEN, port, containerPort)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -56,8 +60,8 @@ func (s *Service) Handle(serviceName string) error {
 	return nil
 }
 
-func (s *Service) worker(namespace, serviceName string, serviceID int64, phase string, port, containerPort int) error {
-	name := k8s.GetAppID(serviceName, serviceID, phase)
+func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, group string, port, containerPort int) error {
+	name := k8s.GetDeploymentName(serviceName, serviceID, phase, group)
 	labels := map[string]string{
 		"appid": name,
 	}

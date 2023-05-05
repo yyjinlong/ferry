@@ -145,7 +145,7 @@ insert into namespace (name, cluster, creator) values('default', 'hp', 'yangjinl
 insert into namespace (name, cluster, creator) values('credit', 'xq', 'yangjinlong');  -- credit命名空间, 所属西青(xq)机房
 
 -- 插入测试服务
-insert into service(namespace_id, name, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, port, container_port, rd, op) values(1, 'ivr', '10.12.28.4:80/service/ivr:1.1.1', '500', '1000', '500', '1024', 2, 8008, 5000, 'yangjinlong', 'yangjinlong');
+insert into service(namespace_id, name, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, port, container_port, rd, op) values(1, 'ivr', '10.12.28.4:80/service/ivr:1.1.1', '500', '1000', '512', '1024', 2, 5000, 5000, 'yangjinlong', 'yangjinlong');
 update service set volume='[{"host_path": "/home/logs/default/ivr", "name": "logs", "mount_path": "/home/tong/logs"}]' where id = 1;
 update service set configmap='{"LOG_PATH": "/home/tong/www/log/ivr", "LOG_FILE": "application.log"}' where id = 1;
 

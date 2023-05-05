@@ -67,8 +67,10 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 	log.Infof("[deployment] check: %s ready with group: %s replicas: %d", name, group, replicas)
 
 	pipeline, err := model.GetServicePipeline(serviceID)
-	if !errors.Is(err, model.NotFound) && err != nil {
-		log.Errorf("[deployment] query pipeline by service id: %d error: %s", err, serviceID)
+	if errors.Is(err, model.NotFound) {
+		return nil
+	} else if err != nil {
+		log.Errorf("[deployment] query pipeline by service id: %d error: %s", serviceID, err)
 		return err
 	}
 	pipelineID := pipeline.ID

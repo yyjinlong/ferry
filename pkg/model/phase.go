@@ -43,10 +43,6 @@ const (
 	PHASE_ROLLBACK = "rollback"
 )
 
-var (
-	PHASE_NAME_LIST = []string{PHASE_SANDBOX, PHASE_ONLINE}
-)
-
 // FindPhases 根据pipeline id返回对应的阶段
 func FindPhases(pipelineID int64) ([]PipelinePhase, error) {
 	ppList := make([]PipelinePhase, 0)

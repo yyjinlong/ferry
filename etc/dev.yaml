@@ -6,13 +6,13 @@ log:
   informer: "/tmp/informer.log"
 
 postgres:
-  master: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
-  slave1: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
-  slave2: "postgres://yangjinlong:postgres@localhost:5432/nautilus?sslmode=disable"
+  master: "postgres://yangjinlong:postgres@10.12.24.255:5432/nautilus?sslmode=disable"
+  slave1: "postgres://yangjinlong:postgres@10.12.24.255:5432/nautilus?sslmode=disable"
+  slave2: "postgres://yangjinlong:postgres@10.12.24.255:5432/nautilus?sslmode=disable"
 
 k8s:
-  hp: "/Users/yangjinlong/.kube/config"
-  xq: "/Users/yangjinlong/.kube/config"
+  hp: "/root/.kube/config"
+  xq: "/root/.kube/config"
   imageKey: "harborkey"
 
 rabbitmq:
