@@ -56,9 +56,8 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 		graceTime      = int64(svc.ReserveTime)
 		namespace      = ns.Name
 		deploymentName = k8s.GetDeploymentName(serviceName, serviceID, phase, deployGroup)
-		appid          = k8s.GetAppID(serviceName, serviceID, phase)
 		configMapName  = k8s.GetConfigmapName(serviceName)
-		labels         = d.generateLabels(deploymentName, phase, appid)
+		labels         = d.generateLabels(serviceName, phase, deploymentName)
 	)
 
 	if phase == model.PHASE_SANDBOX {
@@ -209,11 +208,11 @@ func (d *Deploy) checkStatus(status int) error {
 	return nil
 }
 
-func (d *Deploy) generateLabels(deploymentName, phase, appid string) map[string]string {
+func (d *Deploy) generateLabels(service, phase, deploymentName string) map[string]string {
 	return map[string]string{
-		"service": deploymentName,
+		"service": service,
 		"phase":   phase,
-		"appid":   appid,
+		"appid":   deploymentName,
 	}
 }
 

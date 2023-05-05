@@ -9,14 +9,9 @@ const (
 	GREEN = "green"
 )
 
-// GetDeploymentName 生成deployment名字 规则: 服务名-服务ID-部署阶段-部署组
+// GetDeploymentName 作为唯一标识(appid). 规则: 服务名-服务ID-部署阶段-部署组
 func GetDeploymentName(serviceName string, serviceID int64, phase, group string) string {
 	return fmt.Sprintf("%s-%d-%s-%s", serviceName, serviceID, phase, group)
-}
-
-// GetAppID 生成appid 规则: 服务名-服务ID-部署阶段
-func GetAppID(serviceName string, serviceID int64, phase string) string {
-	return fmt.Sprintf("%s-%d-%s", serviceName, serviceID, phase)
 }
 
 // GetDeployGroup 获取部署组

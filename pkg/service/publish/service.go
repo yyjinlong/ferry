@@ -61,6 +61,7 @@ func (s *Service) Handle(serviceName string) error {
 }
 
 func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, group string, port, containerPort int) error {
+	// service名称与deployment名称保持一致
 	name := k8s.GetDeploymentName(serviceName, serviceID, phase, group)
 	labels := map[string]string{
 		"appid": name,

@@ -94,7 +94,7 @@ func (c *CronJob) Handle(namespace, service, command, schedule string) (string, 
 					BackoffLimit: &backoffLimit, // job的重试次数
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Labels: c.generateLabels(service, name, phase),
+							Labels: c.generateLabels(service, phase, name),
 						},
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 corev1.RestartPolicyNever,
@@ -137,11 +137,11 @@ func (c *CronJob) Handle(namespace, service, command, schedule string) (string, 
 	return name, nil
 }
 
-func (c *CronJob) generateLabels(service, name, phase string) map[string]string {
+func (c *CronJob) generateLabels(service, phase, name string) map[string]string {
 	return map[string]string{
 		"service": service,
-		"appid":   name,
 		"phase":   phase,
+		"appid":   name,
 	}
 }
 
