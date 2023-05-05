@@ -40,6 +40,7 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		namespace         = data.ObjectMeta.Namespace
 		replicas          = *data.Spec.Replicas
 		updatedReplicas   = data.Status.UpdatedReplicas
+		readyReplicas     = data.Status.ReadyReplicas
 		availableReplicas = data.Status.AvailableReplicas
 	)
 
@@ -48,15 +49,11 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
-	// 忽略副本数为0的deployment
-	if replicas == 0 {
-		return nil
-	}
-
 	// 检查deployment是否ready
 	if !(data.ObjectMeta.Generation == data.Status.ObservedGeneration &&
 		replicas == updatedReplicas &&
-		replicas == availableReplicas) {
+		replicas == availableReplicas &&
+		replicas == readyReplicas) {
 		return nil
 	}
 
@@ -105,7 +102,9 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 	log.Infof("[deployment] get pipeline: %d kind: %s phase: %s", pipelineID, kind, phase)
 
 	ph, err := model.GetPhaseInfo(pipelineID, kind, phase)
-	if err != nil {
+	if errors.Is(err, model.NotFound) {
+		return nil
+	} else if err != nil {
 		log.Errorf("[deployment] query phase info error: %s", err)
 		return err
 	}
@@ -115,9 +114,11 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
+	// 获取endpoint信息
+
 	// deployment ready更新阶段完成
 	if err := model.UpdatePhaseV2(pipelineID, kind, phase, model.PHSuccess); err != nil {
-		log.Errorf("update pipeline: %d to db on phase: %s failed: %s", pipelineID, phase, err)
+		log.Errorf("[deployment] update pipeline: %d to db on phase: %s failed: %s", pipelineID, phase, err)
 		return err
 	}
 	log.Infof("[deployment] update pipeline: %d to db on phase: %s success", pipelineID, phase)

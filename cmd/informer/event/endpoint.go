@@ -39,14 +39,14 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		return nil
 	}
 
-	ips, ready := r.parseIP(subsets)
-	if !ready {
-		return nil
-	}
-
 	serviceID, serviceName, phase, err := r.parseInfo(name)
 	if err != nil {
 		return err
+	}
+
+	ips, ready := r.parseAddr(subsets)
+	if !ready {
+		return nil
 	}
 	log.Infof("[endpoint] service: %s phase: %s have total ips: %#v", serviceName, phase, ips)
 
@@ -55,6 +55,7 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		log.Errorf("[endpoint] query service by id error: %+v", err)
 		return err
 	}
+
 	ns, err := model.GetNamespaceByID(svc.NamespaceID)
 	if err != nil {
 		log.Errorf("[endpoint] query namespace by id error: %+v", err)
@@ -65,7 +66,7 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		return nil
 	}
 
-	if err := r.updateTraffic(serviceName, phase, ips); err != nil {
+	if err := r.updateTraffic(namespace, serviceName, phase, ips); err != nil {
 		log.Errorf("[endpoint] update service: %s traffic failed: %+v", serviceName, err)
 		return err
 	}
@@ -83,23 +84,6 @@ func (r *EndpointResource) filter(name string) bool {
 		return false
 	}
 	return true
-}
-
-func (r *EndpointResource) parseIP(subsets []corev1.EndpointSubset) ([]string, bool) {
-	ready := false
-	ips := make([]string, 0)
-	for _, item := range subsets {
-		// NotReadyAddresses list is empty, indicate pod is ready
-		if len(item.NotReadyAddresses) == 0 {
-			ready = true
-		}
-
-		for _, addr := range item.Addresses {
-			ips = append(ips, addr.IP)
-		}
-	}
-	sort.Strings(ips)
-	return ips, ready
 }
 
 func (r *EndpointResource) parseInfo(name string) (int64, string, string, error) {
@@ -120,7 +104,24 @@ func (r *EndpointResource) parseInfo(name string) (int64, string, string, error)
 	return serviceID, serviceName, phase, nil
 }
 
-func (r *EndpointResource) updateTraffic(service, phase string, ips []string) error {
+func (r *EndpointResource) parseAddr(subsets []corev1.EndpointSubset) ([]string, bool) {
+	ready := false
+	ips := make([]string, 0)
+	for _, item := range subsets {
+		// NotReadyAddresses list is empty, indicate pod is ready
+		if len(item.NotReadyAddresses) == 0 {
+			ready = true
+		}
+
+		for _, addr := range item.Addresses {
+			ips = append(ips, addr.IP)
+		}
+	}
+	sort.Strings(ips)
+	return ips, ready
+}
+
+func (r *EndpointResource) updateTraffic(namespace, service, phase string, ips []string) error {
 	log.Infof("[endpoint] service: %s phase: %s update traffic: %#v success", service, phase, ips)
 	return nil
 }
