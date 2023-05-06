@@ -6,6 +6,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -76,7 +77,9 @@ func (r *LogResource) HandleLog(obj interface{}, mode, cluster string) error {
 	operTime := info.Time.Format("15:04:05")
 
 	msg := fmt.Sprintf("[%s] %v\n%s", operTime, serviceName, message)
-	if err := model.RealtimeLog(pipelineID, kind, phase, msg); err != nil {
+	if err := model.RealtimeLog(pipelineID, kind, phase, msg); errors.Is(err, model.NotFound) {
+		return nil
+	} else if err != nil {
 		log.Errorf("[log] write event log to db error: %s", err)
 		return err
 	}
@@ -84,7 +87,7 @@ func (r *LogResource) HandleLog(obj interface{}, mode, cluster string) error {
 }
 
 func (r *LogResource) filter(name string) bool {
-	re := regexp.MustCompile(`[\w+-]+-\d+-[\w+-]+`)
+	re := regexp.MustCompile(`[\w+-]+-\d+-(sandbox|online)-(blue|green)-[\w+-]+`)
 	if re == nil {
 		return false
 	}

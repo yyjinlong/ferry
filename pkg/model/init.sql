@@ -116,7 +116,7 @@ create table if not exists pipeline_image (
 create table if not exists pipeline_phase (
     id serial primary key,
     pipeline_id int not null,                                                     -- 对应的流水线
-    name varchar(20) check(name in ('image', 'sandbox', 'online')),               -- 部署阶段: 镜像构建、沙盒、全流量
+    name varchar(20) check(name in ('image', 'sandbox', 'online', 'finish')),     -- 部署阶段: 镜像构建、沙盒、全流量
     kind varchar(20) check(kind in ('deploy', 'rollback')),
     status int not null check(status in (0, 1, 2, 3, 4)) default 0,               -- 0 待执行 1 执行中 3 执行成功  4 执行失败
     log text,                                                                     -- 阶段日志

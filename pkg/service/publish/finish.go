@@ -32,23 +32,44 @@ func (f *Finish) Handle(pid int64) error {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
+	ns, err := model.GetNamespaceByID(service.NamespaceID)
+	if err != nil {
+		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
+	}
+
 	var (
+		namespace   = ns.Name
 		serviceID   = service.ID
 		serviceName = service.Name
-		onlineGroup = service.DeployGroup
-		deployGroup = k8s.GetDeployGroup(onlineGroup)
+		onlineGroup = service.OnlineGroup
 	)
-	log.Infof("get current online_group: %s deploy_group: %s", onlineGroup, deployGroup)
 
 	// 另一组缩成0
+	resource, err := k8s.New(namespace)
+	if err != nil {
+		return err
+	}
 	for _, phase := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
 		oldDeployment := k8s.GetDeploymentName(serviceName, serviceID, phase, onlineGroup)
-		fmt.Println("----缩成0的deployment: ", oldDeployment)
+		if err := resource.Scale(namespace, oldDeployment, 0); err != nil {
+		}
+		log.Infof("old deployment: %s replicas scale 0 success", oldDeployment)
 	}
 
-	if err := model.UpdateGroup(pid, service.ID, onlineGroup, deployGroup, model.PLSuccess); err != nil {
+	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHSuccess); err != nil {
+		return fmt.Errorf(config.FSH_CREATE_FINISH_PHASE_ERROR, err)
+	}
+	log.Infof("record finish phase for pid: %d success", pid)
+
+	var (
+		newOnlineGroup = service.DeployGroup
+		newDeployGroup = k8s.GetDeployGroup(newOnlineGroup)
+	)
+	log.Infof("get current online_group: %s deploy_group: %s", newOnlineGroup, newDeployGroup)
+
+	if err := model.UpdateGroup(pid, service.ID, newOnlineGroup, newDeployGroup, model.PLSuccess); err != nil {
 		return fmt.Errorf(config.FSH_UPDATE_ONLINE_GROUP_ERROR, err)
 	}
-	log.Infof("set current online group: %s deploy group: %s success", onlineGroup, deployGroup)
+	log.Infof("set current online group: %s deploy group: %s success", newOnlineGroup, newDeployGroup)
 	return nil
 }

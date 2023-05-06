@@ -83,6 +83,7 @@ const (
 // 确认完成
 const (
 	FSH_UPDATE_ONLINE_GROUP_ERROR = "设置当前在线组、部署组失败: %s"
+	FSH_CREATE_FINISH_PHASE_ERROR = "记录完成阶段失败: %s"
 )
 
 // 回滚

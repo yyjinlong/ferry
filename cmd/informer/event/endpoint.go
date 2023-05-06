@@ -39,16 +39,16 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		return nil
 	}
 
-	serviceID, serviceName, phase, err := r.parseInfo(name)
-	if err != nil {
-		return err
-	}
-
 	ips, ready := r.parseAddr(subsets)
 	if !ready {
 		return nil
 	}
-	log.Infof("[endpoint] service: %s phase: %s have total ips: %#v", serviceName, phase, ips)
+
+	serviceID, serviceName, phase, group, err := r.parseInfo(name)
+	if err != nil {
+		return err
+	}
+	log.Infof("[endpoint] service: %s phase: %s group: %s have total ips: %#v", serviceName, phase, group, ips)
 
 	svc, err := model.GetServiceByID(serviceID)
 	if err != nil {
@@ -66,7 +66,9 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		return nil
 	}
 
-	if err := r.updateTraffic(namespace, serviceName, phase, ips); err != nil {
+	deployGroup := svc.DeployGroup
+	onlineGroup := svc.OnlineGroup
+	if err := r.traffic(serviceID, namespace, serviceName, phase, group, deployGroup, onlineGroup, ips); err != nil {
 		log.Errorf("[endpoint] update service: %s traffic failed: %+v", serviceName, err)
 		return err
 	}
@@ -86,7 +88,7 @@ func (r *EndpointResource) filter(name string) bool {
 	return true
 }
 
-func (r *EndpointResource) parseInfo(name string) (int64, string, string, error) {
+func (r *EndpointResource) parseInfo(name string) (int64, string, string, string, error) {
 	// 获取服务ID
 	re := regexp.MustCompile(`-\d+-`)
 	result := re.FindStringSubmatch(name)
@@ -94,14 +96,19 @@ func (r *EndpointResource) parseInfo(name string) (int64, string, string, error)
 	serviceID, err := strconv.ParseInt(match, 10, 64)
 	if err != nil {
 		log.Errorf("[endpoint] parse: %s convert to int64 error: %s", name, err)
-		return 0, "", "", err
+		return 0, "", "", "", err
 	}
 
 	// 获取服务名
 	matchList := re.Split(name, -1)
 	serviceName := matchList[0]
-	phase := matchList[1]
-	return serviceID, serviceName, phase, nil
+
+	// 获取阶段、部署组
+	other := matchList[1]
+	otherList := strings.Split(other, "-")
+	phase := otherList[0]
+	group := otherList[1]
+	return serviceID, serviceName, phase, group, nil
 }
 
 func (r *EndpointResource) parseAddr(subsets []corev1.EndpointSubset) ([]string, bool) {
@@ -121,7 +128,56 @@ func (r *EndpointResource) parseAddr(subsets []corev1.EndpointSubset) ([]string,
 	return ips, ready
 }
 
-func (r *EndpointResource) updateTraffic(namespace, service, phase string, ips []string) error {
-	log.Infof("[endpoint] service: %s phase: %s update traffic: %#v success", service, phase, ips)
+func (r *EndpointResource) traffic(serviceID int64, namespace, service, phase, group, deployGroup, onlineGroup string, ips []string) error {
+	// 两组(blue、green) 只有一组接流量
+	pipeline, err := model.GetServicePipeline(serviceID)
+	if err != nil {
+		log.Errorf("get pipeline info by service id: %d failed: %+v", serviceID, err)
+		return err
+	}
+	pipelineID := pipeline.ID
+
+	if pipeline.Status == model.PLProcess {
+		// NOTE: 发布中
+		if group == deployGroup {
+			// 发布中且该组是发布组, 则更新流量
+			r.update(service, phase, group, ips)
+			return nil
+
+		} else {
+			// 发布中且该组不是发布组
+			// 判断该阶段是否已发布完成; 如果没有, 则表示是需要更新该组的流量
+			// case: 正在发布green组sandbox, 且green组online没有发布. 这时blue组online pod变化了, 则需要更新
+			if !model.CheckPhaseIsDeploy(pipelineID, model.PHASE_DEPLOY, phase) {
+				r.update(service, phase, group, ips)
+				return nil
+			}
+		}
+
+	} else if pipeline.Status == model.PLRollbacking {
+		// NOTE: 回滚中
+		if !model.CheckDeployFinish(pipelineID) {
+			// 发布中回滚(当前组为在线组)
+			if group == onlineGroup {
+				r.update(service, phase, group, ips)
+				return nil
+			}
+
+		} else {
+			// 发布完成回滚(当前组为部署组)
+			if group == deployGroup {
+				r.update(service, phase, group, ips)
+				return nil
+			}
+		}
+
+	} else {
+		// NOTE: 发布成功、失败(只更新对应阶段、对应组的流量)
+		r.update(service, phase, group, ips)
+	}
 	return nil
+}
+
+func (r *EndpointResource) update(service, phase, group string, ips []string) {
+	log.Infof("[endpoint] service: %s phase: %s group: %s update traffic: %#v success", service, phase, group, ips)
 }

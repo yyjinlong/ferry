@@ -114,8 +114,6 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
-	// 获取endpoint信息
-
 	// deployment ready更新阶段完成
 	if err := model.UpdatePhaseV2(pipelineID, kind, phase, model.PHSuccess); err != nil {
 		log.Errorf("[deployment] update pipeline: %d to db on phase: %s failed: %s", pipelineID, phase, err)
