@@ -26,12 +26,12 @@ var (
 	FINISH      = []byte("finish")
 )
 
-func NewWebsocket() *WSocket {
-	return &WSocket{}
-}
-
 type WSocket struct {
 	conn *websocket.Conn
+}
+
+func NewWebsocket() *WSocket {
+	return &WSocket{}
 }
 
 func (w *WSocket) Serve(c *gin.Context) error {
@@ -46,7 +46,7 @@ func (w *WSocket) Serve(c *gin.Context) error {
 	// 将当前请求升级为websocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Errorf("http request upgrade to websocket err: %s", err)
+		log.Errorf("upgrade http request to websocket err: %s", err)
 		return err
 	}
 
@@ -60,24 +60,25 @@ func (w *WSocket) Serve(c *gin.Context) error {
 
 	// websocket协议对应的close回调方法
 	conn.SetCloseHandler(func(code int, text string) error {
-		log.Infof("websocket closed")
+		log.Infof("upgrade http request failed: websocket closed")
 		return err
 	})
 	w.conn = conn
-	log.Infof("create websocket success")
+	log.Infof("upgrade http request to websocket success")
 	return nil
 }
 
 func (w *WSocket) Heartbeat() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("---- websocket read heartbeat exception: %s", err)
+			log.Errorf("websocket read heartbeat exception: %s", err)
 		}
 	}()
+
 	for {
 		code, data, err := w.conn.ReadMessage()
 		if err != nil {
-			log.Errorf("read message error: %s", err)
+			log.Errorf("websocket read message error: %s", err)
 			return
 		}
 		if code == -1 {
@@ -96,7 +97,7 @@ func (w *WSocket) Echo(msg string) {
 func (w *WSocket) Send(msg []byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("---- websocket send message exception: %s", err)
+			log.Errorf("websocket send message exception: %s", err)
 		}
 	}()
 	w.conn.WriteMessage(websocket.TextMessage, msg)
@@ -105,7 +106,7 @@ func (w *WSocket) Send(msg []byte) {
 func (w *WSocket) Quit() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("---- websocket send quit exception: %s", err)
+			log.Errorf("websocket send quit exception: %s", err)
 		}
 	}()
 	w.conn.WriteMessage(websocket.TextMessage, QUIT)
@@ -114,7 +115,7 @@ func (w *WSocket) Quit() {
 func (w *WSocket) Finish() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("---- websocket send finish exception: %s", err)
+			log.Errorf("websocket send finish exception: %s", err)
 		}
 	}()
 	w.conn.WriteMessage(websocket.TextMessage, FINISH)
