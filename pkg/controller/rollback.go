@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
-	"nautilus/pkg/service/rollback"
+	"nautilus/pkg/service/publish"
 )
 
 func CheckRollback(c *gin.Context) {
@@ -48,7 +48,7 @@ func Rollback(c *gin.Context) {
 		username = data.Username
 	)
 
-	ro := rollback.NewRollback()
+	ro := publish.NewRollback()
 	if err := ro.Handle(pid, username); err != nil {
 		log.Errorf("execute rollback failed: %+v", err)
 		ResponseFailed(c, err.Error())

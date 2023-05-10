@@ -3,11 +3,12 @@
 // author: jinlong yang
 //
 
-package controller
+package publish
 
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -26,15 +27,15 @@ var (
 	FINISH      = []byte("finish")
 )
 
-type WSocket struct {
+type WebSocket struct {
 	conn *websocket.Conn
 }
 
-func NewWebsocket() *WSocket {
-	return &WSocket{}
+func NewWebsocket() *WebSocket {
+	return &WebSocket{}
 }
 
-func (w *WSocket) Serve(c *gin.Context) error {
+func (w *WebSocket) Serve(c *gin.Context) error {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  BUFFER_SIZE,
 		WriteBufferSize: BUFFER_SIZE,
@@ -68,7 +69,7 @@ func (w *WSocket) Serve(c *gin.Context) error {
 	return nil
 }
 
-func (w *WSocket) Heartbeat() {
+func (w *WebSocket) Heartbeat() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("websocket read heartbeat exception: %s", err)
@@ -90,11 +91,19 @@ func (w *WSocket) Heartbeat() {
 	}
 }
 
-func (w *WSocket) Echo(msg string) {
+func (w *WebSocket) Echo(msg string) {
 	w.Send([]byte(msg))
 }
 
-func (w *WSocket) Send(msg []byte) {
+func (w *WebSocket) EchoRed(msg string) {
+	w.Send([]byte(fmt.Sprintf("\033[31m%s\033[0m\n", msg)))
+}
+
+func (w *WebSocket) EchoGreen(msg string) {
+	w.Send([]byte(fmt.Sprintf("\033[32m%s\033[0m\n", msg)))
+}
+
+func (w *WebSocket) Send(msg []byte) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("websocket send message exception: %s", err)
@@ -103,7 +112,7 @@ func (w *WSocket) Send(msg []byte) {
 	w.conn.WriteMessage(websocket.TextMessage, msg)
 }
 
-func (w *WSocket) Quit() {
+func (w *WebSocket) Quit() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("websocket send quit exception: %s", err)
@@ -112,7 +121,7 @@ func (w *WSocket) Quit() {
 	w.conn.WriteMessage(websocket.TextMessage, QUIT)
 }
 
-func (w *WSocket) Finish() {
+func (w *WebSocket) Finish() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("websocket send finish exception: %s", err)
@@ -122,7 +131,7 @@ func (w *WSocket) Finish() {
 }
 
 // Realtime 执行命令的实时输出
-func (w *WSocket) Realtime(param string, output *string) {
+func (w *WebSocket) Realtime(param string, output *string) {
 	cmd := exec.Command("bash", "-c", param)
 
 	stdout, err := cmd.StdoutPipe()
@@ -163,7 +172,7 @@ func (w *WSocket) Realtime(param string, output *string) {
 	}
 }
 
-func (w *WSocket) read(wg *sync.WaitGroup, std io.ReadCloser, output *string) {
+func (w *WebSocket) read(wg *sync.WaitGroup, std io.ReadCloser, output *string) {
 	defer wg.Done()
 
 	reader := bufio.NewReader(std)

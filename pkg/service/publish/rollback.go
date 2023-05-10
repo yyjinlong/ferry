@@ -3,7 +3,7 @@
 // author: jinlong yang
 //
 
-package rollback
+package publish
 
 import (
 	"fmt"
