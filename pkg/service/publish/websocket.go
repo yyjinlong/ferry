@@ -95,6 +95,10 @@ func (w *WebSocket) Echo(msg string) {
 	w.Send([]byte(msg))
 }
 
+func (w *WebSocket) EchoLine(msg string) {
+	w.Send([]byte(msg + "\n"))
+}
+
 func (w *WebSocket) EchoRed(msg string) {
 	w.Send([]byte(fmt.Sprintf("\033[31m%s\033[0m\n", msg)))
 }
@@ -131,21 +135,21 @@ func (w *WebSocket) Finish() {
 }
 
 // Realtime 执行命令的实时输出
-func (w *WebSocket) Realtime(param string, output *string) {
+func (w *WebSocket) Realtime(param string, output *string) error {
 	cmd := exec.Command("bash", "-c", param)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		w.Echo(err.Error())
 		w.Quit()
-		return
+		return err
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		w.Echo(err.Error())
 		w.Quit()
-		return
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -157,19 +161,20 @@ func (w *WebSocket) Realtime(param string, output *string) {
 	if err := cmd.Start(); err != nil {
 		w.Echo(err.Error())
 		w.Quit()
-		return
+		return err
 	}
 
 	if err := cmd.Wait(); err != nil {
 		w.Echo(err.Error())
 		w.Quit()
-		return
+		return err
 	}
 
 	if !cmd.ProcessState.Success() {
 		w.Quit()
-		return
+		return err
 	}
+	return nil
 }
 
 func (w *WebSocket) read(wg *sync.WaitGroup, std io.ReadCloser, output *string) {
