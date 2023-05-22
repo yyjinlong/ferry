@@ -22,24 +22,19 @@ import (
 )
 
 const (
-	// HP k8s cluster: hp
-	HP = "hp"
-	// XQ k8s cluster: xq
-	XQ = "xq"
+	HP = "hp" // HP k8s cluster: hp
+	XQ = "xq" // XQ k8s cluster: xq
 )
 
 type Settings struct {
 	Address  string       `yaml:"address"`
 	Log      LogInfo      `yaml:"log"`
 	Postgres PostgresInfo `yaml:"postgres"`
-	RabbitMQ RabbtimqInfo `yaml:"rabbitmq"`
-	Image    ImageInfo    `yaml:"image"`
 	K8S      K8SInfo      `yaml:"k8s"`
 }
 
 type LogInfo struct {
 	Server   string `yaml:"server"`
-	Image    string `yaml:"image"`
 	Informer string `yaml:"informer"`
 }
 
@@ -47,18 +42,6 @@ type PostgresInfo struct {
 	Master string `yaml:"master"`
 	Slave1 string `yaml:"slave1"`
 	Slave2 string `yaml:"slave2"`
-}
-
-type RabbtimqInfo struct {
-	Address    string `yaml:"address"`
-	Exchange   string `yaml:"exchange"`
-	Queue      string `yaml:"queue"`
-	RoutingKey string `yaml:"routingKey"`
-}
-
-type ImageInfo struct {
-	Release  string `yaml:"release"`
-	Registry string `yaml:"registry"`
 }
 
 type K8SInfo struct {

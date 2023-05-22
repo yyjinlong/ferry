@@ -4,15 +4,17 @@ base=$(dirname $0)
 source $base/config.sh
 source $base/common.sh
 
-addr=""
 module=""
+lang=""
+addr=""
 branch=""
 taskid=""
 
-while getopts a:b:m:i: opt; do
+while getopts m:l:a:b:i:h: opt; do
     case $opt in
-        a) addr=$OPTARG;;
         m) module=$OPTARG;;
+        l) lang=$OPTARG;;
+        a) addr=$OPTARG;;
         b) branch=$OPTARG;;
         i) taskid=$OPTARG;;
         h) help;;
@@ -22,53 +24,21 @@ done
 function help() {
     cat <<EOF
 功能说明: 代码打tag, 并做代码合并检查
-使用方法: $0 -a https://gitlab.xxx.com/xxx -m ivr -b master -i 100
-参数说明:
-    -a 仓库地址
-    -m 模块名称
-    -b 分支名称
-    -i 任务ID
+使用方法: $0 -m 模块名 -l 语言 -a 仓库地址 -b 分支名 -i 任务ID
 EOF
-    exit $err
+    exit 0
 }
 
-function branch_merge_check() {
-    echoinfo "开始进行分支合并检查"
-    echoinfo "当前模块: $module"
-    echoinfo "当前分支: $branch"
-
-}
-
-function build_tag() {
-    cd $module
-    tag="released_${module}_$(date +%Y_%m_%d_%H%M%S)_${taskid}"
-    echoinfo "开始打tag: $tag"
-
-    git checkout $branch
-    if [ $? -ne 0 ]; then
-        echoerror "切换到分支: $branch 失败!"
-        exit $err
-    fi
-    git tag $tag -am "make tag $tag"
-    git push origin $branch --tags
-    if [ $? -ne 0 ]; then
-        echoerror "推送tag: $tag 到仓库失败!"
-        exit $err
-    fi
-
-    report_tag $taskid $module $tag
-    echoinfo "上报tag: $tag 成功!"
-
-    echoinfo "最新的5个tag列表如下:"
-    git tag | grep $module | tail -n 5
-}
-
-function main() {
-    if [ -z $addr ]; then
+function check() {
+    if [ -z $module ]; then
         help
     fi
 
-    if [ -z $module ]; then
+    if [ -z $lang ]; then
+        help
+    fi
+
+    if [ -z $addr ]; then
         help
     fi
 
@@ -80,27 +50,77 @@ function main() {
         help
     fi
 
-    if [ ! -d $MAIN_PATH ]; then
-        mkdir $MAIN_PATH
+    # 部署路径不存在则创建
+    if [ ! -d $DEPLOY_PATH ]; then
+        mkdir -p $DEPLOY_PATH
     fi
-    cd $MAIN_PATH
+}
 
-    git clone $addr $module
+function branch_merge_check() {
+    echo "当前模块: $module"
+    echo "当前分支: $branch"
+
+    echo "分支检查完成!"
+}
+
+function build_tag() {
+    git checkout $branch -q
+    if [ $? -ne 0 ]; then
+        echoerror "切换到分支: $branch 失败!"
+        exit $err
+    fi
+    echo "模块($module) 切换到分支($branch) 成功"
+
+    tag="released_${module}_$(date +%Y_%m_%d_%H%M%S)_${taskid}"
+    git tag $tag -am "make tag for branch: $branch"
+    git push origin $branch --tags
+    if [ $? -ne 0 ]; then
+        echoerror "推送tag: $tag 到仓库失败!"
+        exit $err
+    fi
+
+    echobold "上报tag信息"
+    report_tag $taskid $module $tag
+    echobold "打Tag完成, Tag: $tag"
+    sleep 1
+
+    echobold "最新的5个tag列表如下:"
+    git tag | grep $module | tail -n 5
+}
+
+function clear_module() {
+    cd $DEPLOY_PATH
+    module_path="$DEPLOY_PATH/$module"
+    if [ -d $module_path ]; then
+        rm -rf $module_path
+    fi
+    echo "模块清理完成"
+}
+
+function main() {
+    check
+
+    echobold "阶段一: 模块$module代码下载"
+    cd $DEPLOY_PATH
+    if [ -d $module ]; then
+        rm -rf $module
+    fi
+    git clone --recursive $addr $module -q
     if [ $? -ne 0 ]; then
         echoerror "git clone $addr 失败!"
         exit $rr
     fi
-    echoinfo "代码下载完成!"
+    echo "代码下载完成!"
 
+    echobold "阶段二: 模块$module进行分支合并检查"
+    cd $module
     branch_merge_check
+
+    echobold "阶段三: 模块$module打tag"
     build_tag
 
-    cd $MAIN_PATH
-    code_path="$MAIN_PATH/$module"
-    if [ -d $code_path ]; then
-        rm -rf $code_path
-        echoinfo "删除代码目录完成!"
-    fi
+    echobold "阶段四: 模块$module清理"
+    clear_module
 }
 
 main

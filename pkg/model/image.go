@@ -12,8 +12,9 @@ import (
 type PipelineImage struct {
 	ID         int64
 	PipelineID int64     `xorm:"bigint notnull"`
-	ImageURL   string    `xorm:"varchar(200)"`
-	ImageTag   string    `xorm:"varchar(50)"`
+	CodeModule string    `xorm:"varchar(50) notnull"` // 代码模块
+	ImageURL   string    `xorm:"varchar(200)"`        // 对应release镜像地址
+	ImageTag   string    `xorm:"varchar(50)"`         // 对应release镜像tag
 	Status     int       `xorm:"int notnull"`
 	CreateAt   time.Time `xorm:"timestamp notnull created"`
 }
@@ -25,14 +26,27 @@ const (
 	PIFailed             // 构建失败
 )
 
-func GetImagInfo(pipelineID int64) (*PipelineImage, error) {
-	pi := new(PipelineImage)
-	if has, err := SEngine.Where("pipeline_id=?", pipelineID).Get(pi); err != nil {
-		return nil, err
-	} else if !has {
-		return nil, NotFound
+func CreateImage(pipelineID int64, codeModule string) error {
+	image := new(PipelineImage)
+	image.PipelineID = pipelineID
+	image.CodeModule = codeModule
+	image.Status = PIProcess
+	if _, err := MEngine.Insert(image); err != nil {
+		return err
 	}
-	return pi, nil
+	return nil
+}
+
+func UpdateImage(pipelineID int64, codeModule, imageURL, imageTag string) error {
+	image := new(PipelineImage)
+	image.PipelineID = pipelineID
+	image.CodeModule = codeModule
+	image.ImageURL = imageURL
+	image.ImageTag = imageTag
+	if _, err := MEngine.Where("pipeline_id=?", pipelineID).Update(image); err != nil {
+		return err
+	}
+	return nil
 }
 
 // FindImageInfo 根据pipeline id返回本次构建的镜像信息
@@ -49,25 +63,4 @@ func FindImageInfo(pipelineID int64) (map[string]string, error) {
 		"image_tag": pi.ImageTag,
 	}
 	return imageInfo, nil
-}
-
-func CreateImage(pipelineID int64) error {
-	image := new(PipelineImage)
-	image.PipelineID = pipelineID
-	image.Status = PIProcess
-	if _, err := MEngine.Insert(image); err != nil {
-		return err
-	}
-	return nil
-}
-
-func UpdateImage(pipelineID int64, imageURL, imageTag string) error {
-	image := new(PipelineImage)
-	image.PipelineID = pipelineID
-	image.ImageURL = imageURL
-	image.ImageTag = imageTag
-	if _, err := MEngine.Where("pipeline_id=?", pipelineID).Update(image); err != nil {
-		return err
-	}
-	return nil
 }

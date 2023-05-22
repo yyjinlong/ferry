@@ -29,7 +29,7 @@ type Pipeline struct {
 type PipelineUpdate struct {
 	ID           int64
 	PipelineID   int64     `xorm:"bigint notnull"`
-	CodeModuleID int64     `xorm:"bigint notnull"`
+	CodeModule   string    `xorm:"varchar(50) notnull"`
 	DeployBranch string    `xorm:"varchar(20)"`
 	CodeTag      string    `xorm:"varchar(50)"`
 	CreateAt     time.Time `xorm:"timestamp notnull created"`
@@ -129,16 +129,9 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		moduleName := moduleInfo["name"]
 		deployBranch := moduleInfo["branch"]
 
-		codeModule := new(CodeModule)
-		if has, err := session.Where("name=? and service_id=?", moduleName, service.ID).Get(codeModule); err != nil {
-			return err
-		} else if !has {
-			return NotFound
-		}
-
 		pipelineUpdate := new(PipelineUpdate)
 		pipelineUpdate.PipelineID = pipeline.ID
-		pipelineUpdate.CodeModuleID = codeModule.ID
+		pipelineUpdate.CodeModule = moduleName
 		pipelineUpdate.DeployBranch = deployBranch
 		if _, err := session.Insert(pipelineUpdate); err != nil {
 			return err

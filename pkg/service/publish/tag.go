@@ -52,14 +52,15 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 
 	for _, item := range updateList {
 		branch := item.DeployBranch
-		codeModule, err := model.GetCodeModuleInfoByID(item.CodeModuleID)
+		codeModule, err := model.GetCodeModuleInfo(item.CodeModule)
 		if err != nil {
 			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
+		lang := codeModule.Language
 		addr := codeModule.ReposAddr
 		module := codeModule.Name
 
-		param := fmt.Sprintf("%s/maketag -a %s -m %s -b %s -i %d", scriptPath, addr, module, branch, pid)
+		param := fmt.Sprintf("%s/maketag -m %s -l %s -a %s -b %s -i %d", scriptPath, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
 		if !bt.do(param) {
 			return fmt.Errorf(config.TAG_BUILD_FAILED)

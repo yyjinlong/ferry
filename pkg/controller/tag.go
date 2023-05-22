@@ -6,9 +6,12 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
+	"nautilus/pkg/config"
 	"nautilus/pkg/service/publish"
 )
 
@@ -48,6 +51,7 @@ func ReceiveTag(c *gin.Context) {
 	var data params
 	if err := c.ShouldBind(&data); err != nil {
 		ResponseFailed(c, err.Error())
+		c.String(http.StatusOK, err.Error())
 		return
 	}
 
@@ -60,8 +64,8 @@ func ReceiveTag(c *gin.Context) {
 	receive := publish.NewReceiveTag()
 	if err := receive.Handle(pid, module, tag); err != nil {
 		log.Errorf("receive tag failed: %+v", err)
-		ResponseFailed(c, err.Error())
+		c.String(http.StatusOK, err.Error())
 		return
 	}
-	ResponseSuccess(c, nil)
+	c.String(http.StatusOK, config.OK)
 }

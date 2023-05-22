@@ -2,7 +2,6 @@ address: "0.0.0.0:8888"
 
 log:
   server: "/tmp/nautilus.log"
-  image: "/tmp/image.log"
   informer: "/tmp/informer.log"
 
 postgres:
@@ -14,13 +13,3 @@ k8s:
   hp: "/root/.kube/config"
   xq: "/root/.kube/config"
   imageKey: "harborkey"
-
-rabbitmq:
-  address: "amqp://rabbit:yangjinlong@10.12.24.19:5672/core"
-  exchange: "nautilus"
-  queue: "all-build-image"
-  routingKey: "build-image"
-
-image:
-  release: "/tmp/release"
-  registry: "10.12.28.4:80/release"

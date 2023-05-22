@@ -21,35 +21,36 @@ func URLs(r *gin.Engine) {
 	})
 
 	// 上线单
-	p := r.Group("v1", UserAuth)
+	pipeline := r.Group("v1/pipeline", UserAuth)
 	{
-		p.POST("/pipeline", controller.CreatePipeline)
+		pipeline.POST("/create", controller.CreatePipeline)
 	}
 
 	// 上线流程
-	d := r.Group("v1", UserAuth)
+	deploy := r.Group("v1/deploy", UserAuth)
 	{
 		// 发布流程
-		d.POST("/tag", controller.BuildTag)
-		d.GET("/tag", controller.ReceiveTag)
-		d.POST("/image", controller.BuildImage)
-		d.POST("/configmap", controller.ConfigMap)
-		d.POST("/service", controller.Service)
-		d.POST("/deploy", controller.Deploy)
-		d.POST("/finish", controller.Finish)
+		deploy.POST("/tag", controller.BuildTag)
+		deploy.GET("/tag", controller.ReceiveTag)
+		deploy.POST("/image/create", controller.BuildImage)
+		deploy.GET("/image/update", controller.UpdateImage)
+		deploy.POST("/configmap", controller.ConfigMap)
+		deploy.POST("/service", controller.Service)
+		deploy.POST("/do", controller.Deploy)
+		deploy.POST("/finish", controller.Finish)
 	}
 
 	// 回滚流程
-	ro := r.Group("v1", UserAuth)
+	rollback := r.Group("v1/rollback", UserAuth)
 	{
-		ro.POST("/check/rollback", controller.CheckRollback)
-		ro.POST("/rollback", controller.Rollback)
+		rollback.POST("/check", controller.CheckRollback)
+		rollback.POST("/do", controller.Rollback)
 	}
 
 	// 定时任务
-	cr := r.Group("v1", UserAuth)
+	cron := r.Group("v1/cronjob", UserAuth)
 	{
-		cr.POST("/cronjob", controller.BuildCronJob)
-		cr.POST("/cronjob/delete", controller.DeleteCronJob)
+		cron.POST("/create", controller.BuildCronJob)
+		cron.POST("/delete", controller.DeleteCronJob)
 	}
 }

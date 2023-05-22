@@ -1,0 +1,204 @@
+#!/bin/bash
+
+base=$(dirname $0)
+source $base/config.sh
+source $base/common.sh
+
+service=""
+module=""
+lang=""
+addr=""
+tag=""
+service_image=""
+taskid=""
+
+while getopts s:m:l:a:t:u:i:h: opt; do
+    case $opt in
+        s) service=$OPTARG;;
+        m) module=$OPTARG;;
+        l) lang=$OPTARG;;
+        a) addr=$OPTARG;;
+        t) tag=$OPTARG;;
+        u) service_image=$OPTARG;;
+        i) taskid=$OPTARG;;
+        h) help;;
+    esac
+done
+
+function help() {
+    cat <<EOF
+功能说明: 构建代码镜像
+使用方法: $0 -s 服务名 -m 模块名 -l 语言 -a 仓库地址 -t tag名 -u 服务镜像url -i 任务id
+EOF
+    exit 0
+}
+
+function check() {
+    if [ -z $service ]; then
+        help
+    fi
+    if [ -z $module ]; then
+        help
+    fi
+
+    if [ -z $lang ]; then
+        help
+    fi
+
+    if [ -z $addr ]; then
+        help
+    fi
+
+    if [ -z $tag ]; then
+        help
+    fi
+
+    if [ -z $service_image ]; then
+        help
+    fi
+
+    if [ -z $taskid ]; then
+        help
+    fi
+
+    # release路径不存在则创建
+    if [ ! -d $RELEASE_PATH ]; then
+        mkdir -p $RELEASE_PATH
+    fi
+}
+
+function checkout_tag() {
+    build_path=$1
+    cd $build_path
+
+    if [ -d $module ]; then
+        rm -rf $module
+    fi
+    git clone --recursive $addr $module -q
+    echo "代码下载完成!"
+
+    cd $module
+    git checkout $tag -q
+    if [ $? -ne 0 ]; then
+        echoerror "切换到tag: $tag 失败!"
+        exit $err
+    fi
+    echo "模块($module) 切换到tag($tag) 成功"
+}
+
+function compile() {
+    build_path=$1
+    code_path=$2
+
+    rm -rf .git .gitignore
+    echo "删除隐藏文件成功"
+
+    if [ $lang == "go" ]; then
+        echo "模块$module开始进行golang编译"
+
+    elif [ $lang == "java" ]; then
+        echo "模块$module开始进行maven编译"
+
+    else
+        echo "模块$module跳过该编译阶段"
+        cd $build_path
+        mv $module $code_path
+        if [ $? -ne 0 ]; then
+            echoerror "拷贝代码$module到代码路径$code_path失败!"
+            return
+        fi
+    fi
+    echo "拷贝编译好的代码到代码路径成功"
+}
+
+function create_dockerfile() {
+    build_path=$1
+    dockerfile="$build_path/Dockerfile"
+
+    cat << EOF > $dockerfile
+ARG repo
+FROM \${repo}
+
+ARG deploy_path=/home/tong/www
+
+ADD --chown=tong:tong ./code \${deploy_path}
+EOF
+    echo "生成Dockerfile: $dockerfile 成功"
+}
+
+function build_image() {
+    build_path=$1
+
+    echo "docker pull $service_image"
+    docker pull $service_image
+    if [ $? -ne 0 ]; then
+        echoerror "docker pull失败!"
+        exit $err
+    fi
+
+    # docker build --build-arg repo=服务镜像 -t release镜像:版本 dockerfile路径
+    image_url="$RELEASE_REGISTRY/$service"
+    image_tag="v-$(date +%Y%m%d_%H%M%S)"
+    release_url="$image_url:$image_tag"
+    echo "docker build --build-arg repo=$service_image -t $release_url $build_path"
+    docker build --build-arg repo=$service_image -t $release_url $build_path
+    if [ $? -ne 0 ]; then
+        echoerror "docker build失败!"
+        exit $err
+    fi
+
+    echo "docker tag $release_url $release_url"
+    docker tag $release_url $release_url
+    if [ $? -ne 0 ]; then
+        echoerror "docker tag失败!"
+        exit $err
+    fi
+
+    echo "docker push $release_url"
+    docker push $release_url
+    if [ $? -ne 0 ]; then
+        echoerror "docker push失败!"
+        exit $err
+    fi
+
+    echobold "上报镜像信息"
+    report_img $taskid $module $image_url $image_tag
+    echobold "镜像构建完成, 镜像: $release_url"
+}
+
+function main() {
+    check
+ 
+    build_path="$RELEASE_PATH/$service/$taskid" # 构建路径: release路径/服务/上线单ID
+    if [ -d $build_path ]; then
+        rm -rf $build_path
+    fi
+    if [ ! -d $build_path ]; then
+        mkdir -p $build_path
+    fi
+    echo "创建构建路径: $build_path 成功"
+
+    code_path="$build_path/code" # 代码路径: release路径/服务/上线单ID/code
+    if [ ! -d $code_path ]; then
+        mkdir $code_path
+    fi
+    echo "创建代码路径: $code_path 成功"
+
+    echobold "阶段一: 模块$module下载tag:$tag代码"
+    checkout_tag $build_path
+
+    echobold "阶段二: 模块$module进行编译"
+    compile $build_path $code_path
+
+    echobold "阶段三: 模块$module创建Dockerfile"
+    create_dockerfile $build_path
+
+    # 构建路径样例:
+    # ├── code
+    # │   └── 模块名
+    # └── Dockerfile
+    echobold "阶段三: 模块$module进行镜像构建"
+    build_image $build_path
+}
+
+main

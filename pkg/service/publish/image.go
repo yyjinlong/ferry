@@ -6,16 +6,16 @@
 package publish
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util/cm"
-	"nautilus/pkg/util/rmq"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func NewBuildImage() *BuildImage {
@@ -34,12 +34,9 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return err
 	}
 
-	pipelineImage, err := model.GetImagInfo(pid)
-	if err != nil && !errors.Is(err, model.NotFound) {
-		return fmt.Errorf(config.IMG_QUERY_IS_BUILD_ERROR, err)
-	}
-	if pipelineImage != nil && cm.Ini(pipelineImage.Status, []int{model.PIProcess, model.PISuccess, model.PIFailed}) {
-		return fmt.Errorf(config.IMG_QUERY_IMAGE_IS_BUILED)
+	svc, err := model.GetServiceInfo(service)
+	if err != nil {
+		return fmt.Errorf(config.IMG_QUERY_SERVICE_ERROR, err)
 	}
 
 	updateList, err := model.FindUpdateInfo(pid)
@@ -47,48 +44,31 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return fmt.Errorf(config.IMG_QUERY_UPDATE_ERROR, err)
 	}
 
-	language := ""
-	builds := make([]config.ModuleInfo, 0)
+	_, curPath, _, _ := runtime.Caller(1)
+	var (
+		mainPath   = filepath.Dir(filepath.Dir(filepath.Dir(curPath)))
+		scriptPath = filepath.Join(mainPath, "script")
+	)
+
 	for _, item := range updateList {
-		codeModule, err := model.GetCodeModuleInfoByID(item.CodeModuleID)
+		if err := model.CreateImage(pid, item.CodeModule); err != nil {
+			return fmt.Errorf(config.IMG_CREATE_IMAGE_INFO_ERROR, err)
+		}
+
+		codeModule, err := model.GetCodeModuleInfo(item.CodeModule)
 		if err != nil {
 			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
-		language = codeModule.Language
+		lang := codeModule.Language
+		repo := codeModule.ReposAddr
 
-		builds = append(builds, config.ModuleInfo{
-			Module: codeModule.Name,
-			Repo:   codeModule.ReposAddr,
-			Tag:    item.CodeTag,
-		})
+		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -u %s -i %d",
+			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, svc.ImageAddr, pid)
+		log.Infof("maketag command: %s", param)
+		if !bi.do(param) {
+			return fmt.Errorf(config.IMG_BUILD_FAILED)
+		}
 	}
-
-	image := config.Image{
-		PID:     pid,
-		Type:    language,
-		Service: service,
-		Build:   builds,
-	}
-	body, err := json.Marshal(image)
-	if err != nil {
-		return fmt.Errorf(config.IMG_BUILD_PARAM_ENCODE_ERROR, err)
-	}
-	log.Infof("publish build image body: %s", string(body))
-
-	if err := model.CreateImage(pid); err != nil {
-		return fmt.Errorf(config.IMG_CREATE_IMAGE_INFO_ERROR, err)
-	}
-
-	mq, err := rmq.NewRabbitMQ(
-		config.Config().RabbitMQ.Address,
-		config.Config().RabbitMQ.Exchange,
-		config.Config().RabbitMQ.Queue,
-		config.Config().RabbitMQ.RoutingKey)
-	if err != nil {
-		return fmt.Errorf(config.IMG_SEND_BUILD_TO_MQ_FAILED, err)
-	}
-	mq.Publish(string(body))
-	log.Infof("publish build image info to rabbitmq success")
 	return nil
 }
 
@@ -104,4 +84,43 @@ func (bi *BuildImage) checkStatus(status int) error {
 		return fmt.Errorf(config.IMG_BUILD_FINISHED)
 	}
 	return nil
+}
+
+func (bi *BuildImage) do(param string) bool {
+	cmd := exec.Command("/bin/bash", "-c", param)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Errorf(config.TAG_CREATE_PIPE_ERROR, err)
+		return false
+	}
+	defer stdout.Close()
+
+	if err := cmd.Start(); err != nil {
+		log.Errorf(config.TAG_START_EXEC_ERROR, err)
+		return false
+	}
+
+	for {
+		buf := make([]byte, 1024)
+		_, err := stdout.Read(buf)
+		fmt.Println(string(buf))
+		if err != nil {
+			break
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		log.Errorf(config.TAG_WAIT_FINISH_ERROR, err)
+		return false
+	}
+
+	if cmd.ProcessState.Success() {
+		return true
+	}
+	return false
+}
+
+func UpdateImageInfo(pid int64, module, imageURL, imageTag string) error {
+	return model.UpdateImage(pid, module, imageURL, imageTag)
 }

@@ -92,7 +92,7 @@ create table if not exists pipeline (
 create table if not exists pipeline_update (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
-    code_module_id int not null,                                               -- 变更的代码模块
+    code_module varchar(50) not null,                                          -- 变更的代码模块
     deploy_branch varchar(20) default 'master',                                -- 变更的代码模块对应的部署分支 master上线、分支上线
     code_tag varchar(50),                                                      -- 基于代码模块打的tag
     create_at timestamp not null default now()
@@ -104,6 +104,7 @@ create table if not exists pipeline_update (
 create table if not exists pipeline_image (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
+    code_module varchar(50) not null,                                          -- 变更的代码模块
     image_url varchar(200),                                                    -- 基于所有代码模块构建的服务镜像地址
     image_tag varchar(50),                                                     -- 基于所有代码模块构建的服务镜像tag
     status int not null check(status in (0, 1, 2,3)) default 0,                -- 0 待构建 1 构建中 2 构建成功 3 构建失败

@@ -38,14 +38,14 @@ func main() {
 		config.Config().Postgres.Slave1,
 		config.Config().Postgres.Slave2)
 
+	r := gin.Default()
+	r.Use(cors.Default())
+	router.URLs(r)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	quitSignal := make(chan os.Signal, 1)
 	signal.Notify(quitSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	r := gin.Default()
-	r.Use(cors.Default())
-	router.URLs(r)
 
 	server := http.Server{
 		Addr:    config.Config().Address,
