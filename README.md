@@ -29,8 +29,8 @@ Jinlong Yang
 
 ## 3 业务逻辑
 
-    ├── pipelin  -- 构建
-    └── publish  -- 发布
+    ├── pipeline  -- 构建
+    └── publish   -- 发布
 
     * 新服务上线默认为blue
     * 蓝绿两组分别创建对应的deployment、service

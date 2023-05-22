@@ -7,15 +7,14 @@ package publish
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
 	"nautilus/pkg/util/cm"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func NewBuildImage() *BuildImage {
@@ -64,8 +63,8 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 
 		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -u %s -i %d",
 			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, svc.ImageAddr, pid)
-		log.Infof("maketag command: %s", param)
-		if !bi.do(param) {
+		log.Infof("makeimg command: %s", param)
+		if !cm.CallRealtimeOut(param) {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
 	}
@@ -84,41 +83,6 @@ func (bi *BuildImage) checkStatus(status int) error {
 		return fmt.Errorf(config.IMG_BUILD_FINISHED)
 	}
 	return nil
-}
-
-func (bi *BuildImage) do(param string) bool {
-	cmd := exec.Command("/bin/bash", "-c", param)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Errorf(config.TAG_CREATE_PIPE_ERROR, err)
-		return false
-	}
-	defer stdout.Close()
-
-	if err := cmd.Start(); err != nil {
-		log.Errorf(config.TAG_START_EXEC_ERROR, err)
-		return false
-	}
-
-	for {
-		buf := make([]byte, 1024)
-		_, err := stdout.Read(buf)
-		fmt.Println(string(buf))
-		if err != nil {
-			break
-		}
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Errorf(config.TAG_WAIT_FINISH_ERROR, err)
-		return false
-	}
-
-	if cmd.ProcessState.Success() {
-		return true
-	}
-	return false
 }
 
 func UpdateImageInfo(pid int64, module, imageURL, imageTag string) error {

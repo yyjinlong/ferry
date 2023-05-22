@@ -25,9 +25,6 @@ const (
 const (
 	TAG_OPERATE_FORBIDDEN  = "服务被上线单(%s)占用, 不能发布!"
 	TAG_QUERY_UPDATE_ERROR = "查询变更模块信息失败: %s"
-	TAG_CREATE_PIPE_ERROR  = "打tag创建输出管道失败: %s"
-	TAG_START_EXEC_ERROR   = "打tag执行命令失败: %s"
-	TAG_WAIT_FINISH_ERROR  = "等待命令执行完成失败: %s"
 	TAG_BUILD_FAILED       = "打tag失败!"
 	TAG_UPDATE_DB_ERROR    = "更新tag信息失败: %s"
 )

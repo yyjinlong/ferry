@@ -7,7 +7,6 @@ package publish
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
+	"nautilus/pkg/util/cm"
 )
 
 func NewBuildTag() *BuildTag {
@@ -62,46 +62,11 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 
 		param := fmt.Sprintf("%s/maketag -m %s -l %s -a %s -b %s -i %d", scriptPath, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
-		if !bt.do(param) {
+		if !cm.CallRealtimeOut(param) {
 			return fmt.Errorf(config.TAG_BUILD_FAILED)
 		}
 	}
 	return nil
-}
-
-func (bt *BuildTag) do(param string) bool {
-	cmd := exec.Command("/bin/bash", "-c", param)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Errorf(config.TAG_CREATE_PIPE_ERROR, err)
-		return false
-	}
-	defer stdout.Close()
-
-	if err := cmd.Start(); err != nil {
-		log.Errorf(config.TAG_START_EXEC_ERROR, err)
-		return false
-	}
-
-	for {
-		buf := make([]byte, 1024)
-		_, err := stdout.Read(buf)
-		fmt.Println(string(buf))
-		if err != nil {
-			break
-		}
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Errorf(config.TAG_WAIT_FINISH_ERROR, err)
-		return false
-	}
-
-	if cmd.ProcessState.Success() {
-		return true
-	}
-	return false
 }
 
 func NewReceiveTag() *ReceiveTag {
