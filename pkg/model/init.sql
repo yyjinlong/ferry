@@ -6,7 +6,6 @@ start transaction;
 create table if not exists cluster (
     id serial primary key,
     name varchar(50) not null,                       -- 集群名
-    token text not null,                             -- 集群token
     creator varchar(50) not null,                    -- 集群创建人
     create_at timestamp not null default now()
 );
@@ -28,9 +27,8 @@ create table if not exists namespace (
 --
 create table if not exists service (
     id serial primary key,
-    namespace_id int not null,                       -- 服务所在命名空间
-
     name varchar(32) not null unique,                -- 服务名
+    namespace varchar(32) not null,                  -- 服务所在命名空间
     image_addr varchar(500) not null,                -- 服务镜像地址:版本
     quota_cpu varchar(20) not null,                  -- 服务容器request_cpu
     quota_max_cpu varchar(20) not null,              -- 服务容器limit_cpu
@@ -56,15 +54,23 @@ create table if not exists service (
 --
 -- 代码模块表
 --
--- 一个服务可能对应一个或多个代码模块, 比如ivr服务只有一个git仓库地址, 也就是只依赖一个代码模块.
---
 create table if not exists code_module (
     id serial primary key,
-    service_id int not null,
     name varchar(50) not null,                                                             -- 模块名
     language varchar(20) not null,                                                         -- 模块对应的语言
-    repos_name varchar(10) not null check(repos_name in ('GIT', 'SVN')) default 'GIT',     -- 模块使用的仓库名
-    repos_addr varchar(200),                                                               -- 模块所在的仓库地址
+    repo_name varchar(10) not null check(repo_name in ('GIT', 'SVN')) default 'GIT',       -- 模块使用的仓库名(git/svn)
+    repo_addr varchar(200),                                                                -- 模块所在的仓库地址
+    create_at timestamp not null default now(),
+    update_at timestamp not null default now()
+);
+
+--
+-- 服务与代码模块绑定表
+--
+create table if not exists module_binding (
+    id serial primary key,
+    service_id int not null,                      -- 服务
+    code_module_id int not null,                  -- 模块
     create_at timestamp not null default now(),
     update_at timestamp not null default now()
 );
@@ -74,7 +80,7 @@ create table if not exists code_module (
 --
 create table if not exists pipeline (
     id serial primary key,
-    service_id int not null,                                                   -- 上线的服务
+    service varchar(32) not null,                                              -- 上线服务
     name varchar(100) not null,                                                -- 上线名称
     summary text not null,                                                     -- 上线概要
     creator varchar(50) not null,                                              -- 创建人
@@ -104,6 +110,7 @@ create table if not exists pipeline_update (
 create table if not exists pipeline_image (
     id serial primary key,
     pipeline_id int not null,                                                  -- 对应的流水线
+    service varchar(32) not null,                                              -- 变更的服务
     code_module varchar(50) not null,                                          -- 变更的代码模块
     image_url varchar(200),                                                    -- 基于所有代码模块构建的服务镜像地址
     image_tag varchar(50),                                                     -- 基于所有代码模块构建的服务镜像tag
@@ -139,18 +146,19 @@ create table if not exists crontab (
 );
 
 -- 插入集群
-insert into cluster(name, token, creator) values('hp', '', 'yangjinlong'), ('xq', '', 'yangjinlong');
+insert into cluster(name, creator) values('hp', 'yangjinlong');
 
 -- 插入命名空间
-insert into namespace (name, cluster, creator) values('default', 'hp', 'yangjinlong'); -- default命名空间, 所属和平(hp)机房
-insert into namespace (name, cluster, creator) values('credit', 'xq', 'yangjinlong');  -- credit命名空间, 所属西青(xq)机房
+insert into namespace (name, cluster, creator) values('default', 'hp', 'yangjinlong');
 
 -- 插入测试服务
-insert into service(namespace_id, name, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, port, container_port, rd, op) values(1, 'ivr', '10.12.28.4:80/service/ivr:1.1.1', '500', '1000', '512', '1024', 2, 5000, 5000, 'yangjinlong', 'yangjinlong');
-update service set volume='[{"host_path": "/home/logs/default/ivr", "name": "logs", "mount_path": "/home/tong/logs"}]' where id = 1;
-update service set configmap='{"LOG_PATH": "/home/tong/www/log/ivr", "LOG_FILE": "application.log"}' where id = 1;
+insert into service(name, namespace, image_addr, quota_cpu, quota_max_cpu, quota_mem, quota_max_mem, replicas, port, container_port, rd, op) values('ivr', 'default', '10.12.28.4:80/service/ivr:1.1.1', '500m', '1000m', '512Mi', '1024Mi', 2, 5000, 5000, 'yangjinlong', 'yangjinlong');
+update service set volume='[{"host_path": "/home/logs/default/ivr", "name": "logs", "mount_path": "/home/tong/www/log"}]' where id = 1;
+update service set configmap='{"LOG_PATH": "/home/tong/www/log", "LOG_FILE": "application.log"}' where id = 1;
 
 -- 插入测试代码模块
-insert into code_module(service_id, name, language, repos_name, repos_addr) values(1, 'ivr', 'python', 'GIT', 'http://127.0.0.1:4567/devops/ivr');
+insert into code_module(name, language, repo_name, repo_addr) values('ivr', 'python', 'GIT', 'http://127.0.0.1:4567/devops/ivr');
+insert into code_module(name, language, repo_name, repo_addr) values('ivr-ui', 'js', 'GIT', 'http://127.0.0.1:4567/devops/ivr-ui');
+insert into module_binding(service_id, code_module_id) values(1, 1), (1, 2);
 
 commit;

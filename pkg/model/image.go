@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
+// PipelineImage 每次上线存储全量模块的镜像信息
 type PipelineImage struct {
 	ID         int64
 	PipelineID int64     `xorm:"bigint notnull"`
+	Service    string    `xorm:"varchar(32) notnull"` // 服务
 	CodeModule string    `xorm:"varchar(50) notnull"` // 代码模块
-	ImageURL   string    `xorm:"varchar(200)"`        // 对应release镜像地址
-	ImageTag   string    `xorm:"varchar(50)"`         // 对应release镜像tag
+	ImageURL   string    `xorm:"varchar(200)"`        // 对应代码模块镜像地址
+	ImageTag   string    `xorm:"varchar(50)"`         // 对应代码模块镜像tag
 	Status     int       `xorm:"int notnull"`
 	CreateAt   time.Time `xorm:"timestamp notnull created"`
 }
@@ -49,8 +51,7 @@ func UpdateImage(pipelineID int64, codeModule, imageURL, imageTag string) error 
 	return nil
 }
 
-// FindImageInfo 根据pipeline id返回本次构建的镜像信息
-func FindImageInfo(pipelineID int64) (map[string]string, error) {
+func FindImages(pipelineID int64) (map[string]string, error) {
 	pi := new(PipelineImage)
 	if has, err := SEngine.Where("pipeline_id = ?", pipelineID).Get(pi); err != nil {
 		return nil, err

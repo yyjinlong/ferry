@@ -12,8 +12,8 @@ import (
 
 type Service struct {
 	ID            int64
-	NamespaceID   int64     `xorm:"bigint notnull"`
 	Name          string    `xorm:"varchar(32) notnull unique"`
+	Namespace     string    `xorm:"varchar(32) notnull"`
 	ImageAddr     string    `xorm:"varchar(500) notnull"`
 	QuotaCPU      int       `xorm:"int"`
 	QuotaMaxCPU   int       `xorm:"int"`
@@ -36,14 +36,21 @@ type Service struct {
 }
 
 type CodeModule struct {
-	ID        int64
-	ServiceID int64     `xorm:"bigint notnull"`
-	Name      string    `xorm:"varchar(50) notnull"`
-	Language  string    `xorm:"varchar(20) notnull"`
-	ReposName string    `xorm:"varchar(10) notnull"`
-	ReposAddr string    `xorm:"varchar(200)"`
-	CreateAt  time.Time `xorm:"timestamp notnull created"`
-	UpdateAt  time.Time `xorm:"timestamp notnull updated"`
+	ID       int64
+	Name     string    `xorm:"varchar(50) notnull"`
+	Language string    `xorm:"varchar(20) notnull"`
+	RepoName string    `xorm:"varchar(10) notnull"`
+	RepoAddr string    `xorm:"varchar(200)"`
+	CreateAt time.Time `xorm:"timestamp notnull created"`
+	UpdateAt time.Time `xorm:"timestamp notnull updated"`
+}
+
+type ModuleBinding struct {
+	ID           int64
+	ServiceID    int64     `xorm:"int notnull"`
+	CodeModuleID int64     `xorm:"int notnull"`
+	CreateAt     time.Time `xorm:"timestamp notnull created"`
+	UpdateAt     time.Time `xorm:"timestamp notnull updated"`
 }
 
 func GetServiceInfo(name string) (*Service, error) {

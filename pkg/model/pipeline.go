@@ -13,17 +13,17 @@ import (
 )
 
 type Pipeline struct {
-	ID        int64
-	ServiceID int64     `xorm:"bigint notnull"`
-	Name      string    `xorm:"varchar(100) notnull"`
-	Summary   string    `xorm:"text notnull"`
-	Creator   string    `xorm:"varchar(50) notnull"`
-	RD        string    `xorm:"varchar(500) notnull"`
-	QA        string    `xorm:"varchar(200)"`
-	PM        string    `xorm:"varchar(500) notnull"`
-	Status    int       `xorm:"int notnull"`
-	CreateAt  time.Time `xorm:"timestamp notnull created"`
-	UpdateAt  time.Time `xorm:"timestamp notnull updated"`
+	ID       int64
+	Service  string    `xorm:"varchar(32) notnull"`
+	Name     string    `xorm:"varchar(100) notnull"`
+	Summary  string    `xorm:"text notnull"`
+	Creator  string    `xorm:"varchar(50) notnull"`
+	RD       string    `xorm:"varchar(500) notnull"`
+	QA       string    `xorm:"varchar(200)"`
+	PM       string    `xorm:"varchar(500) notnull"`
+	Status   int       `xorm:"int notnull"`
+	CreateAt time.Time `xorm:"timestamp notnull created"`
+	UpdateAt time.Time `xorm:"timestamp notnull updated"`
 }
 
 type PipelineUpdate struct {

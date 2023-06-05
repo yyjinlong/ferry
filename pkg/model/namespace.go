@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+type Cluster struct {
+	ID       int64
+	Name     string    `xorm:"varchar(50) notnull"`
+	Creator  string    `xorm:"varchar(50) notnull"`
+	CreateAt time.Time `xorm:"timestamp notnull created"`
+}
+
 type Namespace struct {
 	ID       int64
 	Name     string    `xorm:"varchar(32) notnull unique"`

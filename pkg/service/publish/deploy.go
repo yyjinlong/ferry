@@ -66,16 +66,6 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	}
 	log.Infof("publish get deployment name: %s group: %s replicas: %d", deploymentName, deployGroup, replicas)
 
-	imageInfo, err := model.FindImageInfo(pid)
-	if err != nil {
-		return fmt.Errorf(config.DB_PIPELINE_UPDATE_ERROR, err)
-	}
-
-	if len(imageInfo) == 0 {
-		return fmt.Errorf(config.PUB_FETCH_IMAGE_INFO_ERROR)
-	}
-	log.Infof("publish get deployment image info: %s", imageInfo)
-
 	volumes, err := d.generateVolumes(svc.Volume)
 	if err != nil {
 		return fmt.Errorf(config.PUB_CREATE_VOLUMES_ERROR, err)
@@ -121,7 +111,6 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					DNSConfig:                     d.generatePodDNSConfig(),
 					ImagePullSecrets:              d.generateImagePullSecret(),
-					HostAliases:                   d.generateHostAlias(),
 					Volumes:                       volumes,
 					TerminationGracePeriodSeconds: &graceTime,
 					Containers: []corev1.Container{
@@ -265,15 +254,6 @@ func (d *Deploy) generateImagePullSecret() []corev1.LocalObjectReference {
 	}
 }
 
-func (d *Deploy) generateHostAlias() []corev1.HostAlias {
-	return []corev1.HostAlias{
-		{
-			IP:        "127.0.0.1",
-			Hostnames: []string{"localhost.localdomain"},
-		},
-	}
-}
-
 func (d *Deploy) generateVolumes(volumeConf string) ([]corev1.Volume, error) {
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath-DirectoryOrCreate类型.
 	type volume struct {
@@ -301,6 +281,20 @@ func (d *Deploy) generateVolumes(volumeConf string) ([]corev1.Volume, error) {
 		})
 	}
 	return podVolumes, nil
+}
+
+func generateInitContainers() ([]corev1.Container, error) {
+	var containers []corev1.Container
+
+	imageInfo, err := model.FindImages(pid)
+	if err != nil {
+		return fmt.Errorf(config.DB_PIPELINE_UPDATE_ERROR, err)
+	}
+
+	if len(imageInfo) == 0 {
+		return fmt.Errorf(config.PUB_FETCH_IMAGE_INFO_ERROR)
+	}
+	log.Infof("publish get deployment image info: %s", imageInfo)
 }
 
 func (d *Deploy) generateEnvs(namespace, service, stage string) []corev1.EnvVar {

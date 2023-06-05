@@ -42,7 +42,7 @@ func (c *CronJob) Handle(namespace, service, command, schedule string) (string, 
 		return "", fmt.Errorf(config.DB_PIPELINE_QUERY_FAILED, err)
 	}
 
-	imageInfo, err := model.FindImageInfo(pipeline.ID)
+	imageInfo, err := model.FindImages(pipeline.ID)
 	if err != nil {
 		return "", fmt.Errorf(config.DB_PIPELINE_UPDATE_ERROR, err)
 	}
