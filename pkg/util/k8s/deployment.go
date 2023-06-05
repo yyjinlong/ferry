@@ -35,11 +35,7 @@ func NewDeploymentResource(clientset *kubernetes.Clientset) *DeploymentResource 
 }
 
 func (r *DeploymentResource) GetDeployment(namespace, name string) (*appsv1.Deployment, error) {
-	deployment, err := r.clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return deployment, nil
+	return r.clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
 func (r *DeploymentResource) GetDeploymentPods(namespace, name string) (*corev1.PodList, error) {

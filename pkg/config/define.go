@@ -11,6 +11,9 @@ const (
 	BRANCH_NAME = "分支名"
 )
 
+// 数据库
+const ()
+
 // 创建pipeline
 const (
 	PL_SEGMENT_IS_EMPTY      = "字段: %s 内容为空!"

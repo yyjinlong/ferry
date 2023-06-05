@@ -228,7 +228,7 @@ func (d *Deploy) generateAffinity(deploymentName string) *corev1.Affinity {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      "service",
+									Key:      "appid",
 									Operator: metav1.LabelSelectorOpIn,
 									Values:   []string{deploymentName},
 								},

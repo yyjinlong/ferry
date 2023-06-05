@@ -59,7 +59,7 @@ func GetPipeline(pipelineID int64) (*Pipeline, error) {
 // GetServicePipeline 根据服务id返回最近一次的上线信息
 func GetServicePipeline(serviceID int64) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine.Where("service_id = ? and status != 0", serviceID).Desc("id").Get(pipeline); err != nil {
+	if has, err := SEngine.Where("service_id = ? and status != 0", serviceID).Desc("id").Limit(1).Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -90,7 +91,8 @@ func CallRealtimeOut(param string) bool {
 	for {
 		buf := make([]byte, 1024)
 		_, err := stdout.Read(buf)
-		fmt.Println(string(buf))
+		msg := strings.Replace(string(buf), "\u0000", "", -1)
+		fmt.Println(msg)
 		if err != nil {
 			break
 		}

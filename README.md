@@ -24,7 +24,12 @@ Jinlong Yang
     base层    : 操作系统层: centos6.7 centos7.5
     run层     : 运行时环境: python(conda环境)、java(tomcat环境)
     service层 : 具体的服务
-    release层 : 由image进程基于代码自动构建
+    code层    : 基于代码构建镜像(一个服务对应多个代码模块)
+
+## 2.1 为什么不用release层, 而用code层
+
+    (1) 镜像太大的问题: 如果直接继承service层, 将代码拷贝到service层, 构建release镜像, 镜像就会很大.
+    (2) 服务对应多个代码模块, 如果只变更一个模块, 其他模块也需要跟着再进行编译, 无法复用.
 
 
 ## 3 业务逻辑
