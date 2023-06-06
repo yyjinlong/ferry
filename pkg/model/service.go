@@ -8,6 +8,8 @@ package model
 import (
 	"fmt"
 	"time"
+
+	"xorm.io/xorm"
 )
 
 type Service struct {
@@ -52,6 +54,18 @@ type ModuleBinding struct {
 	UpdateAt     time.Time `xorm:"timestamp notnull updated"`
 }
 
+type BindingUnionQuery struct {
+	Service       `xorm:"extends"`
+	CodeModule    `xorm:"extends"`
+	ModuleBinding `xorm:"extends"`
+}
+
+func BindingSession() *xorm.Session {
+	return SEngine.Table("service").Alias("s").
+		Join("INNER", []string{"module_binding", "mb"}, "s.id = mb.service_id").
+		Join("INNER", []string{"module", "m"}, "m.id = mb.code_module_id")
+}
+
 func GetServiceInfo(name string) (*Service, error) {
 	service := new(Service)
 	if has, err := SEngine.Where("name = ?", name).Get(service); err != nil {
@@ -92,12 +106,12 @@ func GetCodeModuleInfoByID(moduleID int64) (*CodeModule, error) {
 	return codeModule, nil
 }
 
-func FindCodeModules(serviceID int64) ([]CodeModule, error) {
-	moduleList := make([]CodeModule, 0)
-	if err := SEngine.Where("service_id = ?", serviceID).Find(&moduleList); err != nil {
+func FindServiceCodeModules(service string) ([]BindingUnionQuery, error) {
+	bindings := make([]BindingUnionQuery, 0)
+	if err := BindingSession().Where("s.name = ?", service).Find(&bindings); err != nil {
 		return nil, err
 	}
-	return moduleList, nil
+	return bindings, nil
 }
 
 func UpdateTag(pipelineID int64, moduleName, codeTag string) error {

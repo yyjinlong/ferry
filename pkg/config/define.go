@@ -34,17 +34,19 @@ const (
 
 // 数据库查询
 const (
-	DB_QUERY_SERVICE_ERROR   = "查询服务: %s 错误: %s"
-	DB_PIPELINE_NOT_FOUND    = "pipeline: %d 查询不存在"
-	DB_PIPELINE_QUERY_ERROR  = "查询pipeline: %d 失败: %s"
-	DB_PIPELINE_QUERY_FAILED = "查询pipeline信息失败: %s"
-	DB_PIPELINE_UPDATE_ERROR = "查询pipeline变更信息失败: %s"
-	DB_SERVICE_QUERY_ERROR   = "查询service信息失败: %s"
-	DB_QUERY_NAMESPACE_ERROR = "查询命名空间信息失败: %s"
-	DB_QUERY_CLUSTER_ERROR   = "查询cluster信息失败: %s"
-	DB_QUERY_PHASES_ERROR    = "查询pipeline对应阶段错误: %s"
-	DB_UPDATE_PIPELINE_ERROR = "更新pipeline状态失败: %s"
-	DB_WRITE_LOCK_ERROR      = "服务占锁: %v 失败: %s"
+	DB_QUERY_SERVICE_ERROR          = "查询服务: %s 错误: %s"
+	DB_PIPELINE_NOT_FOUND           = "pipeline: %d 查询不存在"
+	DB_PIPELINE_QUERY_ERROR         = "查询pipeline: %d 失败: %s"
+	DB_PIPELINE_QUERY_FAILED        = "查询pipeline信息失败: %s"
+	DB_PIPELINE_UPDATE_ERROR        = "查询pipeline变更信息失败: %s"
+	DB_SERVICE_QUERY_ERROR          = "查询service信息失败: %s"
+	DB_QUERY_NAMESPACE_ERROR        = "查询命名空间信息失败: %s"
+	DB_QUERY_CLUSTER_ERROR          = "查询cluster信息失败: %s"
+	DB_QUERY_PHASES_ERROR           = "查询pipeline对应阶段错误: %s"
+	DB_UPDATE_PIPELINE_ERROR        = "更新pipeline状态失败: %s"
+	DB_WRITE_LOCK_ERROR             = "服务占锁: %v 失败: %s"
+	DB_QUERY_MODULE_BINDING_ERROR   = "查询服务与模块绑定信息失败: %s"
+	DB_IMAGE_CREATE_OR_UPDATE_ERROR = "创建或更新镜像失败: %s"
 )
 
 const (

@@ -1,13 +1,9 @@
 package cm
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func In(data string, dataList []string) bool {
@@ -71,40 +67,4 @@ func Call(param string) ([]byte, error) {
 func Execute(param string) error {
 	c := exec.Command("/bin/bash", "-c", param)
 	return c.Run()
-}
-
-func CallRealtimeOut(param string) bool {
-	cmd := exec.Command("/bin/bash", "-c", param)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Errorf("call command create stdout pipe error: %v", err)
-		return false
-	}
-	defer stdout.Close()
-
-	if err := cmd.Start(); err != nil {
-		log.Errorf("call command start execute error: %v", err)
-		return false
-	}
-
-	for {
-		buf := make([]byte, 1024)
-		_, err := stdout.Read(buf)
-		msg := strings.Replace(string(buf), "\u0000", "", -1)
-		fmt.Println(msg)
-		if err != nil {
-			break
-		}
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Errorf("call command wait execute finish error: %v", err)
-		return false
-	}
-
-	if cmd.ProcessState.Success() {
-		return true
-	}
-	return false
 }

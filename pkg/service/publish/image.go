@@ -33,9 +33,9 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		return err
 	}
 
-	svc, err := model.GetServiceInfo(service)
-	if err != nil {
-		return fmt.Errorf(config.IMG_QUERY_SERVICE_ERROR, err)
+	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHProcess); err != nil {
+		log.Errorf("create pipeline: %d image phase error: %s", pid, err)
+		return err
 	}
 
 	updateList, err := model.FindUpdateInfo(pid)
@@ -47,6 +47,8 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 	var (
 		mainPath   = filepath.Dir(filepath.Dir(filepath.Dir(curPath)))
 		scriptPath = filepath.Join(mainPath, "script")
+		changes    []string
+		retains    []string
 	)
 
 	for _, item := range updateList {
@@ -59,14 +61,49 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
 		lang := codeModule.Language
-		repo := codeModule.ReposAddr
+		repo := codeModule.RepoAddr
 
-		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -u %s -i %d",
-			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, svc.ImageAddr, pid)
+		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -i %d",
+			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, pid)
 		log.Infof("makeimg command: %s", param)
-		if !cm.CallRealtimeOut(param) {
+		if !CallRealtimeOut(param, nil) {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
+		changes = append(changes, item.CodeModule)
+	}
+
+	// 获取未变更的模块(服务所有模块-当前变更的模块)
+	totals, err := model.FindServiceCodeModules(service)
+	if err != nil {
+		return fmt.Errorf(config.DB_QUERY_MODULE_BINDING_ERROR, err)
+	}
+
+	for _, item := range totals {
+		codeModule := item.CodeModule.Name
+		if cm.In(codeModule, changes) {
+			continue
+		}
+		retains = append(retains, codeModule)
+	}
+	log.Infof("build image pipeline: %d fetch unchange code modules: %v", pid, retains)
+
+	for _, codeModule := range retains {
+		image, err := model.QueryLatestSuccessModuleImage(service, codeModule)
+		if err != nil {
+			log.Errorf(config.DB_IMAGE_CREATE_OR_UPDATE_ERROR, err)
+			return err
+		}
+		imageURL := image.ImageURL
+		imageTag := image.ImageTag
+
+		if err := model.CreateOrUpdatePipelineImage(pid, service, codeModule, imageURL, imageTag); err != nil {
+			return err
+		}
+		log.Infof("build image pipeline: %d record latest module: %s image: %s:%s success", pid, codeModule, imageURL, imageTag)
+	}
+
+	if err := model.UpdatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHSuccess); err != nil {
+		log.Errorf("update pipeline: %d image phase error: %s", pid, err)
 	}
 	return nil
 }
