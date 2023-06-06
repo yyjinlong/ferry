@@ -6,7 +6,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -56,10 +55,10 @@ func GetPipeline(pipelineID int64) (*Pipeline, error) {
 	return pipeline, nil
 }
 
-// GetServicePipeline 根据服务id返回最近一次的上线信息
-func GetServicePipeline(serviceID int64) (*Pipeline, error) {
+// GetServicePipeline 根据服务返回最近一次的上线信息
+func GetServicePipeline(service string) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine.Where("service_id = ? and status != 0", serviceID).Desc("id").Limit(1).Get(pipeline); err != nil {
+	if has, err := SEngine.Where("service = ? and status != 0", service).Desc("id").Limit(1).Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
 		return nil, NotFound
@@ -67,10 +66,10 @@ func GetServicePipeline(serviceID int64) (*Pipeline, error) {
 	return pipeline, nil
 }
 
-// GetServiceLastPipeline 根据服务id返回最近一次成功的上线信息
-func GetServiceLastPipeline(serviceID int64) (*Pipeline, error) {
+// GetServiceLastPipeline 根据服务返回最近一次成功的上线信息
+func GetServiceLastPipeline(service string) (*Pipeline, error) {
 	pipeline := new(Pipeline)
-	if has, err := SEngine.Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
+	if has, err := SEngine.Where("service = ? AND pipeline.status = ?", service, PLSuccess).
 		Desc("id").Get(pipeline); err != nil {
 		return nil, err
 	} else if !has {
@@ -80,9 +79,9 @@ func GetServiceLastPipeline(serviceID int64) (*Pipeline, error) {
 }
 
 // FindPipelineInfo 根据service返回pipeline相关信息
-func FindPipelineInfo(serviceID int64) ([]Pipeline, error) {
+func FindPipelineInfo(service string) ([]Pipeline, error) {
 	pList := make([]Pipeline, 0)
-	if err := SEngine.Where("service_id = ? AND pipeline.status = ?", serviceID, PLSuccess).
+	if err := SEngine.Where("service = ? AND pipeline.status = ?", service, PLSuccess).
 		Desc("id").Find(&pList); err != nil {
 		return nil, err
 	}
@@ -105,13 +104,6 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 		return err
 	}
 
-	service := new(Service)
-	if has, err := session.Where("name=?", serviceName).Get(service); err != nil {
-		return err
-	} else if !has {
-		return fmt.Errorf("service query by name: %s is not exists", serviceName)
-	}
-
 	pipeline := new(Pipeline)
 	pipeline.Name = name
 	pipeline.Summary = summary
@@ -119,7 +111,7 @@ func CreatePipeline(name, summary, creator, rd, qa, pm, serviceName string, modu
 	pipeline.RD = rd
 	pipeline.QA = qa
 	pipeline.PM = pm
-	pipeline.ServiceID = service.ID
+	pipeline.Service = serviceName
 	if _, err := session.Insert(pipeline); err != nil {
 		return err
 	}

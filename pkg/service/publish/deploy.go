@@ -6,8 +6,8 @@
 package publish
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,6 +20,13 @@ import (
 	"nautilus/pkg/model"
 	"nautilus/pkg/util/cm"
 	"nautilus/pkg/util/k8s"
+)
+
+const (
+	CodeMountPoint = "www"
+	CodeMountPath  = "/home/tong/www"
+	LogMountPoint  = "log"
+	LogMountPath   = "/home/tong/www/log"
 )
 
 func NewDeploy() *Deploy {
@@ -38,23 +45,19 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 		return err
 	}
 
-	svc, err := model.GetServiceByID(pipeline.ServiceID)
+	svc, err := model.GetServiceInfo(pipeline.Service)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	ns, err := model.GetNamespaceByID(svc.NamespaceID)
-	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
-	}
-
 	var (
-		serviceID      = pipeline.ServiceID
+		serviceID      = svc.ID
 		serviceName    = svc.Name
+		namespace      = svc.Namespace
+		serviceImage   = svc.ImageAddr
 		deployGroup    = svc.DeployGroup
 		replicas       = int32(svc.Replicas)
 		graceTime      = int64(svc.ReserveTime)
-		namespace      = ns.Name
 		deploymentName = k8s.GetDeploymentName(serviceName, serviceID, phase, deployGroup)
 		configMapName  = k8s.GetConfigmapName(serviceName)
 		labels         = d.generateLabels(serviceName, phase, deploymentName)
@@ -66,14 +69,9 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	}
 	log.Infof("publish get deployment name: %s group: %s replicas: %d", deploymentName, deployGroup, replicas)
 
-	volumes, err := d.generateVolumes(svc.Volume)
+	initContainers, err := d.generateInitContainers(pid)
 	if err != nil {
-		return fmt.Errorf(config.PUB_CREATE_VOLUMES_ERROR, err)
-	}
-
-	volumeMounts, err := d.generateVolumeMounts(svc.Volume)
-	if err != nil {
-		return fmt.Errorf(config.PUB_CREATE_VOLUME_MOUNT_ERROR, err)
+		return err
 	}
 
 	dep := &appsv1.Deployment{
@@ -111,18 +109,19 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					DNSConfig:                     d.generatePodDNSConfig(),
 					ImagePullSecrets:              d.generateImagePullSecret(),
-					Volumes:                       volumes,
+					Volumes:                       d.generateVolumes(namespace, serviceName, pid),
 					TerminationGracePeriodSeconds: &graceTime,
+					InitContainers:                initContainers,
 					Containers: []corev1.Container{
 						{
 							Name:            serviceName,
-							Image:           fmt.Sprintf("%s:%s", imageInfo["image_url"], imageInfo["image_tag"]),
+							Image:           serviceImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env:             d.generateEnvs(namespace, serviceName, phase),
 							EnvFrom:         d.generateEnvFroms(configMapName),
 							SecurityContext: d.generateContainerSecurity(),
 							Resources:       d.generateResources(svc.QuotaCPU, svc.QuotaMaxCPU, svc.QuotaMem, svc.QuotaMaxMem),
-							VolumeMounts:    volumeMounts,
+							VolumeMounts:    d.generateMainVolumeMounts(),
 							Lifecycle: &corev1.Lifecycle{
 								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
@@ -254,47 +253,93 @@ func (d *Deploy) generateImagePullSecret() []corev1.LocalObjectReference {
 	}
 }
 
-func (d *Deploy) generateVolumes(volumeConf string) ([]corev1.Volume, error) {
+func (d *Deploy) generateVolumes(namespace, service string, pid int64) []corev1.Volume {
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath-DirectoryOrCreate类型.
-	type volume struct {
-		Name      string `json:"name"`
-		HostPath  string `json:"host_path"`
-		MountPath string `json:"mount_path"`
-	}
+	var (
+		pathType     = corev1.HostPathDirectoryOrCreate
+		codeHostPath = fmt.Sprintf("/home/www/%s/%d", service, pid)
+		logHostPath  = fmt.Sprintf("/home/log/%s/%s", namespace, service)
+	)
 
-	var volumes []volume
-	if err := json.Unmarshal([]byte(volumeConf), &volumes); err != nil {
-		return nil, err
-	}
-
-	pathType := corev1.HostPathDirectoryOrCreate
-	podVolumes := make([]corev1.Volume, 0)
-	for _, item := range volumes {
-		podVolumes = append(podVolumes, corev1.Volume{
-			Name: item.Name,
+	return []corev1.Volume{
+		{
+			Name: CodeMountPoint,
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
 					Type: &pathType,
-					Path: item.HostPath,
+					Path: codeHostPath,
 				},
 			},
-		})
+		},
+		{
+			Name: LogMountPoint,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Type: &pathType,
+					Path: logHostPath,
+				},
+			},
+		},
 	}
-	return podVolumes, nil
 }
 
-func generateInitContainers() ([]corev1.Container, error) {
+func (d *Deploy) generateInitContainers(pid int64) ([]corev1.Container, error) {
 	var containers []corev1.Container
 
-	imageInfo, err := model.FindImages(pid)
+	images, err := model.FindImages(pid)
 	if err != nil {
-		return fmt.Errorf(config.DB_PIPELINE_UPDATE_ERROR, err)
+		log.Errorf("query pipeline: %d images error: %+v", pid, err)
+		return nil, err
 	}
 
-	if len(imageInfo) == 0 {
-		return fmt.Errorf(config.PUB_FETCH_IMAGE_INFO_ERROR)
+	if len(images) == 0 {
+		log.Errorf("query pipeline: %d images empty", pid)
+		return nil, err
 	}
-	log.Infof("publish get deployment image info: %s", imageInfo)
+	log.Infof("publish get deployment images: %s", images)
+
+	for _, item := range images {
+		codeModule := strings.Replace(item.CodeModule, "_", "-", -1)
+		containers = append(containers, d.getInitContainer(codeModule, item.ImageURL, item.ImageTag))
+	}
+	return containers, nil
+}
+
+func (d *Deploy) getInitContainer(module, imageURL, imageTag string) corev1.Container {
+	// 约定代码目录: /home/tong/www
+	// 约定日志目录: /home/tong/www/log
+	var (
+		lockFile = fmt.Sprintf("/home/tong/www/%s_done", module)
+		cmd      = fmt.Sprintf("cp -rfp /code/* /home/tong/www; chown tong:tong /home/tong/www -R; touch %s", lockFile)
+		safeCmd  = fmt.Sprintf(`if [ ! -f %s ]; then %s; fi`, lockFile, cmd)
+	)
+
+	return corev1.Container{
+		Name:            fmt.Sprintf("%s-code", module),
+		Image:           fmt.Sprintf("%s:%s", imageURL, imageTag),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+		},
+		VolumeMounts: d.generateInitVolumeMounts(),
+		Command:      []string{"/bin/sh", "-c", safeCmd},
+	}
+}
+
+func (d *Deploy) generateInitVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      CodeMountPoint,
+			MountPath: CodeMountPath,
+		},
+	}
 }
 
 func (d *Deploy) generateEnvs(namespace, service, stage string) []corev1.EnvVar {
@@ -379,24 +424,14 @@ func (d *Deploy) generateResources(minCPU, maxCPU, minMem, maxMem int) corev1.Re
 	}
 }
 
-func (d *Deploy) generateVolumeMounts(volumeConf string) ([]corev1.VolumeMount, error) {
-	type volume struct {
-		Name      string `json:"name"`
-		HostPath  string `json:"host_path"`
-		MountPath string `json:"mount_path"`
-	}
-
-	var volumes []volume
-	if err := json.Unmarshal([]byte(volumeConf), &volumes); err != nil {
-		return nil, err
-	}
-
+func (d *Deploy) generateMainVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := make([]corev1.VolumeMount, 0)
-	for _, item := range volumes {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      item.Name,
-			MountPath: item.MountPath,
-		})
-	}
-	return volumeMounts, nil
+	initMounts := d.generateInitVolumeMounts()
+	volumeMounts = append(volumeMounts, initMounts...)
+
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      LogMountPoint,
+		MountPath: LogMountPath,
+	})
+	return volumeMounts
 }

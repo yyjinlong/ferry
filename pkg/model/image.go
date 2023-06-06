@@ -51,17 +51,10 @@ func UpdateImage(pipelineID int64, codeModule, imageURL, imageTag string) error 
 	return nil
 }
 
-func FindImages(pipelineID int64) (map[string]string, error) {
-	pi := new(PipelineImage)
-	if has, err := SEngine.Where("pipeline_id = ?", pipelineID).Get(pi); err != nil {
+func FindImages(pipelineID int64) ([]PipelineImage, error) {
+	images := make([]PipelineImage, 0)
+	if err := SEngine.Where("pipeline_id = ?", pipelineID).Find(&images); err != nil {
 		return nil, err
-	} else if !has {
-		return nil, NotFound
 	}
-
-	imageInfo := map[string]string{
-		"image_url": pi.ImageURL,
-		"image_tag": pi.ImageTag,
-	}
-	return imageInfo, nil
+	return images, nil
 }

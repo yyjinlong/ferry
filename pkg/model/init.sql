@@ -35,7 +35,6 @@ create table if not exists service (
     quota_mem varchar(20) not null,                  -- 服务容器request_memory
     quota_max_mem  varchar(20) not null,             -- 服务容器limit_memory
     replicas int default 0,                          -- 服务的副本数(在线的)
-    volume json,                                     -- 服务的数据卷配置信息
     configmap text default '',                       -- 服务的configmap信息
     reserve_time int default 60,                     -- 服务停止时预留多长时间再关闭(优雅关闭时间)
     port int,                                        -- 服务端口
