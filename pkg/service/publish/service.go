@@ -32,8 +32,8 @@ func (s *Service) Handle(serviceName string) error {
 	}
 
 	var (
-		namespace     = svc.Namespace
 		serviceID     = svc.ID
+		namespace     = svc.Namespace
 		port          = svc.Port
 		containerPort = svc.ContainerPort
 	)
@@ -89,6 +89,6 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, 
 	if err := resource.CreateOrUpdateService(namespace, so); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
-	log.Infof("publish service: %s to k8s success", name)
+	log.Infof("publish service resource: %s to k8s success", name)
 	return nil
 }
