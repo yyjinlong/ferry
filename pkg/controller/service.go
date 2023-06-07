@@ -24,7 +24,8 @@ func Service(c *gin.Context) {
 	}
 	serviceName := data.Service
 
-	if err := publish.NewService(serviceName); err != nil {
+	se := publish.NewService()
+	if err := se.Handle(serviceName); err != nil {
 		log.Errorf("build service failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return
