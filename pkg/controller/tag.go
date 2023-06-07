@@ -32,8 +32,7 @@ func BuildTag(c *gin.Context) {
 		serviceName = data.Service
 	)
 
-	build := publish.NewBuildTag()
-	if err := build.Handle(pid, serviceName); err != nil {
+	if err := publish.NewBuildTag(pid, serviceName); err != nil {
 		log.Errorf("build tag failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return
@@ -61,8 +60,7 @@ func ReceiveTag(c *gin.Context) {
 		tag    = data.Tag
 	)
 
-	receive := publish.NewReceiveTag()
-	if err := receive.Handle(pid, module, tag); err != nil {
+	if err := publish.NewReceiveTag(pid, module, tag); err != nil {
 		log.Errorf("receive tag failed: %+v", err)
 		c.String(http.StatusOK, err.Error())
 		return

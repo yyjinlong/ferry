@@ -29,20 +29,21 @@ const (
 	LogMountPath   = "/home/tong/www/log"
 )
 
-func NewDeploy() *Deploy {
-	return &Deploy{}
-}
-
-type Deploy struct{}
-
-func (d *Deploy) Handle(pid int64, phase, username string) error {
+func NewDeploy(pid int64, phase, username string) error {
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	if err := d.checkStatus(pipeline.Status); err != nil {
-		return err
+	statusList := []int{
+		model.PLSuccess,
+		model.PLFailed,
+		model.PLRollbackSuccess,
+		model.PLRollbackFailed,
+		model.PLTerminate,
+	}
+	if cm.Ini(pipeline.Status, statusList) {
+		return fmt.Errorf(config.PUB_DEPLOY_FINISHED)
 	}
 
 	svc, err := model.GetServiceInfo(pipeline.Service)
@@ -60,7 +61,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 		graceTime      = int64(svc.ReserveTime)
 		deploymentName = k8s.GetDeploymentName(serviceName, serviceID, phase, deployGroup)
 		configMapName  = k8s.GetConfigmapName(serviceName)
-		labels         = d.generateLabels(serviceName, phase, deploymentName)
+		labels         = generateLabels(serviceName, phase, deploymentName)
 	)
 
 	if phase == model.PHASE_SANDBOX {
@@ -69,9 +70,9 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	}
 	log.Infof("publish get deployment name: %s group: %s replicas: %d", deploymentName, deployGroup, replicas)
 
-	initContainers, err := d.generateInitContainers(pid)
+	initContainers, err := generateInitContainers(pid)
 	if err != nil {
-		return err
+		return fmt.Errorf(config.PUB_INIT_CONTINAER_ERROR, err)
 	}
 
 	dep := &appsv1.Deployment{
@@ -103,13 +104,13 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Affinity:                      d.generateAffinity(deploymentName),
-					NodeSelector:                  d.generateNodeSelector(),
-					SecurityContext:               d.generatePodSecurity(),
+					Affinity:                      generateAffinity(deploymentName),
+					NodeSelector:                  generateNodeSelector("default"),
+					SecurityContext:               generatePodSecurity(),
 					DNSPolicy:                     corev1.DNSClusterFirst,
-					DNSConfig:                     d.generatePodDNSConfig(),
-					ImagePullSecrets:              d.generateImagePullSecret(),
-					Volumes:                       d.generateVolumes(namespace, serviceName, pid),
+					DNSConfig:                     generatePodDNSConfig(),
+					ImagePullSecrets:              generateImagePullSecret(),
+					Volumes:                       generateVolumes(namespace, serviceName, "business", pid),
 					TerminationGracePeriodSeconds: &graceTime,
 					InitContainers:                initContainers,
 					Containers: []corev1.Container{
@@ -117,11 +118,11 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 							Name:            serviceName,
 							Image:           serviceImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env:             d.generateEnvs(namespace, serviceName, phase),
-							EnvFrom:         d.generateEnvFroms(configMapName),
-							SecurityContext: d.generateContainerSecurity(),
-							Resources:       d.generateResources(svc.QuotaCPU, svc.QuotaMaxCPU, svc.QuotaMem, svc.QuotaMaxMem),
-							VolumeMounts:    d.generateMainVolumeMounts(),
+							Env:             generateEnvs(namespace, serviceName, phase),
+							EnvFrom:         generateEnvFroms(configMapName),
+							SecurityContext: generateContainerSecurity(),
+							Resources:       generateResources(svc.QuotaCPU, svc.QuotaMaxCPU, svc.QuotaMem, svc.QuotaMaxMem),
+							VolumeMounts:    generateMainVolumeMounts(),
 							Lifecycle: &corev1.Lifecycle{
 								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
@@ -182,21 +183,7 @@ func (d *Deploy) Handle(pid int64, phase, username string) error {
 	return nil
 }
 
-func (d *Deploy) checkStatus(status int) error {
-	statusList := []int{
-		model.PLSuccess,
-		model.PLFailed,
-		model.PLRollbackSuccess,
-		model.PLRollbackFailed,
-		model.PLTerminate,
-	}
-	if cm.Ini(status, statusList) {
-		return fmt.Errorf(config.PUB_DEPLOY_FINISHED)
-	}
-	return nil
-}
-
-func (d *Deploy) generateLabels(service, phase, deploymentName string) map[string]string {
+func generateLabels(service, phase, deploymentName string) map[string]string {
 	return map[string]string{
 		"service": service,
 		"phase":   phase,
@@ -205,7 +192,7 @@ func (d *Deploy) generateLabels(service, phase, deploymentName string) map[strin
 }
 
 // 同一deployment下的pod散列在不同node上
-func (d *Deploy) generateAffinity(deploymentName string) *corev1.Affinity {
+func generateAffinity(deploymentName string) *corev1.Affinity {
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
@@ -229,23 +216,23 @@ func (d *Deploy) generateAffinity(deploymentName string) *corev1.Affinity {
 	}
 }
 
-func (d *Deploy) generateNodeSelector() map[string]string {
+func generateNodeSelector(zone string) map[string]string {
 	return map[string]string{
-		"aggregate": "default",
+		"aggregate": zone,
 	}
 }
 
-func (d *Deploy) generatePodSecurity() *corev1.PodSecurityContext {
+func generatePodSecurity() *corev1.PodSecurityContext {
 	return &corev1.PodSecurityContext{}
 }
 
-func (d *Deploy) generatePodDNSConfig() *corev1.PodDNSConfig {
+func generatePodDNSConfig() *corev1.PodDNSConfig {
 	return &corev1.PodDNSConfig{
 		Nameservers: []string{"114.114.114.114"},
 	}
 }
 
-func (d *Deploy) generateImagePullSecret() []corev1.LocalObjectReference {
+func generateImagePullSecret() []corev1.LocalObjectReference {
 	return []corev1.LocalObjectReference{
 		{
 			Name: config.Config().K8S.ImageKey,
@@ -253,12 +240,12 @@ func (d *Deploy) generateImagePullSecret() []corev1.LocalObjectReference {
 	}
 }
 
-func (d *Deploy) generateVolumes(namespace, service string, pid int64) []corev1.Volume {
+func generateVolumes(namespace, service, category string, pid int64) []corev1.Volume {
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath-DirectoryOrCreate类型.
 	var (
 		pathType     = corev1.HostPathDirectoryOrCreate
-		codeHostPath = fmt.Sprintf("/home/www/%s/%d", service, pid)
-		logHostPath  = fmt.Sprintf("/home/log/%s/%s", namespace, service)
+		codeHostPath = fmt.Sprintf("/home/www/%s/%s/%d", category, service, pid)
+		logHostPath  = fmt.Sprintf("/home/log/%s/%s/%s", category, namespace, service)
 	)
 
 	return []corev1.Volume{
@@ -283,7 +270,7 @@ func (d *Deploy) generateVolumes(namespace, service string, pid int64) []corev1.
 	}
 }
 
-func (d *Deploy) generateInitContainers(pid int64) ([]corev1.Container, error) {
+func generateInitContainers(pid int64) ([]corev1.Container, error) {
 	var containers []corev1.Container
 
 	images, err := model.FindImages(pid)
@@ -300,12 +287,12 @@ func (d *Deploy) generateInitContainers(pid int64) ([]corev1.Container, error) {
 
 	for _, item := range images {
 		codeModule := strings.Replace(item.CodeModule, "_", "-", -1)
-		containers = append(containers, d.getInitContainer(codeModule, item.ImageURL, item.ImageTag))
+		containers = append(containers, getInitContainer(codeModule, item.ImageURL, item.ImageTag))
 	}
 	return containers, nil
 }
 
-func (d *Deploy) getInitContainer(module, imageURL, imageTag string) corev1.Container {
+func getInitContainer(module, imageURL, imageTag string) corev1.Container {
 	// 约定代码目录: /home/tong/www
 	// 约定日志目录: /home/tong/www/log
 	var (
@@ -328,12 +315,12 @@ func (d *Deploy) getInitContainer(module, imageURL, imageTag string) corev1.Cont
 				corev1.ResourceMemory: resource.MustParse("50Mi"),
 			},
 		},
-		VolumeMounts: d.generateInitVolumeMounts(),
+		VolumeMounts: generateInitVolumeMounts(),
 		Command:      []string{"/bin/sh", "-c", safeCmd},
 	}
 }
 
-func (d *Deploy) generateInitVolumeMounts() []corev1.VolumeMount {
+func generateInitVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
 			Name:      CodeMountPoint,
@@ -342,7 +329,7 @@ func (d *Deploy) generateInitVolumeMounts() []corev1.VolumeMount {
 	}
 }
 
-func (d *Deploy) generateEnvs(namespace, service, stage string) []corev1.EnvVar {
+func generateEnvs(namespace, service, stage string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "NAMESPACE",
@@ -377,7 +364,7 @@ func (d *Deploy) generateEnvs(namespace, service, stage string) []corev1.EnvVar 
 	}
 }
 
-func (d *Deploy) generateEnvFroms(configMapName string) []corev1.EnvFromSource {
+func generateEnvFroms(configMapName string) []corev1.EnvFromSource {
 	return []corev1.EnvFromSource{
 		{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
@@ -389,7 +376,7 @@ func (d *Deploy) generateEnvFroms(configMapName string) []corev1.EnvFromSource {
 	}
 }
 
-func (d *Deploy) generateContainerSecurity() *corev1.SecurityContext {
+func generateContainerSecurity() *corev1.SecurityContext {
 	capabilities := &corev1.Capabilities{
 		Add: []corev1.Capability{"SYS_ADMIN", "SYS_PTRACE"},
 	}
@@ -411,22 +398,22 @@ func (d *Deploy) generateContainerSecurity() *corev1.SecurityContext {
 	}
 }
 
-func (d *Deploy) generateResources(minCPU, maxCPU, minMem, maxMem int) corev1.ResourceRequirements {
+func generateResources(minCPU, maxCPU, minMem, maxMem string) corev1.ResourceRequirements {
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", minCPU)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", minMem)),
+			corev1.ResourceCPU:    resource.MustParse(minCPU),
+			corev1.ResourceMemory: resource.MustParse(minMem),
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", maxCPU)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", maxMem)),
+			corev1.ResourceCPU:    resource.MustParse(maxCPU),
+			corev1.ResourceMemory: resource.MustParse(maxMem),
 		},
 	}
 }
 
-func (d *Deploy) generateMainVolumeMounts() []corev1.VolumeMount {
+func generateMainVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := make([]corev1.VolumeMount, 0)
-	initMounts := d.generateInitVolumeMounts()
+	initMounts := generateInitVolumeMounts()
 	volumeMounts = append(volumeMounts, initMounts...)
 
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{

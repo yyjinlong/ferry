@@ -17,20 +17,21 @@ import (
 	"nautilus/pkg/util/cm"
 )
 
-func NewBuildImage() *BuildImage {
-	return &BuildImage{}
-}
-
-type BuildImage struct{}
-
-func (bi *BuildImage) Handle(pid int64, service string) error {
+func NewBuildImage(pid int64, service string) error {
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.IMG_QUERY_PIPELINE_ERROR, err)
 	}
 
-	if err := bi.checkStatus(pipeline.Status); err != nil {
-		return err
+	statusList := []int{
+		model.PLSuccess,
+		model.PLFailed,
+		model.PLRollbackSuccess,
+		model.PLRollbackFailed,
+		model.PLTerminate,
+	}
+	if cm.Ini(pipeline.Status, statusList) {
+		return fmt.Errorf(config.IMG_BUILD_FINISHED)
 	}
 
 	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHProcess); err != nil {
@@ -66,7 +67,7 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -i %d",
 			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, pid)
 		log.Infof("makeimg command: %s", param)
-		if !CallRealtimeOut(param, nil) {
+		if err := CallRealtimeOut(param, nil); err != nil {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
 		changes = append(changes, item.CodeModule)
@@ -104,20 +105,6 @@ func (bi *BuildImage) Handle(pid int64, service string) error {
 
 	if err := model.UpdatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHSuccess); err != nil {
 		log.Errorf("update pipeline: %d image phase error: %s", pid, err)
-	}
-	return nil
-}
-
-func (bi *BuildImage) checkStatus(status int) error {
-	statusList := []int{
-		model.PLSuccess,
-		model.PLFailed,
-		model.PLRollbackSuccess,
-		model.PLRollbackFailed,
-		model.PLTerminate,
-	}
-	if cm.Ini(status, statusList) {
-		return fmt.Errorf(config.IMG_BUILD_FINISHED)
 	}
 	return nil
 }

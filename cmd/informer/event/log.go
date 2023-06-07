@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -46,15 +45,12 @@ func (r *LogResource) HandleLog(obj interface{}, mode, cluster string) error {
 		return nil
 	}
 
-	serviceID, serviceName, phase, err := r.parseInfo(name)
-	if err != nil {
-		return err
-	}
+	serviceName, phase := r.parseInfo(name)
 	if !cm.In(phase, []string{model.PHASE_SANDBOX, model.PHASE_ONLINE}) {
 		return nil
 	}
 
-	pipeline, err := model.GetServicePipeline(serviceID)
+	pipeline, err := model.GetServicePipeline(serviceName)
 	if err != nil {
 		log.Errorf("[log] query pipeline by service error: %s", err)
 		return err
@@ -98,20 +94,12 @@ func (r *LogResource) filter(name string) bool {
 	return true
 }
 
-func (r *LogResource) parseInfo(name string) (int64, string, string, error) {
+func (r *LogResource) parseInfo(name string) (string, string) {
 	re := regexp.MustCompile(`-\d+-`)
 	matchList := re.Split(name, -1)
 	service := matchList[0]
 
 	afterList := strings.Split(matchList[1], "-")
 	phase := afterList[0]
-
-	result := re.FindStringSubmatch(name)
-	match := strings.Trim(result[0], "-")
-	serviceID, err := strconv.ParseInt(match, 10, 64)
-	if err != nil {
-		log.Errorf("[cronjob] parse: %s convert to int64 error: %s", name, err)
-		return 0, "", "", err
-	}
-	return serviceID, service, phase, nil
+	return service, phase
 }

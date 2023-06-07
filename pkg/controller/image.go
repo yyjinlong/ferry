@@ -32,8 +32,7 @@ func BuildImage(c *gin.Context) {
 		service = data.Service
 	)
 
-	image := publish.NewBuildImage()
-	if err := image.Handle(pid, service); err != nil {
+	if err := publish.NewBuildImage(pid, service); err != nil {
 		log.Errorf("build image pre handle failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return

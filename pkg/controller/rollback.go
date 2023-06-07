@@ -48,8 +48,7 @@ func Rollback(c *gin.Context) {
 		username = data.Username
 	)
 
-	ro := publish.NewRollback()
-	if err := ro.Handle(pid, username); err != nil {
+	if err := publish.NewRollback(pid, username); err != nil {
 		log.Errorf("execute rollback failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return

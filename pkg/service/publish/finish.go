@@ -15,30 +15,19 @@ import (
 	"nautilus/pkg/util/k8s"
 )
 
-func NewFinish() *Finish {
-	return &Finish{}
-}
-
-type Finish struct{}
-
-func (f *Finish) Handle(pid int64) error {
+func NewFinish(pid int64) error {
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
 	}
 
-	service, err := model.GetServiceByID(pipeline.ServiceID)
+	service, err := model.GetServiceInfo(pipeline.Service)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	ns, err := model.GetNamespaceByID(service.NamespaceID)
-	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
-	}
-
 	var (
-		namespace   = ns.Name
+		namespace   = service.Name
 		serviceID   = service.ID
 		serviceName = service.Name
 		onlineGroup = service.OnlineGroup

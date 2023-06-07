@@ -31,8 +31,7 @@ func Deploy(c *gin.Context) {
 		username = data.Username
 	)
 
-	dep := publish.NewDeploy()
-	if err := dep.Handle(pid, phase, username); err != nil {
+	if err := publish.NewDeploy(pid, phase, username); err != nil {
 		log.Errorf("build deployment failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return

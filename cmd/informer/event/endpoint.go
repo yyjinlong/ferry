@@ -3,7 +3,6 @@ package event
 import (
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -44,31 +43,27 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 		return nil
 	}
 
-	serviceID, serviceName, phase, group, err := r.parseInfo(name)
-	if err != nil {
-		return err
-	}
+	serviceName, phase, group := r.parseInfo(name)
 	log.Infof("[endpoint] service: %s phase: %s group: %s have total ips: %#v", serviceName, phase, group, ips)
 
-	svc, err := model.GetServiceByID(serviceID)
+	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
 		log.Errorf("[endpoint] query service by id error: %+v", err)
 		return err
 	}
 
-	ns, err := model.GetNamespaceByID(svc.NamespaceID)
-	if err != nil {
-		log.Errorf("[endpoint] query namespace by id error: %+v", err)
-		return err
-	}
-	if namespace != ns.Name {
-		log.Errorf("[endpoint] service: %s namespace: %s != %s", serviceName, ns.Name, namespace)
+	var (
+		curNamespace = svc.Namespace
+		deployGroup  = svc.DeployGroup
+		onlineGroup  = svc.OnlineGroup
+	)
+
+	if namespace != curNamespace {
+		log.Errorf("[endpoint] service: %s namespace: %s != %s", serviceName, curNamespace, namespace)
 		return nil
 	}
 
-	deployGroup := svc.DeployGroup
-	onlineGroup := svc.OnlineGroup
-	if err := r.traffic(serviceID, namespace, serviceName, phase, group, deployGroup, onlineGroup, ips); err != nil {
+	if err := r.traffic(namespace, serviceName, phase, group, deployGroup, onlineGroup, ips); err != nil {
 		log.Errorf("[endpoint] update service: %s traffic failed: %+v", serviceName, err)
 		return err
 	}
@@ -88,19 +83,11 @@ func (r *EndpointResource) filter(name string) bool {
 	return true
 }
 
-func (r *EndpointResource) parseInfo(name string) (int64, string, string, string, error) {
-	// 获取服务ID
+func (r *EndpointResource) parseInfo(name string) (string, string, string) {
 	re := regexp.MustCompile(`-\d+-`)
-	result := re.FindStringSubmatch(name)
-	match := strings.Trim(result[0], "-")
-	serviceID, err := strconv.ParseInt(match, 10, 64)
-	if err != nil {
-		log.Errorf("[endpoint] parse: %s convert to int64 error: %s", name, err)
-		return 0, "", "", "", err
-	}
+	matchList := re.Split(name, -1)
 
 	// 获取服务名
-	matchList := re.Split(name, -1)
 	serviceName := matchList[0]
 
 	// 获取阶段、部署组
@@ -108,7 +95,7 @@ func (r *EndpointResource) parseInfo(name string) (int64, string, string, string
 	otherList := strings.Split(other, "-")
 	phase := otherList[0]
 	group := otherList[1]
-	return serviceID, serviceName, phase, group, nil
+	return serviceName, phase, group
 }
 
 func (r *EndpointResource) parseAddr(subsets []corev1.EndpointSubset) ([]string, bool) {
@@ -128,11 +115,11 @@ func (r *EndpointResource) parseAddr(subsets []corev1.EndpointSubset) ([]string,
 	return ips, ready
 }
 
-func (r *EndpointResource) traffic(serviceID int64, namespace, service, phase, group, deployGroup, onlineGroup string, ips []string) error {
+func (r *EndpointResource) traffic(namespace, service, phase, group, deployGroup, onlineGroup string, ips []string) error {
 	// 两组(blue、green) 只有一组接流量
-	pipeline, err := model.GetServicePipeline(serviceID)
+	pipeline, err := model.GetServicePipeline(service)
 	if err != nil {
-		log.Errorf("get pipeline info by service id: %d failed: %+v", serviceID, err)
+		log.Errorf("get service: %s pipeline info failed: %+v", service, err)
 		return err
 	}
 	pipelineID := pipeline.ID

@@ -23,10 +23,7 @@ func Finish(c *gin.Context) {
 		return
 	}
 
-	pid := data.ID
-
-	finish := publish.NewFinish()
-	if err := finish.Handle(pid); err != nil {
+	if err := publish.NewFinish(data.ID); err != nil {
 		log.Errorf("finish handle failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return

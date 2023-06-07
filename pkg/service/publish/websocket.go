@@ -131,19 +131,19 @@ func (w *WebSocket) Finish() {
 	w.conn.WriteMessage(websocket.TextMessage, FINISH)
 }
 
-func CallRealtimeOut(param string, ws *WebSocket) bool {
+func CallRealtimeOut(param string, ws *WebSocket) error {
 	cmd := exec.Command("/bin/bash", "-c", param)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("command execute create stdout pipe error: %v", err)
-		return false
+		return err
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
 		log.Errorf("command execute start execute error: %v", err)
-		return false
+		return err
 	}
 
 	for {
@@ -161,11 +161,11 @@ func CallRealtimeOut(param string, ws *WebSocket) bool {
 
 	if err := cmd.Wait(); err != nil {
 		log.Errorf("command execute wait finish error: %v", err)
-		return false
+		return err
 	}
 
 	if cmd.ProcessState.Success() {
-		return true
+		return nil
 	}
-	return false
+	return fmt.Errorf("exit 1")
 }

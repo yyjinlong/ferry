@@ -8,7 +8,6 @@ package event
 import (
 	"errors"
 	"regexp"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -57,41 +56,23 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
-	serviceID, serviceName, phase, group, err := r.parseInfo(name)
-	if err != nil {
-		return err
-	}
+	serviceName, phase, group := r.parseInfo(name)
 	log.Infof("[deployment] check: %s ready with group: %s replicas: %d", name, group, replicas)
 
-	pipeline, err := model.GetServicePipeline(serviceID)
+	pipeline, err := model.GetServicePipeline(serviceName)
 	if errors.Is(err, model.NotFound) {
 		return nil
 	} else if err != nil {
-		log.Errorf("[deployment] query pipeline by service id: %d error: %s", serviceID, err)
+		log.Errorf("[deployment] query pipeline by service: %s error: %s", serviceName, err)
 		return err
 	}
 	pipelineID := pipeline.ID
 
-	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
-		log.Info("[deployment] check deploy is finished")
-		return err
+	if r.checkPipelineFinish(pipeline.Status) {
+		return nil
 	}
 
-	svc, err := model.GetServiceByID(serviceID)
-	if err != nil {
-		log.Errorf("[deployment] query service by id: %d failed: %s", serviceID, err)
-		return err
-	}
-	namespaceID := svc.NamespaceID
-
-	ns, err := model.GetNamespaceByID(namespaceID)
-	if err != nil {
-		log.Errorf("[deployment] query namespace by id: %d failed: %s", namespaceID, err)
-		return err
-	}
-
-	if namespace != ns.Name {
-		log.Errorf("[deployment] service: %s namespace: %s != %s", serviceName, ns.Name, namespace)
+	if !r.checkSameNamespace(namespace, serviceName) {
 		return nil
 	}
 
@@ -99,18 +80,8 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 	if pipeline.Status == model.PLRollbacking {
 		kind = model.PHASE_ROLLBACK
 	}
-	log.Infof("[deployment] get pipeline: %d kind: %s phase: %s", pipelineID, kind, phase)
-
-	ph, err := model.GetPhaseInfo(pipelineID, kind, phase)
-	if errors.Is(err, model.NotFound) {
-		return nil
-	} else if err != nil {
-		log.Errorf("[deployment] query phase info error: %s", err)
-		return err
-	}
-
-	// 判断该阶段是否完成
-	if ph.Status == model.PHSuccess {
+	log.Infof("[deployment] get pipeline: %d deploy kind is: %s", pipelineID, kind)
+	if r.checkPhaseFinish(pipelineID, kind, phase) {
 		return nil
 	}
 
@@ -135,7 +106,7 @@ func (r *DeploymentResource) filter(name string) bool {
 	return true
 }
 
-func (r *DeploymentResource) parseInfo(name string) (int64, string, string, string, error) {
+func (r *DeploymentResource) parseInfo(name string) (string, string, string) {
 	re := regexp.MustCompile(`-\d+-`)
 
 	// 获取服务名、阶段、蓝绿组
@@ -145,14 +116,42 @@ func (r *DeploymentResource) parseInfo(name string) (int64, string, string, stri
 	afterList := strings.Split(matchList[1], "-")
 	phase := afterList[0]
 	group := afterList[1]
+	return serviceName, phase, group
+}
 
-	// 获取服务ID
-	result := re.FindStringSubmatch(name)
-	match := strings.Trim(result[0], "-")
-	serviceID, err := strconv.ParseInt(match, 10, 64)
-	if err != nil {
-		log.Errorf("[deployment] parse: %s convert to int64 error: %s", name, err)
-		return 0, "", "", "", err
+func (r *DeploymentResource) checkPipelineFinish(status int) bool {
+	if cm.Ini(status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
+		log.Info("[deployment] check deploy is finished")
+		return true
 	}
-	return serviceID, serviceName, phase, group, nil
+	return false
+}
+
+func (r *DeploymentResource) checkSameNamespace(namespace, serviceName string) bool {
+	svc, err := model.GetServiceInfo(serviceName)
+	if err != nil {
+		log.Errorf("[deployment] query service by id: %d failed: %s", serviceName, err)
+		return false
+	}
+	if namespace != svc.Namespace {
+		log.Errorf("[deployment] service: %s namespace: %s != %s", serviceName, svc.Namespace, namespace)
+		return false
+	}
+	return true
+}
+
+func (r *DeploymentResource) checkPhaseFinish(pipelineID int64, kind, phase string) bool {
+	ph, err := model.GetPhaseInfo(pipelineID, kind, phase)
+	if errors.Is(err, model.NotFound) {
+		return true
+	} else if err != nil {
+		log.Errorf("[deployment] query phase info error: %s", err)
+		return true
+	}
+
+	// 判断该阶段是否完成
+	if ph.Status == model.PHSuccess {
+		return true
+	}
+	return false
 }

@@ -19,25 +19,14 @@ import (
 	"nautilus/pkg/util/k8s"
 )
 
-func NewService() *Service {
-	return &Service{}
-}
-
-type Service struct{}
-
-func (s *Service) Handle(serviceName string) error {
+func NewService(serviceName string) error {
 	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	ns, err := model.GetNamespaceByID(svc.NamespaceID)
-	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
-	}
-
 	var (
-		namespace     = ns.Name
+		namespace     = svc.Namespace
 		serviceID     = svc.ID
 		port          = svc.Port
 		containerPort = svc.ContainerPort
@@ -47,11 +36,11 @@ func (s *Service) Handle(serviceName string) error {
 	for _, item := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
 		phase := item
 		eg.Go(func() error {
-			return s.worker(namespace, serviceName, serviceID, phase, k8s.BLUE, port, containerPort)
+			return worker(namespace, serviceName, serviceID, phase, k8s.BLUE, port, containerPort)
 		})
 
 		eg.Go(func() error {
-			return s.worker(namespace, serviceName, serviceID, phase, k8s.GREEN, port, containerPort)
+			return worker(namespace, serviceName, serviceID, phase, k8s.GREEN, port, containerPort)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -60,7 +49,7 @@ func (s *Service) Handle(serviceName string) error {
 	return nil
 }
 
-func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, group string, port, containerPort int) error {
+func worker(namespace, serviceName string, serviceID int64, phase, group string, port, containerPort int) error {
 	// service名称与deployment名称保持一致
 	name := k8s.GetDeploymentName(serviceName, serviceID, phase, group)
 	labels := map[string]string{

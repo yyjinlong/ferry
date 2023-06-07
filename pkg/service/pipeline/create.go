@@ -64,7 +64,7 @@ func (cp *CreatePipeline) checkGit(module, branch string) error {
 	if err != nil {
 		return fmt.Errorf(config.PL_QUERY_MODULE_ERROR, module)
 	}
-	param := fmt.Sprintf("git ls-remote --heads %s %s | wc -l", codeModule.ReposAddr, branch)
+	param := fmt.Sprintf("git ls-remote --heads %s %s | wc -l", codeModule.RepoAddr, branch)
 	log.Infof("git check param: %s", param)
 	output, err := cm.Call(param)
 	if err != nil {

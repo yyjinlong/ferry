@@ -85,6 +85,7 @@ const (
 	PUB_CREATE_VOLUME_MOUNT_ERROR     = "挂载volume失败: %s"
 	PUB_FETCH_IMAGE_INFO_ERROR        = "获取镜像信息为空!"
 	PUB_GET_CLIENTSET_ERROR           = "获取clientset失败: %s"
+	PUB_INIT_CONTINAER_ERROR          = "生成initContainer失败: %s"
 )
 
 // 确认完成

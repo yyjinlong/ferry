@@ -16,13 +16,7 @@ import (
 	"nautilus/pkg/util/k8s"
 )
 
-func NewRollback() *Rollback {
-	return &Rollback{}
-}
-
-type Rollback struct{}
-
-func (ro *Rollback) Handle(pid int64, username string) error {
+func NewRollback(pid int64, username string) error {
 	pipeline, err := model.GetPipeline(pid)
 	if err != nil {
 		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
@@ -32,20 +26,15 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		return fmt.Errorf(config.ROL_CANNOT_EXECUTE)
 	}
 
-	svc, err := model.GetServiceByID(pipeline.ServiceID)
+	svc, err := model.GetServiceInfo(pipeline.Service)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
-	}
-
-	ns, err := model.GetNamespaceByID(svc.NamespaceID)
-	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_NAMESPACE_ERROR, err)
 	}
 
 	var (
 		rollbackGroup string // 回滚组恢复指定副本数
 		destroyGroup  string // 销毁组缩成0
-		namespace     = ns.Name
+		namespace     = svc.Namespace
 		service       = svc.Name
 		replicas      = svc.Replicas
 		serviceID     = svc.ID
@@ -67,7 +56,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		return fmt.Errorf(config.DB_UPDATE_PIPELINE_ERROR, err)
 	}
 
-	if err := model.SetLock(pipeline.ServiceID, username); err != nil {
+	if err := model.SetLock(serviceID, username); err != nil {
 		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pid, err)
 	}
 
@@ -126,7 +115,7 @@ func (ro *Rollback) Handle(pid int64, username string) error {
 		return fmt.Errorf(config.DB_UPDATE_PIPELINE_ERROR, err)
 	}
 
-	if err := model.SetLock(pipeline.ServiceID, ""); err != nil {
+	if err := model.SetLock(serviceID, ""); err != nil {
 		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pid, err)
 	}
 	log.Infof("rollback all phases: %+v success", publishes)

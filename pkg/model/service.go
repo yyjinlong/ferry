@@ -17,10 +17,10 @@ type Service struct {
 	Name          string    `xorm:"varchar(32) notnull unique"`
 	Namespace     string    `xorm:"varchar(32) notnull"`
 	ImageAddr     string    `xorm:"varchar(500) notnull"`
-	QuotaCPU      int       `xorm:"int"`
-	QuotaMaxCPU   int       `xorm:"int"`
-	QuotaMem      int       `xorm:"int"`
-	QuotaMaxMem   int       `xorm:"int"`
+	QuotaCPU      string    `xorm:"varchar(20)"`
+	QuotaMaxCPU   string    `xorm:"varchar(20)"`
+	QuotaMem      string    `xorm:"varchar(20)"`
+	QuotaMaxMem   string    `xorm:"varchar(20)"`
 	Replicas      int32     `xorm:"int"`
 	Configmap     string    `xorm:"text"`
 	ReserveTime   int       `xorm:"int"`

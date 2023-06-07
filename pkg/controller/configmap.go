@@ -41,8 +41,7 @@ func ConfigMap(c *gin.Context) {
 		return
 	}
 
-	cm := publish.NewConfigMap()
-	if err := cm.Handle(namespace, service, pair, pairInfo); err != nil {
+	if err := publish.NewConfigMap(namespace, service, pair, pairInfo); err != nil {
 		log.Errorf("publish configmap failed: %+v", err)
 		ResponseFailed(c, fmt.Sprintf(config.CM_PUBLISH_FAILED, err))
 		return

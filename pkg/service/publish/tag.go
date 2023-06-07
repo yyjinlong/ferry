@@ -15,16 +15,9 @@ import (
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util/cm"
 )
 
-func NewBuildTag() *BuildTag {
-	return &BuildTag{}
-}
-
-type BuildTag struct{}
-
-func (bt *BuildTag) Handle(pid int64, serviceName string) error {
+func NewBuildTag(pid int64, serviceName string) error {
 	pidStr := strconv.FormatInt(pid, 10)
 	serviceObj, err := model.GetServiceInfo(serviceName)
 	if err != nil {
@@ -57,25 +50,19 @@ func (bt *BuildTag) Handle(pid int64, serviceName string) error {
 			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
 		lang := codeModule.Language
-		addr := codeModule.ReposAddr
+		addr := codeModule.RepoAddr
 		module := codeModule.Name
 
 		param := fmt.Sprintf("%s/maketag -m %s -l %s -a %s -b %s -i %d", scriptPath, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
-		if !cm.CallRealtimeOut(param) {
+		if err := CallRealtimeOut(param, nil); err != nil {
 			return fmt.Errorf(config.TAG_BUILD_FAILED)
 		}
 	}
 	return nil
 }
 
-func NewReceiveTag() *ReceiveTag {
-	return &ReceiveTag{}
-}
-
-type ReceiveTag struct{}
-
-func (rt *ReceiveTag) Handle(pid int64, module, tag string) error {
+func NewReceiveTag(pid int64, module, tag string) error {
 	log.Infof("receive module: %s build tag value: %s", module, tag)
 	if err := model.UpdateTag(pid, module, tag); err != nil {
 		return fmt.Errorf(config.TAG_UPDATE_DB_ERROR, err)

@@ -17,13 +17,7 @@ import (
 	"nautilus/pkg/util/k8s"
 )
 
-func NewConfigMap() *ConfigMap {
-	return &ConfigMap{}
-}
-
-type ConfigMap struct{}
-
-func (c *ConfigMap) Handle(namespace, service, pair string, data map[string]string) error {
+func NewConfigMap(namespace, service, pair string, data map[string]string) error {
 	configName := k8s.GetConfigmapName(service)
 
 	configMap := &corev1.ConfigMap{
