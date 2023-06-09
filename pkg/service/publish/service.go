@@ -62,7 +62,7 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, 
 		"appid": name,
 	}
 
-	so := &corev1.Service{
+	se := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -86,7 +86,7 @@ func (s *Service) worker(namespace, serviceName string, serviceID int64, phase, 
 	if err != nil {
 		return err
 	}
-	if err := resource.CreateOrUpdateService(namespace, so); err != nil {
+	if err := resource.CreateOrUpdateService(namespace, se); err != nil {
 		return fmt.Errorf(config.SVC_K8S_SERVICE_EXEC_FAILED, err)
 	}
 	log.Infof("publish service resource: %s to k8s success", name)

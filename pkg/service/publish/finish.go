@@ -38,9 +38,12 @@ func NewFinish(pid int64) error {
 	if err != nil {
 		return err
 	}
+
 	for _, phase := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
 		oldDeployment := k8s.GetDeploymentName(serviceName, serviceID, phase, onlineGroup)
 		if err := resource.Scale(namespace, oldDeployment, 0); err != nil {
+			log.Errorf("old deployment: %s replicas scale 0 failed: %+v", oldDeployment, err)
+			return err
 		}
 		log.Infof("old deployment: %s replicas scale 0 success", oldDeployment)
 	}
@@ -50,10 +53,8 @@ func NewFinish(pid int64) error {
 	}
 	log.Infof("record finish phase for pid: %d success", pid)
 
-	var (
-		newOnlineGroup = service.DeployGroup
-		newDeployGroup = k8s.GetDeployGroup(newOnlineGroup)
-	)
+	newOnlineGroup := service.DeployGroup
+	newDeployGroup := k8s.GetDeployGroup(newOnlineGroup)
 	log.Infof("get current online_group: %s deploy_group: %s", newOnlineGroup, newDeployGroup)
 
 	if err := model.UpdateGroup(pid, service.ID, newOnlineGroup, newDeployGroup, model.PLSuccess); err != nil {

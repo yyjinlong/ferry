@@ -53,7 +53,7 @@ Jinlong Yang
 kubectl label node xxxx aggregate=default
 
 # 定时node
-kubectl label node xxxx batch=cronjob
+kubectl label node xxxx aggregate=cronjob
 
 # 查看所有node label
 kubectl get nodes --show-labels

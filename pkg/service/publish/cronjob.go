@@ -29,7 +29,7 @@ func NewCronjob(namespace, service, command, schedule string) (string, error) {
 		return "", fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
-	pipeline, err := model.GetServicePipeline(service)
+	pipeline, err := model.GetServiceLastSuccessPipeline(service)
 	if err != nil {
 		return "", fmt.Errorf(config.DB_PIPELINE_QUERY_FAILED, err)
 	}

@@ -23,10 +23,10 @@ import (
 )
 
 const (
-	CodeMountPoint = "www"
-	CodeMountPath  = "/home/tong/www"
-	LogMountPoint  = "log"
-	LogMountPath   = "/home/tong/www/log"
+	CodeMountPoint = "www"                // 代码路径挂载点
+	CodeMountPath  = "/home/tong/www"     // 约定代码目录
+	LogMountPoint  = "log"                // 日志路径挂载点
+	LogMountPath   = "/home/tong/www/log" // 约定日志目录
 )
 
 func NewDeploy(pid int64, phase, username string) error {
@@ -283,7 +283,7 @@ func generateInitContainers(pid int64) ([]corev1.Container, error) {
 		log.Errorf("query pipeline: %d images empty", pid)
 		return nil, err
 	}
-	log.Infof("publish get deployment images: %s", images)
+	log.Infof("publish get deployment images: %v", images)
 
 	for _, item := range images {
 		codeModule := strings.Replace(item.CodeModule, "_", "-", -1)
@@ -293,11 +293,9 @@ func generateInitContainers(pid int64) ([]corev1.Container, error) {
 }
 
 func getInitContainer(module, imageURL, imageTag string) corev1.Container {
-	// 约定代码目录: /home/tong/www
-	// 约定日志目录: /home/tong/www/log
 	var (
-		lockFile = fmt.Sprintf("/home/tong/www/%s_done", module)
-		cmd      = fmt.Sprintf("cp -rfp /code/* /home/tong/www; chown tong:tong /home/tong/www -R; touch %s", lockFile)
+		lockFile = fmt.Sprintf("%s/%s_done", CodeMountPath, module)
+		cmd      = fmt.Sprintf("cp -rfp /code/* %[1]s; chown tong:tong %[1]s -R; touch %[2]s", CodeMountPath, lockFile)
 		safeCmd  = fmt.Sprintf(`if [ ! -f %s ]; then %s; fi`, lockFile, cmd)
 	)
 
@@ -347,8 +345,7 @@ func generateEnvs(namespace, service, stage string) []corev1.EnvVar {
 			Name: "POD_IP",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					APIVersion: "v1",
-					FieldPath:  "status.podIP",
+					FieldPath: "status.podIP",
 				},
 			},
 		},
@@ -356,8 +353,7 @@ func generateEnvs(namespace, service, stage string) []corev1.EnvVar {
 			Name: "POD_NAME",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					APIVersion: "v1",
-					FieldPath:  "metadata.name",
+					FieldPath: "metadata.name",
 				},
 			},
 		},
@@ -412,10 +408,10 @@ func generateResources(minCPU, maxCPU, minMem, maxMem string) corev1.ResourceReq
 }
 
 func generateMainVolumeMounts() []corev1.VolumeMount {
-	volumeMounts := make([]corev1.VolumeMount, 0)
+	var volumeMounts []corev1.VolumeMount
+
 	initMounts := generateInitVolumeMounts()
 	volumeMounts = append(volumeMounts, initMounts...)
-
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      LogMountPoint,
 		MountPath: LogMountPath,

@@ -66,8 +66,8 @@ func GetServicePipeline(service string) (*Pipeline, error) {
 	return pipeline, nil
 }
 
-// GetServiceLastPipeline 根据服务返回最近一次成功的上线信息
-func GetServiceLastPipeline(service string) (*Pipeline, error) {
+// GetServiceLastSuccessPipeline 根据服务返回最近一次成功的上线信息
+func GetServiceLastSuccessPipeline(service string) (*Pipeline, error) {
 	pipeline := new(Pipeline)
 	if has, err := SEngine.Where("service = ? AND pipeline.status = ?", service, PLSuccess).
 		Desc("id").Get(pipeline); err != nil {
