@@ -64,10 +64,11 @@ func NewBuildImage(pid int64, service string) error {
 		lang := codeModule.Language
 		repo := codeModule.RepoAddr
 
+		output := ""
 		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -i %d",
 			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, pid)
 		log.Infof("makeimg command: %s", param)
-		if err := CallRealtimeOut(param, nil); err != nil {
+		if err := CallRealtimeOut(param, &output, nil); err != nil {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
 		changes = append(changes, item.CodeModule)

@@ -244,8 +244,8 @@ func generateVolumes(namespace, service, category string, pid int64) []corev1.Vo
 	// NOTE: 在宿主机上创建本地存储卷, 目前只支持hostPath-DirectoryOrCreate类型.
 	var (
 		pathType     = corev1.HostPathDirectoryOrCreate
-		codeHostPath = fmt.Sprintf("/home/www/%s/%s/%d", category, service, pid)
-		logHostPath  = fmt.Sprintf("/home/log/%s/%s/%s", category, namespace, service)
+		codeHostPath = fmt.Sprintf("/home/code/%s/%s/%d", category, service, pid)
+		logHostPath  = fmt.Sprintf("/home/logs/%s/%s/%s", category, namespace, service)
 	)
 
 	return []corev1.Volume{

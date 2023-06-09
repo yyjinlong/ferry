@@ -6,11 +6,14 @@
 package publish
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -131,32 +134,31 @@ func (w *WebSocket) Finish() {
 	w.conn.WriteMessage(websocket.TextMessage, FINISH)
 }
 
-func CallRealtimeOut(param string, ws *WebSocket) error {
-	cmd := exec.Command("/bin/bash", "-c", param)
+// Realtime 执行命令的实时输出
+func CallRealtimeOut(param string, output *string, ws *WebSocket) error {
+	cmd := exec.Command("bash", "-c", param)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Errorf("command execute create stdout pipe error: %v", err)
 		return err
 	}
-	defer stdout.Close()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Errorf("command execute create stdout pipe error: %v", err)
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go read(ws, &wg, stdout, output)
+	go read(ws, &wg, stderr, output)
 
 	if err := cmd.Start(); err != nil {
 		log.Errorf("command execute start execute error: %v", err)
 		return err
-	}
-
-	for {
-		buf := make([]byte, 1024)
-		_, err := stdout.Read(buf)
-		msg := strings.Replace(string(buf), "\u0000", "", -1)
-		fmt.Println(msg)
-		if ws != nil {
-			ws.Echo(msg)
-		}
-		if err != nil {
-			break
-		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -164,8 +166,24 @@ func CallRealtimeOut(param string, ws *WebSocket) error {
 		return err
 	}
 
-	if cmd.ProcessState.Success() {
+	if !cmd.ProcessState.Success() {
 		return nil
 	}
 	return fmt.Errorf("exit 1")
+}
+
+func read(ws *WebSocket, wg *sync.WaitGroup, std io.ReadCloser, output *string) {
+	defer wg.Done()
+
+	reader := bufio.NewReader(std)
+	for {
+		buf, err := reader.ReadString('\n')
+		if err != nil || err == io.EOF {
+			return
+		}
+		if ws != nil {
+			ws.Echo(buf)
+		}
+		*output += strings.Replace(buf, "\u0000", "", -1)
+	}
 }

@@ -53,9 +53,10 @@ func NewBuildTag(pid int64, serviceName string) error {
 		addr := codeModule.RepoAddr
 		module := codeModule.Name
 
+		output := ""
 		param := fmt.Sprintf("%s/maketag -m %s -l %s -a %s -b %s -i %d", scriptPath, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
-		if err := CallRealtimeOut(param, nil); err != nil {
+		if err := CallRealtimeOut(param, &output, nil); err != nil {
 			return fmt.Errorf(config.TAG_BUILD_FAILED)
 		}
 	}
