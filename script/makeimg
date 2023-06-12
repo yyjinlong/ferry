@@ -36,65 +36,21 @@ function check() {
         help
     fi
 
-    if [ -z $lang ]; then
-        help
-    fi
-
-    if [ -z $addr ]; then
-        help
-    fi
-
-    if [ -z $tag ]; then
+    if [ -z $pkg ]; then
         help
     fi
 
     if [ -z $taskid ]; then
         help
     fi
-
-    # 代码路径不存在则创建
-    if [ ! -d $CODE_PATH ]; then
-        mkdir -p $CODE_PATH
-    fi
 }
 
-function checkout_tag() {
-    build_path=$1
-    cd $build_path
-
-    if [ -d $module ]; then
-        rm -rf $module
-    fi
-    git clone --recursive $addr $module -q
-    echo "代码下载完成!"
-
-    cd $module
-    git checkout $tag -q
-    if [ $? -ne 0 ]; then
-        echoerror "切换到tag: $tag 失败!"
-        exit $err
-    fi
-    echo "模块($module) 切换到tag($tag) 成功"
-}
-
-function compile() {
+function untar() {
     build_path=$1
 
-    rm -rf .git .gitignore
-    echo "删除隐藏文件成功"
-
-    if [ $lang == "go" ]; then
-        echo "模块$module开始进行golang编译"
-
-    elif [ $lang == "java" ]; then
-        echo "模块$module开始进行maven编译"
-
-    else
-        echo "模块$module跳过该编译阶段"
-    fi
-
     cd $build_path
-    echo "拷贝编译好的代码到代码路径成功"
+    tar zxf $pkg
+    echo "解压编译包: $pkg 成功"
 }
 
 function create_dockerfile() {
@@ -115,7 +71,7 @@ EOF
 function build_image() {
     build_path=$1
 
-    image_url="$CODE_REGISTRY/$module"
+    image_url="$IMAGE_REGISTRY/$module"
     image_tag="v-$(date +%Y%m%d_%H%M%S)"
     release_url="$image_url:$image_tag"
 
@@ -153,16 +109,13 @@ function main() {
     if [ -d $build_path ]; then
         rm -rf $build_path
     fi
-        mkdir -p $build_path
+    mkdir -p $build_path
     echo "创建构建路径: $build_path 成功"
 
-    echobold "阶段一: 模块$module下载tag:$tag代码"
-    checkout_tag $build_path
+    echobold "阶段一: 解压$module编译包"
+    untar $build_path
 
-    echobold "阶段二: 模块$module进行编译"
-    compile $build_path $build_path
-
-    echobold "阶段三: 模块$module创建Dockerfile"
+    echobold "阶段二: 模块$module创建Dockerfile"
     create_dockerfile $build_path
 
     echobold "阶段三: 模块$module进行镜像构建"

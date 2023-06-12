@@ -105,7 +105,7 @@ curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/deploy/tag
 3) 构建镜像
 
 ```
-curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/deploy/image
+curl -d 'pipeline_id=4&service=ivr' http://127.0.0.1:8888/v1/deploy/image/create
 ```
 
 4) 发布沙盒
