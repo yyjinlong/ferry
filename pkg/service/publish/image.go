@@ -53,25 +53,19 @@ func NewBuildImage(pid int64, service string) error {
 	)
 
 	for _, item := range updateList {
-		if err := model.CreateImage(pid, item.CodeModule); err != nil {
-			return fmt.Errorf(config.IMG_CREATE_IMAGE_INFO_ERROR, err)
+		module := item.CodeModule
+		if err := model.CreateOrUpdatePipelineImage(pid, service, module, "", ""); err != nil {
+			return err
 		}
-
-		codeModule, err := model.GetCodeModuleInfo(item.CodeModule)
-		if err != nil {
-			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
-		}
-		lang := codeModule.Language
-		repo := codeModule.RepoAddr
 
 		output := ""
-		param := fmt.Sprintf("%s/makeimg -s %s -m %s -l %s -a %s -t %s -i %d",
-			scriptPath, service, item.CodeModule, lang, repo, item.CodeTag, pid)
+		param := fmt.Sprintf("%s/makeimg -s %s -m %s -p %s -i %d", scriptPath, service, module, item.CodePkg, pid)
 		log.Infof("makeimg command: %s", param)
 		if err := CallRealtimeOut(param, &output, nil); err != nil {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
 		changes = append(changes, item.CodeModule)
+		fmt.Println(output)
 	}
 
 	// 获取未变更的模块(服务所有模块-当前变更的模块)

@@ -40,9 +40,10 @@ func ImageSession() *xorm.Session {
 		Join("INNER", []string{"pipeline_image", "pi"}, "p.id = pi.pipeline_id")
 }
 
-func CreateImage(pipelineID int64, codeModule string) error {
+func CreateImage(pipelineID int64, service, codeModule string) error {
 	image := new(PipelineImage)
 	image.PipelineID = pipelineID
+	image.Service = service
 	image.CodeModule = codeModule
 	image.Status = PIProcess
 	if _, err := MEngine.Insert(image); err != nil {
@@ -57,7 +58,7 @@ func UpdateImage(pipelineID int64, codeModule, imageURL, imageTag string) error 
 	image.CodeModule = codeModule
 	image.ImageURL = imageURL
 	image.ImageTag = imageTag
-	if _, err := MEngine.Where("pipeline_id=?", pipelineID).Update(image); err != nil {
+	if _, err := MEngine.Where("pipeline_id=? and code_module=?", pipelineID, codeModule).Update(image); err != nil {
 		return err
 	}
 	return nil

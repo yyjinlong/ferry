@@ -102,14 +102,24 @@ function build_image() {
     echobold "镜像构建完成, 镜像: $release_url"
 }
 
+function clear_module() {
+    build_path=$1
+
+    cd $build_path
+    if [ -d $module ]; then
+        rm -rf $module
+    fi
+
+    echo "镜像模块清理完成"
+}
+
 function main() {
     check
  
     build_path="$IMAGE_PATH/$service/$taskid" # 构建路径: release路径/服务/上线单ID
-    if [ -d $build_path ]; then
-        rm -rf $build_path
+    if [ ! -d $build_path ]; then
+        mkdir -p $build_path
     fi
-    mkdir -p $build_path
     echo "创建构建路径: $build_path 成功"
 
     echobold "阶段一: 解压$module编译包"
@@ -120,6 +130,9 @@ function main() {
 
     echobold "阶段三: 模块$module进行镜像构建"
     build_image $build_path
+
+    echobold "阶段四: 模块$module进行清理"
+    clear_module $build_path
 }
 
 main

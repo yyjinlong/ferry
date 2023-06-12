@@ -61,8 +61,8 @@ type BindingUnionQuery struct {
 
 func BindingSession() *xorm.Session {
 	return SEngine.Table("service").Alias("s").
-		Join("INNER", []string{"module_binding", "mb"}, "s.id = mb.service_id").
-		Join("INNER", []string{"module", "m"}, "m.id = mb.code_module_id")
+		Join("INNER", []string{"module_binding", "b"}, "s.id = b.service_id").
+		Join("INNER", []string{"code_module", "m"}, "m.id = b.code_module_id")
 }
 
 func GetServiceInfo(name string) (*Service, error) {
