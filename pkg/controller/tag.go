@@ -67,3 +67,31 @@ func ReceiveTag(c *gin.Context) {
 	}
 	c.String(http.StatusOK, config.OK)
 }
+
+func ReceivePkg(c *gin.Context) {
+	type params struct {
+		ID     int64  `form:"taskid" binding:"required"`
+		Module string `form:"module" binding:"required"`
+		Pkg    string `form:"pkg" binding:"required"`
+	}
+
+	var data params
+	if err := c.ShouldBind(&data); err != nil {
+		ResponseFailed(c, err.Error())
+		c.String(http.StatusOK, err.Error())
+		return
+	}
+
+	var (
+		pid    = data.ID
+		module = data.Module
+		pkg    = data.Pkg
+	)
+
+	if err := publish.NewReceivePkg(pid, module, pkg); err != nil {
+		log.Errorf("receive compile package failed: %+v", err)
+		c.String(http.StatusOK, err.Error())
+		return
+	}
+	c.String(http.StatusOK, config.OK)
+}

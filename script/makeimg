@@ -6,18 +6,14 @@ source $base/common.sh
 
 service=""
 module=""
-lang=""
-addr=""
-tag=""
+pkg=""
 taskid=""
 
-while getopts s:m:l:a:t:u:i:h: opt; do
+while getopts s:m:p:i:h: opt; do
     case $opt in
         s) service=$OPTARG;;
         m) module=$OPTARG;;
-        l) lang=$OPTARG;;
-        a) addr=$OPTARG;;
-        t) tag=$OPTARG;;
+        p) pkg=$OPTARG;;
         i) taskid=$OPTARG;;
         h) help;;
     esac
@@ -26,7 +22,7 @@ done
 function help() {
     cat <<EOF
 功能说明: 构建代码镜像
-使用方法: $0 -s 服务名 -m 模块名 -l 语言 -a 仓库地址 -t tag名 -i 任务id
+使用方法: $0 -s 服务名 -m 模块名 -p 包名 -i 任务id
 EOF
     exit 0
 }
@@ -35,6 +31,7 @@ function check() {
     if [ -z $service ]; then
         help
     fi
+
     if [ -z $module ]; then
         help
     fi
@@ -55,9 +52,9 @@ function check() {
         help
     fi
 
-    # release路径不存在则创建
-    if [ ! -d $RELEASE_PATH ]; then
-        mkdir -p $RELEASE_PATH
+    # 代码路径不存在则创建
+    if [ ! -d $CODE_PATH ]; then
+        mkdir -p $CODE_PATH
     fi
 }
 
@@ -118,7 +115,7 @@ EOF
 function build_image() {
     build_path=$1
 
-    image_url="$RELEASE_REGISTRY/$module"
+    image_url="$CODE_REGISTRY/$module"
     image_tag="v-$(date +%Y%m%d_%H%M%S)"
     release_url="$image_url:$image_tag"
 
@@ -152,13 +149,11 @@ function build_image() {
 function main() {
     check
  
-    build_path="$RELEASE_PATH/$service/$taskid" # 构建路径: release路径/服务/上线单ID
+    build_path="$IMAGE_PATH/$service/$taskid" # 构建路径: release路径/服务/上线单ID
     if [ -d $build_path ]; then
         rm -rf $build_path
     fi
-    if [ ! -d $build_path ]; then
         mkdir -p $build_path
-    fi
     echo "创建构建路径: $build_path 成功"
 
     echobold "阶段一: 模块$module下载tag:$tag代码"

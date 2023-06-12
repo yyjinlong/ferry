@@ -28,8 +28,9 @@ const (
 const (
 	TAG_OPERATE_FORBIDDEN  = "服务被上线单(%s)占用, 不能发布!"
 	TAG_QUERY_UPDATE_ERROR = "查询变更模块信息失败: %s"
-	TAG_BUILD_FAILED       = "打tag失败!"
+	TAG_BUILD_FAILED       = "打tag失败: %+v"
 	TAG_UPDATE_DB_ERROR    = "更新tag信息失败: %s"
+	PKG_UPDATE_DB_ERROR    = "更新编译包信息失败: %s"
 )
 
 // 数据库查询

@@ -54,11 +54,12 @@ func NewBuildTag(pid int64, serviceName string) error {
 		module := codeModule.Name
 
 		output := ""
-		param := fmt.Sprintf("%s/maketag -m %s -l %s -a %s -b %s -i %d", scriptPath, module, lang, addr, branch, pid)
+		param := fmt.Sprintf("%s/maketag -s %s -m %s -l %s -a %s -b %s -i %d", scriptPath, serviceName, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
 		if err := CallRealtimeOut(param, &output, nil); err != nil {
-			return fmt.Errorf(config.TAG_BUILD_FAILED)
+			return fmt.Errorf(config.TAG_BUILD_FAILED, err)
 		}
+		fmt.Println("输出: ", output)
 	}
 	return nil
 }
@@ -69,5 +70,14 @@ func NewReceiveTag(pid int64, module, tag string) error {
 		return fmt.Errorf(config.TAG_UPDATE_DB_ERROR, err)
 	}
 	log.Infof("module: %s update tag: %s success", module, tag)
+	return nil
+}
+
+func NewReceivePkg(pid int64, module, pkg string) error {
+	log.Infof("receive module: %s compile package: %s", module, pkg)
+	if err := model.UpdatePkg(pid, module, pkg); err != nil {
+		return fmt.Errorf(config.PKG_UPDATE_DB_ERROR, err)
+	}
+	log.Infof("module: %s update pkg: %s success", module, pkg)
 	return nil
 }

@@ -35,7 +35,7 @@ func NewConfigMap(namespace, service, pair string, data map[string]string) error
 	if err := resource.CreateOrUpdateConfigMap(namespace, configMap); err != nil {
 		return fmt.Errorf(config.CM_K8S_EXEC_FAILED, err)
 	}
-	log.Infof("publish configmap: %s to k8s success", configName)
+	log.Infof("deploy configmap: %s to k8s success", configName)
 
 	if err := model.UpdateConfigMap(service, pair); err != nil {
 		return fmt.Errorf(config.CM_UPDATE_DB_ERROR, err)

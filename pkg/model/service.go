@@ -6,7 +6,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 
 	"xorm.io/xorm"
@@ -112,40 +111,6 @@ func FindServiceCodeModules(service string) ([]BindingUnionQuery, error) {
 		return nil, err
 	}
 	return bindings, nil
-}
-
-func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
-	session := MEngine.NewSession()
-	defer session.Close()
-
-	if err := session.Begin(); err != nil {
-		return err
-	}
-
-	codeModule := new(CodeModule)
-	if has, err := session.Where("name = ?", moduleName).Get(codeModule); err != nil {
-		return err
-	} else if !has {
-		return fmt.Errorf("query module name: %s is not exists", moduleName)
-	}
-
-	pu := new(PipelineUpdate)
-	pu.CodeTag = codeTag
-	if affected, err := session.Where("pipeline_id=? and code_module_id=?",
-		pipelineID, codeModule.ID).Cols("code_tag").Update(pu); err != nil {
-	} else if affected == 0 {
-		return NotFound
-	}
-
-	pipeline := new(Pipeline)
-	pipeline.Status = PLProcess
-	if affected, err := session.ID(pipelineID).Cols("status").Update(pipeline); err != nil {
-		return err
-	} else if affected == 0 {
-		return NotFound
-	}
-
-	return session.Commit()
 }
 
 func UpdateConfigMap(name string, pair string) error {

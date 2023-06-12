@@ -32,6 +32,7 @@ func URLs(r *gin.Engine) {
 		// 发布流程
 		deploy.POST("/tag", controller.BuildTag)
 		deploy.GET("/tag", controller.ReceiveTag)
+		deploy.GET("/pkg", controller.ReceivePkg)
 		deploy.POST("/image/create", controller.BuildImage)
 		deploy.GET("/image/update", controller.UpdateImage)
 		deploy.POST("/configmap", controller.ConfigMap)

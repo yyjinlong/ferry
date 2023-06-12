@@ -42,6 +42,16 @@ function report_tag() {
     request $url $errmsg
 }
 
+function report_pkg() {
+    taskid=$1
+    module=$2
+    pkg=$3
+    errmsg="上报编译包信息失败"
+
+    url="$BASE_URL/v1/deploy/pkg?taskid=$taskid&module=$module&pkg=$pkg"
+    request $url $errmsg
+}
+
 function report_img() {
     taskid=$1
     module=$2

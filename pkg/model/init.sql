@@ -100,6 +100,7 @@ create table if not exists pipeline_update (
     code_module varchar(50) not null,                                          -- 变更的代码模块
     deploy_branch varchar(20) default 'master',                                -- 变更的代码模块对应的部署分支 master上线、分支上线
     code_tag varchar(50),                                                      -- 基于代码模块打的tag
+    code_pkg varchar(100),                                                      -- 基于代码模块打的tag
     create_at timestamp not null default now()
 );
 

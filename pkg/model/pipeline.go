@@ -31,6 +31,7 @@ type PipelineUpdate struct {
 	CodeModule   string    `xorm:"varchar(50) notnull"`
 	DeployBranch string    `xorm:"varchar(20)"`
 	CodeTag      string    `xorm:"varchar(50)"`
+	CodePkg      string    `xorm:"varchar(100)"`
 	CreateAt     time.Time `xorm:"timestamp notnull created"`
 }
 
@@ -138,6 +139,46 @@ func SetLock(serviceID int64, lock string) error {
 	service.Lock = lock
 	if _, err := MEngine.Cols("lock").ID(serviceID).Update(service); err != nil {
 		return err
+	}
+	return nil
+}
+
+func UpdateTag(pipelineID int64, moduleName, codeTag string) error {
+	session := MEngine.NewSession()
+	defer session.Close()
+
+	if err := session.Begin(); err != nil {
+		return err
+	}
+
+	pu := new(PipelineUpdate)
+	pu.CodeTag = codeTag
+	if affected, err := MEngine.Where("pipeline_id=? and code_module=?",
+		pipelineID, moduleName).Cols("code_tag").Update(pu); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+
+	pipeline := new(Pipeline)
+	pipeline.Status = PLProcess
+	if affected, err := session.ID(pipelineID).Cols("status").Update(pipeline); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
+	}
+
+	return session.Commit()
+}
+
+func UpdatePkg(pipelineID int64, moduleName, codePkg string) error {
+	pu := new(PipelineUpdate)
+	pu.CodePkg = codePkg
+	if affected, err := MEngine.Where("pipeline_id=? and code_module=?",
+		pipelineID, moduleName).Cols("code_pkg").Update(pu); err != nil {
+		return err
+	} else if affected == 0 {
+		return NotFound
 	}
 	return nil
 }

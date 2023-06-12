@@ -166,7 +166,7 @@ func CallRealtimeOut(param string, output *string, ws *WebSocket) error {
 		return err
 	}
 
-	if !cmd.ProcessState.Success() {
+	if cmd.ProcessState.Success() {
 		return nil
 	}
 	return fmt.Errorf("exit 1")

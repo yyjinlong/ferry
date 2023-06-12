@@ -4,14 +4,16 @@ base=$(dirname $0)
 source $base/config.sh
 source $base/common.sh
 
+service=""
 module=""
 lang=""
 addr=""
 branch=""
 taskid=""
 
-while getopts m:l:a:b:i:h: opt; do
+while getopts s:m:l:a:b:i:h: opt; do
     case $opt in
+        s) service=$OPTARG;;
         m) module=$OPTARG;;
         l) lang=$OPTARG;;
         a) addr=$OPTARG;;
@@ -24,12 +26,16 @@ done
 function help() {
     cat <<EOF
 功能说明: 代码打tag, 并做代码合并检查
-使用方法: $0 -m 模块名 -l 语言 -a 仓库地址 -b 分支名 -i 任务ID
+使用方法: $0 -s 服务名 -m 模块名 -l 语言 -a 仓库地址 -b 分支名 -i 任务ID
 EOF
     exit 0
 }
 
 function check() {
+    if [ -z $service ]; then
+        help
+    fi
+
     if [ -z $module ]; then
         help
     fi
@@ -50,15 +56,32 @@ function check() {
         help
     fi
 
-    # 部署路径不存在则创建
-    if [ ! -d $DEPLOY_PATH ]; then
-        mkdir -p $DEPLOY_PATH
+    # 代码路径不存在则创建
+    if [ ! -d $CODE_PATH ]; then
+        mkdir -p $CODE_PATH
     fi
 }
 
+function download() {
+	src_path=$1
+
+    cd $src_path
+    if [ -d $module ]; then
+        rm -rf $module
+    fi
+
+    git clone --recursive $addr $module -q
+    if [ $? -ne 0 ]; then
+        echoerror "git clone $addr 失败!"
+        exit $rr
+    fi
+    echo "代码下载完成!"
+}
+
 function branch_merge_check() {
-    echo "当前模块: $module"
-    echo "当前分支: $branch"
+    cd $module
+    echo "分支检测, 当前模块: $module"
+    echo "分支检测, 当前分支: $branch"
 
     echo "分支检查完成!"
 }
@@ -88,38 +111,116 @@ function build_tag() {
     git tag | grep $module | tail -n 5
 }
 
-function clear_module() {
-    cd $DEPLOY_PATH
-    module_path="$DEPLOY_PATH/$module"
-    if [ -d $module_path ]; then
-        rm -rf $module_path
+function compile() {
+    service_path=$1
+    release_path=$2
+    src_path=$3
+
+    cd $src_path
+    cd $module
+
+    rm -rf .git .gitignore
+    echo "删除隐藏文件成功"
+
+    timestamp=$(date +%s)
+    pkg_name="${module}_${timestamp}.tar.gz"
+
+    if [ $lang == "go" ]; then
+        echo "模块$module 开始进行golang编译"
+
+        # golang创建pkg目录
+        pkg_path="$service_path/pkg"
+        if [ ! -d $pkg_path ]; then
+            mkdir -p $pkg_path
+        fi
+
+        /usr/bin/make
+
+        cd $release_path
+        tar zcf $pkg_name $module
+        if [ $? -ne 0 ]; then
+            echo "打tar包失败!"
+            exit $err
+        fi
+
+    elif [ $lang == "java" ]; then
+        echo "模块$module开始进行maven编译"
+
+    else
+        echo "模块$module跳过该编译阶段, 直接进行打包"
+        cd $src_path
+        tar zcf $pkg_name $module
+        if [ $? -ne 0 ]; then
+            echo "打tar包失败!"
+            exit $err
+        fi
     fi
-    echo "模块清理完成"
+    echobold "release包名: $pkg_name"
+
+    echo "上报release包信息"
+    report_pkg $taskid $module $pkg_name
+
+    echo "拷贝编译好的代码到代码路径成功"
+    task_path="$IMAGE_PATH/$service/$taskid"
+    if [ ! -d $task_path ]; then
+        mkdir -p $task_path
+    fi
+    mv $pkg_name $task_path
+    echo "移动release包 $pkg_name 到镜像构建路径: $task_path 完成"
+}
+
+function clear_module() {
+	service_path=$1
+	src_path=$2
+
+	cd $service_path
+	if [ -d "pkg" ]; then
+		rm -rf pkg
+	fi
+
+	cd $src_path
+    if [ -d $module ]; then
+        rm -rf $module
+    fi
+
+    echo "打包、编译清理完成"
 }
 
 function main() {
     check
 
+	#code/
+	#└── 服务
+	#	├── pkg       go项目GOPATH中的pkg目录
+	#	├── release   编译后的目录
+	#	└── src       原码目录
+
+	service_path="$CODE_PATH/$service"
+
+    release_path="$service_path/release"
+    if [ ! -d $release_path ]; then
+        mkdir -p $release_path
+    fi
+
+    src_path="$service_path/src"
+    if [ ! -d $src_path ]; then
+        mkdir -p $src_path
+    fi
+    echo "创建构建路径: $service_path 成功"
+
     echobold "阶段一: 模块$module代码下载"
-    cd $DEPLOY_PATH
-    if [ -d $module ]; then
-        rm -rf $module
-    fi
-    git clone --recursive $addr $module -q
-    if [ $? -ne 0 ]; then
-        echoerror "git clone $addr 失败!"
-        exit $rr
-    fi
-    echo "代码下载完成!"
+    download $src_path
 
     echobold "阶段二: 模块$module进行分支合并检查"
-    cd $module
     branch_merge_check
 
     echobold "阶段三: 模块$module打tag"
     build_tag
 
-    echobold "阶段四: 模块$module清理"
+    echobold "阶段四: 模块$module编译"
+    compile $service_path $release_path $src_path
+
+    echobold "阶段五: 模块$module清理"
     clear_module
 }
 
