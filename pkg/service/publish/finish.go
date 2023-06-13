@@ -16,7 +16,7 @@ import (
 )
 
 func NewFinish(pid int64, serviceName string) error {
-	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHProcess); err != nil {
+	if err := model.CreatePhase(pid, model.KIND_DEPLOY, model.PHASE_FINISH, model.PHProcess); err != nil {
 		return fmt.Errorf(config.FSH_CREATE_FINISH_PHASE_ERROR, err)
 	}
 	log.Infof("create finish phase for pid: %d success", pid)
@@ -52,7 +52,7 @@ func NewFinish(pid int64, serviceName string) error {
 		log.Infof("old deployment: %s replicas scale 0 success", oldDeployment)
 	}
 
-	if err := model.UpdatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHSuccess); err != nil {
+	if err := model.UpdatePhase(pid, model.KIND_DEPLOY, model.PHASE_FINISH, model.PHSuccess); err != nil {
 		log.Errorf("update finish phase for pid: %d error: %s", pid, err)
 		return err
 	}

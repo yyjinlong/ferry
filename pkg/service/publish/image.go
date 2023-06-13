@@ -34,7 +34,7 @@ func NewBuildImage(pid int64, service string) error {
 		return fmt.Errorf(config.IMG_BUILD_FINISHED)
 	}
 
-	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHProcess); err != nil {
+	if err := model.CreatePhase(pid, model.KIND_DEPLOY, model.PHASE_IMAGE, model.PHProcess); err != nil {
 		log.Errorf("create pipeline: %d image phase error: %s", pid, err)
 		return err
 	}
@@ -98,7 +98,7 @@ func NewBuildImage(pid int64, service string) error {
 		log.Infof("build image pipeline: %d record latest module: %s image: %s:%s success", pid, codeModule, imageURL, imageTag)
 	}
 
-	if err := model.UpdatePhase(pid, model.PHASE_DEPLOY, model.PHASE_IMAGE, model.PHSuccess); err != nil {
+	if err := model.UpdatePhase(pid, model.KIND_DEPLOY, model.PHASE_IMAGE, model.PHSuccess); err != nil {
 		log.Errorf("update pipeline: %d image phase error: %s", pid, err)
 	}
 	return nil

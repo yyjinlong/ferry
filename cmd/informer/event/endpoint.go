@@ -135,7 +135,7 @@ func (r *EndpointResource) traffic(namespace, service, phase, group, deployGroup
 			// 发布中且该组不是发布组
 			// 判断该阶段是否已发布完成; 如果没有, 则表示是需要更新该组的流量
 			// case: 正在发布green组sandbox, 且green组online没有发布. 这时blue组online pod变化了, 则需要更新
-			if !model.CheckPhaseIsDeploy(pipelineID, model.PHASE_DEPLOY, phase) {
+			if !model.CheckPhaseIsDeploy(pipelineID, model.KIND_DEPLOY, phase) {
 				r.update(service, phase, group, ips)
 				return nil
 			}

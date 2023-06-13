@@ -40,7 +40,7 @@ const (
 
 // 阶段类别
 const (
-	PHASE_DEPLOY   = "deploy"
+	KIND_DEPLOY    = "deploy"
 	PHASE_ROLLBACK = "rollback"
 )
 
@@ -75,7 +75,7 @@ func CheckPhaseIsDeploy(pipelineID int64, kind, phase string) bool {
 func CheckDeployFinish(pipelineID int64) bool {
 	ph := new(PipelinePhase)
 	if has, err := SEngine.Where("pipeline_id=? and kind=? and name=?",
-		pipelineID, PHASE_DEPLOY, PHASE_FINISH).Get(ph); err != nil {
+		pipelineID, KIND_DEPLOY, PHASE_FINISH).Get(ph); err != nil {
 		return false
 	} else if !has {
 		return false

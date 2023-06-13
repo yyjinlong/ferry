@@ -63,7 +63,7 @@ func NewRollback(pid int64, username string) error {
 	}
 
 	// (3) 获取已发布的阶段
-	phases, err := model.FindKindPhases(pid, model.PHASE_DEPLOY)
+	phases, err := model.FindKindPhases(pid, model.KIND_DEPLOY)
 	if err != nil {
 		return fmt.Errorf(config.DB_QUERY_PHASES_ERROR, err)
 	}

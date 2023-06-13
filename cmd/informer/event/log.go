@@ -62,7 +62,7 @@ func (r *LogResource) HandleLog(obj interface{}, mode, cluster string) error {
 		return nil
 	}
 
-	kind := model.PHASE_DEPLOY
+	kind := model.KIND_DEPLOY
 	if pipeline.Status == model.PLRollbacking {
 		kind = model.PHASE_ROLLBACK
 	}

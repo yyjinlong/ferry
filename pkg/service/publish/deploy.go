@@ -176,7 +176,7 @@ func NewDeploy(pid int64, phase, username string) error {
 	}
 	log.Infof("publish deployment: %s to k8s success", deploymentName)
 
-	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, phase, model.PHProcess); err != nil {
+	if err := model.CreatePhase(pid, model.KIND_DEPLOY, phase, model.PHProcess); err != nil {
 		return fmt.Errorf(config.PUB_RECORD_DEPLOYMENT_TO_DB_ERROR, err)
 	}
 	log.Infof("record deployment: %s to db success", deploymentName)
