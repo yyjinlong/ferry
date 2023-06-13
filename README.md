@@ -144,9 +144,9 @@ curl -d 'namespace=default&service=ivr&command=sleep 60&schedule=*/10 * * * *' h
 curl -d 'namespace=default&service=ivr&job_id=7' http://127.0.0.1:8888/v1/cronjob/delete
 ```
 
-8 Makefile举例
+##8 Makefile举例
 
-8.1 golang项目makefile案例
+### 8.1 golang项目makefile案例
 
 ```
 GOBASE=/usr/local/go-1.19
