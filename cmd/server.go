@@ -25,6 +25,7 @@ import (
 
 var (
 	configFile  = flag.String("c", "../etc/dev.yaml", "yaml configuration file.")
+	help        = flag.Bool("h", false, "show help info.")
 	gracePeriod = 2 * time.Second
 )
 

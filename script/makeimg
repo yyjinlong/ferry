@@ -57,7 +57,7 @@ function create_dockerfile() {
     build_path=$1
     dockerfile="$build_path/Dockerfile"
 
-	cat << EOF > $dockerfile
+    cat << EOF > $dockerfile
 FROM alpine:3.7
 
 ARG module

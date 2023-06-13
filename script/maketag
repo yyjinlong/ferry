@@ -63,7 +63,7 @@ function check() {
 }
 
 function download() {
-	src_path=$1
+    src_path=$1
 
     cd $src_path
     if [ -d $module ]; then
@@ -170,15 +170,15 @@ function compile() {
 }
 
 function clear_module() {
-	service_path=$1
-	src_path=$2
+    service_path=$1
+    src_path=$2
 
-	cd $service_path
-	if [ -d "pkg" ]; then
-		rm -rf pkg
-	fi
+    cd $service_path
+    if [ -d "pkg" ]; then
+        rm -rf pkg
+    fi
 
-	cd $src_path
+    cd $src_path
     if [ -d $module ]; then
         rm -rf $module
     fi
@@ -189,13 +189,13 @@ function clear_module() {
 function main() {
     check
 
-	#code/
-	#└── 服务
-	#	├── pkg       go项目GOPATH中的pkg目录
-	#	├── release   编译后的目录
-	#	└── src       原码目录
+    #code/
+    #└── 服务
+    #	├── pkg       go项目GOPATH中的pkg目录
+    #	├── release   编译后的目录
+    #	└── src       原码目录
 
-	service_path="$CODE_PATH/$service"
+    service_path="$CODE_PATH/$service"
 
     release_path="$service_path/release"
     if [ ! -d $release_path ]; then

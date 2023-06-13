@@ -23,7 +23,7 @@ Jinlong Yang
 
     base层    : 操作系统层: centos6.7 centos7.5
     run层     : 运行时环境: python(conda环境)、java(tomcat环境)
-    service层 : 具体的服务
+    service层 : 具体的服务: 探针脚本、定制化
     code层    : 基于代码构建镜像(一个服务对应多个代码模块)
 
 ## 2.1 为什么不用release层, 而用code层
@@ -142,4 +142,30 @@ curl -d 'namespace=default&service=ivr&command=sleep 60&schedule=*/10 * * * *' h
 
 ```
 curl -d 'namespace=default&service=ivr&job_id=7' http://127.0.0.1:8888/v1/cronjob/delete
+```
+
+8 Makefile举例
+
+8.1 golang项目makefile案例
+
+```
+GOBASE=/usr/local/go-1.19
+GOCMD=$(GOBASE)/bin/go
+DIR=$(shell pwd)
+
+# release目录下一般包含启动脚本、二进制文件、配置文件、静态文件等, 不包含代码
+RELEASE=$(DIR)/../../release/coco
+
+# golang GOPATH目录
+export GOPATH=$(DIR)/../../
+
+all: coco
+
+coco:
+    $(GOCMD) env -w GO111MODULE=on
+    $(GOCMD) env -w GOPROXY=https://goproxy.cn,direct
+    $(GOCMD) mod tidy
+    /bin/mkdir -p $(RELEASE)
+    $(GOCMD) build -o $(RELEASE)/coco main.go
+    /bin/cp -rf etc $(RELEASE)/
 ```
