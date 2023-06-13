@@ -112,7 +112,7 @@ func NewRollback(pid int64, username string) error {
 		}
 		log.Infof("destroy deployment: %s scale 0 success", destroyDepName)
 
-		if err := model.CreatePhase(pid, model.PHASE_ROLLBACK, phase, model.PHSuccess); err != nil {
+		if err := model.CreatePhase(pid, model.KIND_ROLLBACK, phase, model.PHSuccess); err != nil {
 			return fmt.Errorf(config.ROL_RECORD_PHASE_ERROR, phase, err)
 		}
 	}

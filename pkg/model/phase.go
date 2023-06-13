@@ -40,8 +40,8 @@ const (
 
 // 阶段类别
 const (
-	KIND_DEPLOY    = "deploy"
-	PHASE_ROLLBACK = "rollback"
+	KIND_DEPLOY   = "deploy"
+	KIND_ROLLBACK = "rollback"
 )
 
 // FindPhases 根据pipeline id返回对应的阶段

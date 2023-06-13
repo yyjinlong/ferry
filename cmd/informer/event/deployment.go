@@ -83,7 +83,7 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 
 	kind := model.KIND_DEPLOY
 	if pipeline.Status == model.PLRollbacking {
-		kind = model.PHASE_ROLLBACK
+		kind = model.KIND_ROLLBACK
 	}
 	log.Infof("[deployment] get pipeline: %d deploy kind is: %s", pipelineID, kind)
 	if r.checkPhaseFinish(pipelineID, kind, phase) {
