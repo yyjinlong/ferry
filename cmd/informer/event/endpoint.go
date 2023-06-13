@@ -44,7 +44,7 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 	}
 
 	serviceName, phase, group := r.parseInfo(name)
-	log.Infof("[endpoint] service: %s phase: %s group: %s have total ips: %#v", serviceName, phase, group, ips)
+	log.Infof("[endpoint] service: %s phase(%s) group(%s) have total ips: %#v", serviceName, phase, group, ips)
 
 	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
@@ -119,7 +119,7 @@ func (r *EndpointResource) traffic(namespace, service, phase, group, deployGroup
 	// 两组(blue、green) 只有一组接流量
 	pipeline, err := model.GetServicePipeline(service)
 	if err != nil {
-		log.Errorf("get service: %s pipeline info failed: %+v", service, err)
+		log.Errorf("[endpoint] query service: %s pipeline info failed: %+v", service, err)
 		return err
 	}
 	pipelineID := pipeline.ID
@@ -160,7 +160,9 @@ func (r *EndpointResource) traffic(namespace, service, phase, group, deployGroup
 
 	} else {
 		// NOTE: 发布成功、失败(只更新对应阶段、对应组的流量)
-		r.update(service, phase, group, ips)
+		if group == onlineGroup {
+			r.update(service, phase, group, ips)
+		}
 	}
 	return nil
 }

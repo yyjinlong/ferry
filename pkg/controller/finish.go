@@ -14,7 +14,8 @@ import (
 
 func Finish(c *gin.Context) {
 	type params struct {
-		ID int64 `form:"pipeline_id" binding:"required"`
+		ID      int64  `form:"pipeline_id" binding:"required"`
+		Service string `form:"service" binding:"required"`
 	}
 
 	var data params
@@ -23,7 +24,7 @@ func Finish(c *gin.Context) {
 		return
 	}
 
-	if err := publish.NewFinish(data.ID); err != nil {
+	if err := publish.NewFinish(data.ID, data.Service); err != nil {
 		log.Errorf("finish handle failed: %+v", err)
 		ResponseFailed(c, err.Error())
 		return

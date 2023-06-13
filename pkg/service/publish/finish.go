@@ -15,21 +15,20 @@ import (
 	"nautilus/pkg/util/k8s"
 )
 
-func NewFinish(pid int64) error {
-	pipeline, err := model.GetPipeline(pid)
-	if err != nil {
-		return fmt.Errorf(config.DB_PIPELINE_QUERY_ERROR, pid, err)
+func NewFinish(pid int64, serviceName string) error {
+	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHProcess); err != nil {
+		return fmt.Errorf(config.FSH_CREATE_FINISH_PHASE_ERROR, err)
 	}
+	log.Infof("create finish phase for pid: %d success", pid)
 
-	service, err := model.GetServiceInfo(pipeline.Service)
+	service, err := model.GetServiceInfo(serviceName)
 	if err != nil {
 		return fmt.Errorf(config.DB_SERVICE_QUERY_ERROR, err)
 	}
 
 	var (
-		namespace   = service.Name
+		namespace   = service.Namespace
 		serviceID   = service.ID
-		serviceName = service.Name
 		onlineGroup = service.OnlineGroup
 	)
 
@@ -40,6 +39,11 @@ func NewFinish(pid int64) error {
 	}
 
 	for _, phase := range []string{model.PHASE_SANDBOX, model.PHASE_ONLINE} {
+		// 第一次上线
+		if onlineGroup == "" {
+			continue
+		}
+
 		oldDeployment := k8s.GetDeploymentName(serviceName, serviceID, phase, onlineGroup)
 		if err := resource.Scale(namespace, oldDeployment, 0); err != nil {
 			log.Errorf("old deployment: %s replicas scale 0 failed: %+v", oldDeployment, err)
@@ -48,10 +52,11 @@ func NewFinish(pid int64) error {
 		log.Infof("old deployment: %s replicas scale 0 success", oldDeployment)
 	}
 
-	if err := model.CreatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHSuccess); err != nil {
-		return fmt.Errorf(config.FSH_CREATE_FINISH_PHASE_ERROR, err)
+	if err := model.UpdatePhase(pid, model.PHASE_DEPLOY, model.PHASE_FINISH, model.PHSuccess); err != nil {
+		log.Errorf("update finish phase for pid: %d error: %s", pid, err)
+		return err
 	}
-	log.Infof("record finish phase for pid: %d success", pid)
+	log.Infof("update finish phase for pid: %d success", pid)
 
 	newOnlineGroup := service.DeployGroup
 	newDeployGroup := k8s.GetDeployGroup(newOnlineGroup)

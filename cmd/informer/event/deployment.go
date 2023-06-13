@@ -48,6 +48,11 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
+	// 另一组缩成0, 不进行处理
+	if replicas == 0 {
+		return nil
+	}
+
 	// 检查deployment是否ready
 	if !(data.ObjectMeta.Generation == data.Status.ObservedGeneration &&
 		replicas == updatedReplicas &&
@@ -130,7 +135,7 @@ func (r *DeploymentResource) checkPipelineFinish(status int) bool {
 func (r *DeploymentResource) checkSameNamespace(namespace, serviceName string) bool {
 	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		log.Errorf("[deployment] query service by id: %d failed: %s", serviceName, err)
+		log.Errorf("[deployment] query service by id: %s failed: %s", serviceName, err)
 		return false
 	}
 	if namespace != svc.Namespace {

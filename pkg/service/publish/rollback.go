@@ -40,6 +40,8 @@ func NewRollback(pid int64, username string) error {
 		serviceID     = svc.ID
 	)
 
+	log.Infof("before rollback, get online group(%s) deploy group(%s)", svc.OnlineGroup, svc.DeployGroup)
+
 	// (1) 获取回滚组和销毁组
 	if pipeline.Status == model.PLSuccess {
 		// 发布成功时, 销毁当前在线组
@@ -49,7 +51,7 @@ func NewRollback(pid int64, username string) error {
 		destroyGroup = svc.DeployGroup
 	}
 	rollbackGroup = k8s.GetAnotherGroup(destroyGroup)
-	log.Infof("get rollback group: %s destroy group: %s", rollbackGroup, destroyGroup)
+	log.Infof("get rollback group(%s) destroy group(%s)", rollbackGroup, destroyGroup)
 
 	// (2) 占锁
 	if err := model.UpdateStatus(pid, model.PLRollbacking); err != nil {
@@ -70,6 +72,11 @@ func NewRollback(pid int64, username string) error {
 	for _, obj := range phases {
 		if obj.Status == model.PHProcess {
 			return fmt.Errorf(config.ROL_PROCESS_NO_EXECUTE)
+		}
+
+		// 排除image、finish两个阶段
+		if cm.In(obj.Name, []string{model.PHASE_IMAGE, model.PHASE_FINISH}) {
+			continue
 		}
 
 		if cm.Ini(obj.Status, []int{model.PHSuccess, model.PHFailed}) {
