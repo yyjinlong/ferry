@@ -36,6 +36,7 @@ func NewWebsocket() *WebSocket {
 }
 
 func (w *WebSocket) Serve(c *gin.Context) error {
+	// websocket协议升级配置
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  BUFFER_SIZE,
 		WriteBufferSize: BUFFER_SIZE,
@@ -44,7 +45,7 @@ func (w *WebSocket) Serve(c *gin.Context) error {
 		},
 	}
 
-	// 将当前请求升级为websocket
+	// 将当前请求升级为websocket协议
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Errorf("upgrade http request to websocket err: %s", err)

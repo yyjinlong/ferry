@@ -60,7 +60,7 @@ func Curl(mode, url string, cookie map[string]string, header map[string]string, 
 		}
 	}
 
-	// 设置超时
+	// 设置超时, 将超时设置到request上
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
 	defer cancel()
 	request = request.WithContext(ctx)
@@ -73,9 +73,9 @@ func Curl(mode, url string, cookie map[string]string, header map[string]string, 
 
 	go func() {
 		client := http.Client{Transport: &http.Transport{
-			DisableKeepAlives: true,
+			DisableKeepAlives: true, // 禁用keepalive
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, // 忽略证书校验
 			},
 		}}
 		response, err := client.Do(request)
