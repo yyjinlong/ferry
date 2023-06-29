@@ -44,8 +44,6 @@ func (r *EndpointResource) HandleEndpoint(obj interface{}, mode, cluster string)
 	}
 
 	serviceName, phase, group := r.parseInfo(name)
-	log.Infof("[endpoint] service: %s phase(%s) group(%s) have total ips: %#v", serviceName, phase, group, ips)
-
 	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
 		log.Errorf("[endpoint] query service by id error: %+v", err)
