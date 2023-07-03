@@ -61,23 +61,24 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		return nil
 	}
 
-	serviceName, phase, group := r.parseInfo(name)
-	log.Infof("[deployment] check: %s ready with group: %s replicas: %d", name, group, replicas)
+	serviceName, phase, _ := r.parseInfo(name)
+	log.Infof("[deployment] %s is ready", name)
 
 	pipeline, err := model.GetServicePipeline(serviceName)
 	if errors.Is(err, model.NotFound) {
 		return nil
 	} else if err != nil {
-		log.Errorf("[deployment] query pipeline by service: %s error: %s", serviceName, err)
+		log.Errorf("[deployment] %s query service pipeline error: %s", name, err)
 		return err
 	}
 	pipelineID := pipeline.ID
 
 	if r.checkPipelineFinish(pipeline.Status) {
+		log.Infof("[deployment] %s is deploy finished", name)
 		return nil
 	}
 
-	if !r.checkSameNamespace(namespace, serviceName) {
+	if !r.checkSameNamespace(name, namespace, serviceName) {
 		return nil
 	}
 
@@ -85,17 +86,17 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 	if pipeline.Status == model.PLRollbacking {
 		kind = model.KIND_ROLLBACK
 	}
-	log.Infof("[deployment] get pipeline: %d deploy kind is: %s", pipelineID, kind)
-	if r.checkPhaseFinish(pipelineID, kind, phase) {
+	log.Infof("[deployment] %s get pipeline: %d publish kind: %s", name, pipelineID, kind)
+	if r.checkPhaseFinish(pipelineID, name, kind, phase) {
 		return nil
 	}
 
 	// deployment ready更新阶段完成
 	if err := model.UpdatePhaseV2(pipelineID, kind, phase, model.PHSuccess); err != nil {
-		log.Errorf("[deployment] update pipeline: %d to db on phase: %s failed: %s", pipelineID, phase, err)
+		log.Errorf("[deployment] %s update pipeline: %d phase: %s failed: %s", name, pipelineID, phase, err)
 		return err
 	}
-	log.Infof("[deployment] update pipeline: %d to db on phase: %s success", pipelineID, phase)
+	log.Infof("[deployment] %s update pipeline: %d phase: %s success", name, pipelineID, phase)
 	return nil
 }
 
@@ -126,31 +127,30 @@ func (r *DeploymentResource) parseInfo(name string) (string, string, string) {
 
 func (r *DeploymentResource) checkPipelineFinish(status int) bool {
 	if cm.Ini(status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
-		log.Info("[deployment] check deploy is finished")
 		return true
 	}
 	return false
 }
 
-func (r *DeploymentResource) checkSameNamespace(namespace, serviceName string) bool {
+func (r *DeploymentResource) checkSameNamespace(name, namespace, serviceName string) bool {
 	svc, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		log.Errorf("[deployment] query service by id: %s failed: %s", serviceName, err)
+		log.Errorf("[deployment] %s query service info failed: %s", name, err)
 		return false
 	}
 	if namespace != svc.Namespace {
-		log.Errorf("[deployment] service: %s namespace: %s != %s", serviceName, svc.Namespace, namespace)
+		log.Errorf("[deployment] %s namespace: %s != %s", name, svc.Namespace, namespace)
 		return false
 	}
 	return true
 }
 
-func (r *DeploymentResource) checkPhaseFinish(pipelineID int64, kind, phase string) bool {
+func (r *DeploymentResource) checkPhaseFinish(pipelineID int64, name, kind, phase string) bool {
 	ph, err := model.GetPhaseInfo(pipelineID, kind, phase)
 	if errors.Is(err, model.NotFound) {
 		return true
 	} else if err != nil {
-		log.Errorf("[deployment] query phase info error: %s", err)
+		log.Errorf("[deployment] %s query phase info error: %s", name, err)
 		return true
 	}
 
