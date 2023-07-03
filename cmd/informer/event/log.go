@@ -6,7 +6,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -55,30 +54,23 @@ func (r *LogResource) HandleLog(obj interface{}, mode, cluster string) error {
 		log.Errorf("[log] query pipeline by service error: %s", err)
 		return err
 	}
-	pipelineID := pipeline.ID
 
 	// 判断该上线流程是否完成
 	if cm.Ini(pipeline.Status, []int{model.PLSuccess, model.PLRollbackSuccess}) {
 		return nil
 	}
+	pipelineID := pipeline.ID
 
 	kind := model.KIND_DEPLOY
 	if pipeline.Status == model.PLRollbacking {
 		kind = model.KIND_ROLLBACK
 	}
 
-	log.Infof("[log] get pipeline: %d kind: %s phase: %s", pipelineID, kind, phase)
-
 	info := fields[0]
 	operTime := info.Time.Format("15:04:05")
 
 	msg := fmt.Sprintf("[%s] %v\n%s", operTime, serviceName, message)
-	if err := model.RealtimeLog(pipelineID, kind, phase, msg); errors.Is(err, model.NotFound) {
-		return nil
-	} else if err != nil {
-		log.Errorf("[log] write event log to db error: %s", err)
-		return err
-	}
+	model.RealtimeLog(pipelineID, kind, phase, msg)
 	return nil
 }
 
