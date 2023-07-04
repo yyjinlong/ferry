@@ -38,6 +38,7 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 		name              = data.ObjectMeta.Name
 		namespace         = data.ObjectMeta.Namespace
 		replicas          = *data.Spec.Replicas
+		statusReplicas    = data.Status.Replicas
 		updatedReplicas   = data.Status.UpdatedReplicas
 		readyReplicas     = data.Status.ReadyReplicas
 		availableReplicas = data.Status.AvailableReplicas
@@ -55,6 +56,7 @@ func (r *DeploymentResource) HandleDeployment(obj interface{}, mode, cluster str
 
 	// 检查deployment是否ready
 	if !(data.ObjectMeta.Generation == data.Status.ObservedGeneration &&
+		replicas == statusReplicas &&
 		replicas == updatedReplicas &&
 		replicas == availableReplicas &&
 		replicas == readyReplicas) {
