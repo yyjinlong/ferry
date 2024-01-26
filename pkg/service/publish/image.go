@@ -9,102 +9,76 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
 	"nautilus/pkg/config"
 	"nautilus/pkg/model"
-	"nautilus/pkg/util/cm"
 )
 
-func NewBuildImage(pid int64, service string) error {
-	pipeline, err := model.GetPipeline(pid)
+func NewBuildTag(pid int64, serviceName string) error {
+	pidStr := strconv.FormatInt(pid, 10)
+	serviceObj, err := model.GetServiceInfo(serviceName)
 	if err != nil {
-		return fmt.Errorf(config.IMG_QUERY_PIPELINE_ERROR, err)
+		return fmt.Errorf(config.DB_QUERY_SERVICE_ERROR, serviceName, err)
 	}
 
-	statusList := []int{
-		model.PLSuccess,
-		model.PLFailed,
-		model.PLRollbackSuccess,
-		model.PLRollbackFailed,
-		model.PLTerminate,
-	}
-	if cm.Ini(pipeline.Status, statusList) {
-		return fmt.Errorf(config.IMG_BUILD_FINISHED)
+	if serviceObj.Lock != "" && serviceObj.Lock != pidStr {
+		return fmt.Errorf(config.TAG_OPERATE_FORBIDDEN, pidStr)
 	}
 
-	if err := model.CreatePhase(pid, model.KIND_DEPLOY, model.PHASE_IMAGE, model.PHProcess); err != nil {
-		log.Errorf("create pipeline: %d image phase error: %s", pid, err)
-		return err
+	if err := model.SetLock(serviceObj.ID, pidStr); err != nil {
+		return fmt.Errorf(config.DB_WRITE_LOCK_ERROR, pidStr, err)
 	}
 
 	updateList, err := model.FindUpdateInfo(pid)
 	if err != nil {
-		return fmt.Errorf(config.IMG_QUERY_UPDATE_ERROR, err)
+		return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 	}
 
 	_, curPath, _, _ := runtime.Caller(1)
 	var (
 		mainPath   = filepath.Dir(filepath.Dir(filepath.Dir(curPath)))
 		scriptPath = filepath.Join(mainPath, "script")
-		changes    []string
-		retains    []string
 	)
 
 	ws := NewWebsocket()
 	ws.IsCmdCall = true
 	for _, item := range updateList {
-		module := item.CodeModule
-		if err := model.CreateOrUpdatePipelineImage(pid, service, module, "", ""); err != nil {
-			return err
+		branch := item.DeployBranch
+		codeModule, err := model.GetCodeModuleInfo(item.CodeModule)
+		if err != nil {
+			return fmt.Errorf(config.TAG_QUERY_UPDATE_ERROR, err)
 		}
+		lang := codeModule.Language
+		addr := codeModule.RepoAddr
+		module := codeModule.Name
 
 		output := ""
-		param := fmt.Sprintf("%s/makeimg -s %s -m %s -p %s -i %d", scriptPath, service, module, item.CodePkg, pid)
-		log.Infof("makeimg command: %s", param)
+		param := fmt.Sprintf("%s/maketag -s %s -m %s -l %s -a %s -b %s -i %d", scriptPath, serviceName, module, lang, addr, branch, pid)
+		log.Infof("maketag command: %s", param)
 		if err := ws.Realtime(param, &output); err != nil {
-			return fmt.Errorf(config.IMG_BUILD_FAILED)
+			return fmt.Errorf(config.TAG_BUILD_FAILED, err)
 		}
-		changes = append(changes, item.CodeModule)
-	}
-
-	// 获取未变更的模块(服务所有模块-当前变更的模块)
-	totals, err := model.FindServiceCodeModules(service)
-	if err != nil {
-		return fmt.Errorf(config.DB_QUERY_MODULE_BINDING_ERROR, err)
-	}
-
-	for _, item := range totals {
-		codeModule := item.CodeModule.Name
-		if cm.In(codeModule, changes) {
-			continue
-		}
-		retains = append(retains, codeModule)
-	}
-	log.Infof("build image pipeline: %d fetch unchange code modules: %v", pid, retains)
-
-	for _, codeModule := range retains {
-		image, err := model.QueryLatestSuccessModuleImage(service, codeModule)
-		if err != nil {
-			log.Errorf(config.DB_IMAGE_CREATE_OR_UPDATE_ERROR, err)
-			return err
-		}
-		imageURL := image.ImageURL
-		imageTag := image.ImageTag
-
-		if err := model.CreateOrUpdatePipelineImage(pid, service, codeModule, imageURL, imageTag); err != nil {
-			return err
-		}
-		log.Infof("build image pipeline: %d record latest module: %s image: %s:%s success", pid, codeModule, imageURL, imageTag)
-	}
-
-	if err := model.UpdatePhase(pid, model.KIND_DEPLOY, model.PHASE_IMAGE, model.PHSuccess); err != nil {
-		log.Errorf("update pipeline: %d image phase error: %s", pid, err)
 	}
 	return nil
 }
 
-func UpdateImageInfo(pid int64, module, imageURL, imageTag string) error {
-	return model.UpdateImage(pid, module, imageURL, imageTag)
+func NewReceiveTag(pid int64, module, tag string) error {
+	log.Infof("receive module: %s build tag value: %s", module, tag)
+	if err := model.UpdateTag(pid, module, tag); err != nil {
+		return fmt.Errorf(config.TAG_UPDATE_DB_ERROR, err)
+	}
+	log.Infof("module: %s update tag: %s success", module, tag)
+	return nil
+}
+
+func NewReceivePkg(pid int64, module, pkg string) error {
+	log.Infof("receive module: %s compile package: %s", module, pkg)
+	if err := model.UpdatePkg(pid, module, pkg); err != nil {
+		return fmt.Errorf(config.PKG_UPDATE_DB_ERROR, err)
+	}
+	log.Infof("module: %s update pkg: %s success", module, pkg)
+	return nil
 }
