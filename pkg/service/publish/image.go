@@ -52,6 +52,8 @@ func NewBuildImage(pid int64, service string) error {
 		retains    []string
 	)
 
+	ws := NewWebsocket()
+	ws.IsCmdCall = true
 	for _, item := range updateList {
 		module := item.CodeModule
 		if err := model.CreateOrUpdatePipelineImage(pid, service, module, "", ""); err != nil {
@@ -61,11 +63,10 @@ func NewBuildImage(pid int64, service string) error {
 		output := ""
 		param := fmt.Sprintf("%s/makeimg -s %s -m %s -p %s -i %d", scriptPath, service, module, item.CodePkg, pid)
 		log.Infof("makeimg command: %s", param)
-		if err := CallRealtimeOut(param, &output, nil); err != nil {
+		if err := ws.Realtime(param, &output); err != nil {
 			return fmt.Errorf(config.IMG_BUILD_FAILED)
 		}
 		changes = append(changes, item.CodeModule)
-		fmt.Println(output)
 	}
 
 	// 获取未变更的模块(服务所有模块-当前变更的模块)
