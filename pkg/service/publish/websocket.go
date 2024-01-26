@@ -28,7 +28,8 @@ var (
 )
 
 type WebSocket struct {
-	conn *websocket.Conn
+	conn      *websocket.Conn
+	IsCmdCall bool
 }
 
 func NewWebsocket() *WebSocket {
@@ -136,34 +137,30 @@ func (w *WebSocket) Finish() {
 }
 
 // Realtime 执行命令的实时输出
-func CallRealtimeOut(param string, output *string, ws *WebSocket) error {
+func (w *WebSocket) Realtime(param string, output *string) error {
 	cmd := exec.Command("bash", "-c", param)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Errorf("command execute create stdout pipe error: %v", err)
 		return err
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Errorf("command execute create stdout pipe error: %v", err)
 		return err
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	go read(ws, &wg, stdout, output)
-	go read(ws, &wg, stderr, output)
+	go w.read(&wg, stdout, output)
+	go w.read(&wg, stderr, output)
 
 	if err := cmd.Start(); err != nil {
-		log.Errorf("command execute start execute error: %v", err)
 		return err
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Errorf("command execute wait finish error: %v", err)
 		return err
 	}
 
@@ -173,7 +170,7 @@ func CallRealtimeOut(param string, output *string, ws *WebSocket) error {
 	return fmt.Errorf("exit 1")
 }
 
-func read(ws *WebSocket, wg *sync.WaitGroup, std io.ReadCloser, output *string) {
+func (w *WebSocket) read(wg *sync.WaitGroup, std io.ReadCloser, output *string) {
 	defer wg.Done()
 
 	reader := bufio.NewReader(std)
@@ -182,8 +179,10 @@ func read(ws *WebSocket, wg *sync.WaitGroup, std io.ReadCloser, output *string) 
 		if err != nil || err == io.EOF {
 			return
 		}
-		if ws != nil {
-			ws.Echo(buf)
+		if !w.IsCmdCall {
+			w.Echo(buf)
+		} else {
+			fmt.Println(buf)
 		}
 		*output += strings.Replace(buf, "\u0000", "", -1)
 	}
