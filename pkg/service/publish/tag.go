@@ -43,6 +43,8 @@ func NewBuildTag(pid int64, serviceName string) error {
 		scriptPath = filepath.Join(mainPath, "script")
 	)
 
+	ws := NewWebsocket()
+	ws.IsCmdCall = true
 	for _, item := range updateList {
 		branch := item.DeployBranch
 		codeModule, err := model.GetCodeModuleInfo(item.CodeModule)
@@ -56,10 +58,9 @@ func NewBuildTag(pid int64, serviceName string) error {
 		output := ""
 		param := fmt.Sprintf("%s/maketag -s %s -m %s -l %s -a %s -b %s -i %d", scriptPath, serviceName, module, lang, addr, branch, pid)
 		log.Infof("maketag command: %s", param)
-		if err := CallRealtimeOut(param, &output, nil); err != nil {
+		if err := ws.Realtime(param, &output); err != nil {
 			return fmt.Errorf(config.TAG_BUILD_FAILED, err)
 		}
-		fmt.Println("输出: ", output)
 	}
 	return nil
 }
